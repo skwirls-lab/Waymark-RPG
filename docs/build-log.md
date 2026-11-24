@@ -5,7 +5,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 ## Current position
 
 - **Phase:** 3 (Campaigns and joining), in progress
-- **Task:** phase 3 built; gate pending CI and the first Cloud Functions deploy (needs John's phase 3 set-up)
+- **Task:** phase 3 built and verified in CI (run 45480932323 on fa71a9b); gate waits only on the first Cloud Functions deploy, which needs three one-time permissions from John (see Questions). When that deploy succeeds: record the gate and start phase 4 at once.
 - **Last verified commit:** 3227ec5 (CI run 45471350857: verify, deploy and Lighthouse all green)
 - **To run everything in a build container:** `npm run verify:container` (see decisions 1 and 22). CI runs plain `npm run verify`.
 
@@ -157,7 +157,11 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Questions for John
 
-1. **Phase 3 set-up (asked 2026-11-24, not blocking yet).** Upgrade the project to the Blaze plan; enable the Cloud Functions, Cloud Build, Artifact Registry, Cloud Run, Eventarc, Pub/Sub and Secret Manager APIs; grant `github-deploy` the roles for deploying Functions and Firestore indexes. No reply needed: phase 3's first deploy will show whether it is done.
+1. **Three one-time permissions for Cloud Functions (asked 2026-11-24, blocking the phase 3 gate).** John's earlier set-up is done (the APIs are on). The first deploy of functions with Firestore triggers needs three bindings that only a project owner can add; the deploy log names them:
+   - `gcloud projects add-iam-policy-binding waymark-rpg --member=serviceAccount:service-786714793025@gcp-sa-pubsub.iam.gserviceaccount.com --role=roles/iam.serviceAccountTokenCreator`
+   - `gcloud projects add-iam-policy-binding waymark-rpg --member=serviceAccount:786714793025-compute@developer.gserviceaccount.com --role=roles/run.invoker`
+   - `gcloud projects add-iam-policy-binding waymark-rpg --member=serviceAccount:786714793025-compute@developer.gserviceaccount.com --role=roles/eventarc.eventReceiver`
+   Then re-run the failed "Deploy" job of the latest "Verify and deploy" run.
 
 ## Suggestions
 
