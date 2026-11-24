@@ -1,8 +1,10 @@
 import { data, type AttributeKey } from '@waymark/rules';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth';
+import { WARDEN_CHARACTER_IDS, saveWardenCharacter } from '../data/campaigns';
 import { characterId } from '../data/characters';
+import { useCampaign } from '../data/useCampaign';
 import { useCharacterStore } from '../data/useCharacters';
 import { RollInput } from '../ui/RollInput';
 import {
@@ -470,5 +472,62 @@ export function Builder() {
       onFinish={finish}
       onCancel={() => navigate('/')}
     />
+  );
+}
+
+/** The same six steps, for a character the Warden will run in a campaign. */
+export function CampaignBuilder() {
+  const { cid } = useParams();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { wardenCharacters } = useCampaign(cid!, user!.uid);
+  const key = `waymark.draft.${user!.uid}.${cid}`;
+  const [draft, setDraft] = useState<Draft>(() => {
+    const saved = localStorage.getItem(key);
+    return saved ? { ...emptyDraft(), ...(JSON.parse(saved) as Draft) } : emptyDraft();
+  });
+  const [problem, setProblem] = useState<string>();
+
+  useEffect(() => {
+    localStorage.setItem(key, JSON.stringify(draft));
+  }, [draft, key]);
+
+  const finish = () => {
+    const id = WARDEN_CHARACTER_IDS.find(
+      (candidate) => !wardenCharacters.some((c) => c.id === candidate),
+    );
+    if (!id) {
+      setProblem('A Warden can run six characters in a campaign.');
+      return;
+    }
+    const sheet = buildCharacter(draft);
+    const now = Date.now();
+    saveWardenCharacter(cid!, {
+      id,
+      name: sheet.name,
+      description: draft.description,
+      notes: '',
+      sheet,
+      createdAt: now,
+      updatedAt: now,
+    }).catch(() => setProblem('That character could not be saved.'));
+    localStorage.removeItem(key);
+    navigate(`/k/${cid}`);
+  };
+
+  return (
+    <>
+      {problem && (
+        <p className="error screen" role="alert">
+          {problem}
+        </p>
+      )}
+      <BuilderView
+        draft={draft}
+        onChange={setDraft}
+        onFinish={finish}
+        onCancel={() => navigate(`/k/${cid}`)}
+      />
+    </>
   );
 }

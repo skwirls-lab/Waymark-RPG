@@ -12,6 +12,8 @@ export interface CharacterDoc {
   age: number | null;
   notes: string;
   sheet: Character;
+  /** The campaign this character is playing in, if any. */
+  campaignId?: string | null;
   createdAt: number;
   updatedAt: number;
 }

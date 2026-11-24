@@ -36,20 +36,41 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    function isMember(campaignId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/campaigns/$(campaignId)/members/$(request.auth.uid));
+    }
+
+    function isWarden(campaignId) {
+      return signedIn()
+        && get(/databases/$(database)/documents/campaigns/$(campaignId)).data.wardenUid == request.auth.uid;
+    }
+
     // A character's id is its owner's uid and a slot number, so the number of
     // characters an account can hold cannot be exceeded from the browser.
     match /characters/{characterId} {
       function wellFormed() {
         let d = request.resource.data;
-        return d.keys().hasOnly(['ownerUid', 'slot', 'name', 'description', 'age', 'notes', 'sheet', 'createdAt', 'updatedAt'])
+        return d.keys().hasOnly(['ownerUid', 'slot', 'name', 'description', 'age', 'notes', 'sheet', 'campaignId', 'createdAt', 'updatedAt'])
           && d.ownerUid == request.auth.uid
           && d.slot is int
           && characterId == request.auth.uid + '_' + string(d.slot)
           && d.name is string && d.name.size() > 0 && d.name.size() <= 80
-          && d.sheet is map;
+          && d.sheet is map
+          // A character may be placed only in a campaign its owner belongs to.
+          && (!('campaignId' in d) || d.campaignId == null || isMember(d.campaignId));
       }
 
-      allow read, delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      function inMyCampaign() {
+        return 'campaignId' in resource.data
+          && resource.data.campaignId != null
+          && isWarden(resource.data.campaignId);
+      }
+
+      // The owner sees the full sheet. So does the Warden of its campaign.
+      // Other members see only the summary, below.
+      allow read: if signedIn() && (resource.data.ownerUid == request.auth.uid || inMyCampaign());
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
       allow create: if signedIn() && wellFormed()
         && request.resource.data.slot >= 1
         && request.resource.data.slot <= characterSlots();
@@ -57,6 +78,49 @@ service cloud.firestore {
         && resource.data.ownerUid == request.auth.uid
         && wellFormed()
         && request.resource.data.slot == resource.data.slot;
+    }
+
+    // Campaigns are created, joined, left and deleted through Cloud Functions,
+    // so that join codes cannot be read or guessed from the database.
+    match /users/{uid}/memberships/{campaignId} {
+      allow read: if isUser(uid);
+      allow write: if false;
+    }
+
+    match /campaigns/{campaignId} {
+      allow read: if isMember(campaignId);
+      allow write: if false;
+
+      match /members/{uid} {
+        allow read: if isMember(campaignId);
+        // A member may change only their own name and their permission choice.
+        allow update: if isUser(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['control', 'displayName'])
+          && request.resource.data.control in ['direct', 'ask']
+          && request.resource.data.displayName is string
+          && request.resource.data.displayName.size() > 0
+          && request.resource.data.displayName.size() <= 40;
+        allow create, delete: if false;
+      }
+
+      // What every member may see of every character: name, HP, conditions.
+      match /summaries/{characterId} {
+        allow read: if isMember(campaignId);
+        allow write: if false;
+      }
+
+      // Characters the Warden runs for players without a device. Six at most:
+      // their ids are w1 to w6.
+      match /characters/{characterId} {
+        allow read, delete: if isWarden(campaignId);
+        allow create, update: if isWarden(campaignId)
+          && characterId.matches('^w[1-6]$')
+          && request.resource.data.keys().hasOnly(['name', 'description', 'notes', 'sheet', 'createdAt', 'updatedAt'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 80
+          && request.resource.data.sheet is map;
+      }
     }
 
     match /{document=**} {

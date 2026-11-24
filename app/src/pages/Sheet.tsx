@@ -16,7 +16,10 @@ import {
 } from '@waymark/rules';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../auth';
+import { deleteWardenCharacter, saveWardenCharacter } from '../data/campaigns';
 import type { CharacterDoc } from '../data/characters';
+import { useCampaign } from '../data/useCampaign';
 import { useCharacterStore } from '../data/useCharacters';
 import {
   ATTRIBUTE_NAMES,
@@ -55,10 +58,17 @@ interface ViewProps {
   doc: CharacterDoc;
   onSave: (doc: CharacterDoc) => void;
   onDelete: () => void;
+  /** Where the back link goes. Defaults to the home screen. */
+  back?: { to: string; label: string };
 }
 
 /** The character sheet in play. Every change to the numbers goes through the rules library. */
-export function SheetView({ doc, onSave, onDelete }: ViewProps) {
+export function SheetView({
+  doc,
+  onSave,
+  onDelete,
+  back = { to: '/', label: 'All characters' },
+}: ViewProps) {
   const sheet = doc.sheet;
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [message, setMessage] = useState('');
@@ -117,7 +127,7 @@ export function SheetView({ doc, onSave, onDelete }: ViewProps) {
   return (
     <main className="screen sheet-screen">
       <p className="back">
-        <Link to="/">← All characters</Link>
+        <Link to={back.to}>← {back.label}</Link>
       </p>
       <header className="sheet-header">
         <h1>{sheet.name}</h1>
@@ -553,6 +563,69 @@ export function Sheet() {
       onDelete={() => {
         store.remove(doc.id);
         navigate('/');
+      }}
+    />
+  );
+}
+
+/** The sheet of a character the Warden runs, kept in the campaign. */
+export function WardenSheet() {
+  const { cid, wid } = useParams();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { campaign, wardenCharacters, isWarden } = useCampaign(cid!, user!.uid);
+  // Shown at once from here; the saved copy follows.
+  const [local, setLocal] = useState<CharacterDoc>();
+  const saved = wardenCharacters.find((c) => c.id === wid);
+
+  if (campaign === undefined || (isWarden && !saved && !local)) {
+    return (
+      <main className="screen center" aria-busy="true">
+        <p className="lede">Loading…</p>
+      </main>
+    );
+  }
+  if (!campaign || !isWarden || !saved) {
+    return (
+      <main className="screen">
+        <h1>No such character</h1>
+        <p>
+          <Link to="/">Back to the start</Link>
+        </p>
+      </main>
+    );
+  }
+  const asDoc: CharacterDoc = local ?? {
+    id: saved.id,
+    ownerUid: '',
+    slot: 0,
+    name: saved.name,
+    description: saved.description,
+    age: null,
+    notes: saved.notes,
+    sheet: saved.sheet,
+    createdAt: saved.createdAt,
+    updatedAt: saved.updatedAt,
+  };
+  return (
+    <SheetView
+      doc={asDoc}
+      back={{ to: `/k/${cid}`, label: campaign.name }}
+      onSave={(doc) => {
+        setLocal(doc);
+        void saveWardenCharacter(cid!, {
+          id: saved.id,
+          name: doc.sheet.name,
+          description: doc.description,
+          notes: doc.notes,
+          sheet: doc.sheet,
+          createdAt: saved.createdAt,
+          updatedAt: Date.now(),
+        });
+      }}
+      onDelete={() => {
+        void deleteWardenCharacter(cid!, saved.id);
+        navigate(`/k/${cid}`);
       }}
     />
   );

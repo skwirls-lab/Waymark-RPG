@@ -10,6 +10,8 @@ export interface AuthState {
   error: string | null;
   signInWithGoogle: () => Promise<void>;
   signInAsGuest: () => Promise<void>;
+  /** Turns a guest into an account holder. They keep their uid, so they keep everything. */
+  upgradeWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -26,6 +28,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Linking a guest to an account changes the same user object in place, so
+  // a counter is what tells React to look again.
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     let stop = () => {};
@@ -33,10 +38,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getServices()
       .then(({ auth, authModule }) => {
         if (cancelled) return;
-        stop = authModule.onAuthStateChanged(auth, (next) => {
+        stop = authModule.onIdTokenChanged(auth, (next) => {
           if (next) localStorage.setItem(SIGNED_IN_FLAG, '1');
           else localStorage.removeItem(SIGNED_IN_FLAG);
           setUser(next);
+          setVersion((v) => v + 1);
           setReady(true);
         });
       })
@@ -75,6 +81,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const { auth, authModule } = started;
           return authModule.signInWithPopup(auth, new authModule.GoogleAuthProvider());
         }),
+      upgradeWithGoogle: () =>
+        attempt(async () => {
+          const started = getReadyServices();
+          if (!started?.auth.currentUser) throw new Error('Not signed in');
+          const { auth, authModule } = started;
+          await authModule.linkWithPopup(auth.currentUser!, new authModule.GoogleAuthProvider());
+          setVersion((v) => v + 1);
+        }),
       signInAsGuest: () =>
         attempt(async () => {
           const { auth, authModule } = await getServices();
@@ -86,7 +100,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return authModule.signOut(auth);
         }),
     };
-  }, [user, ready, error]);
+    // `version` is listed so that screens look again after a guest becomes an account holder.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, ready, error, version]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

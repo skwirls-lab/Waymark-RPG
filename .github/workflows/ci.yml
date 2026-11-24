@@ -70,6 +70,8 @@ jobs:
         run: npx firebase deploy --only hosting:site --project waymark-rpg --non-interactive
       - name: Deploy the app and the security rules
         run: npx firebase deploy --only hosting:app,firestore:rules --project waymark-rpg --non-interactive
+      - name: Deploy the Cloud Functions
+        run: npx firebase deploy --only functions --project waymark-rpg --non-interactive --force
       - name: Check that both are up
         run: |
           curl --fail --silent --show-error --retry 5 --retry-delay 5 https://waymark-rpg.web.app/ | grep -q "Waymark"

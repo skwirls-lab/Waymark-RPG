@@ -58,6 +58,16 @@ async function start(): Promise<Services> {
           authModule.GoogleAuthProvider.credential(token),
         );
       },
+      // Stands in for the "create an account" window: links the current guest to a Google identity.
+      linkGuestToGoogle: async (name, email) => {
+        const token = JSON.stringify({ sub: email, email, email_verified: true, name });
+        await authModule.linkWithCredential(
+          auth.currentUser!,
+          authModule.GoogleAuthProvider.credential(token),
+        );
+        await authModule.updateProfile(auth.currentUser!, { displayName: name });
+        await auth.currentUser!.getIdToken(true);
+      },
     };
   }
   ready = { app, auth, authModule };

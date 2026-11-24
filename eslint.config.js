@@ -15,6 +15,7 @@ const noSkippedTests = ['test', 'it', 'describe'].flatMap((object) =>
 export default tseslint.config(
   {
     ignores: [
+      'functions/lib/**',
       '**/dist/**',
       '**/dist-emulator/**',
       '**/node_modules/**',

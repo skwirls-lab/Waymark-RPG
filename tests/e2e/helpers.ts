@@ -80,3 +80,50 @@ export async function readFromEmulator(request: APIRequestContext, path: string)
   );
   return { status: response.status(), body: response.ok() ? await response.json() : null };
 }
+
+let serial = 0;
+/** A new address each time, so every test gets fresh accounts and their own free-plan limits. */
+export const uniqueEmail = (name: string) =>
+  `${name.toLowerCase()}-${Date.now()}-${++serial}@example.com`;
+
+/** Signs in as a Google account holder, using the Auth emulator's stand-in identity. */
+export async function signInAsAccount(page: Page, name: string) {
+  await page.goto('/sign-in');
+  await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeEnabled();
+  await page.evaluate(
+    ([n, e]) => window.__waymarkTest!.signInAsGoogleUser(n!, e!),
+    [name, uniqueEmail(name)],
+  );
+  await expect(page.getByRole('heading', { name: `Welcome, ${name}` })).toBeVisible();
+}
+
+/** Starts a campaign from the home screen and returns its join code. */
+export async function startCampaign(
+  page: Page,
+  campaignName: string,
+  wardenName: string,
+): Promise<string> {
+  await page.getByRole('button', { name: 'Start a campaign' }).click();
+  const form = page.getByRole('form', { name: 'Start a campaign' });
+  await form.getByLabel('Campaign name').fill(campaignName);
+  await form.getByLabel('Your name').fill(wardenName);
+  await form.getByRole('button', { name: 'Start campaign' }).click();
+  await expect(page.getByRole('heading', { name: campaignName, level: 1 })).toBeVisible();
+  const code = (await page.getByTestId('join-code').textContent())!.trim();
+  expect(code).toMatch(/^[A-Z2-9]{6}$/);
+  return code;
+}
+
+export async function joinWithCode(
+  page: Page,
+  code: string,
+  playerName: string,
+  campaignName: string,
+) {
+  await page.getByRole('button', { name: 'Join with a code' }).click();
+  const form = page.getByRole('form', { name: 'Join a campaign' });
+  await form.getByLabel('Join code').fill(code);
+  await form.getByLabel('Your name').fill(playerName);
+  await form.getByRole('button', { name: 'Join', exact: true }).click();
+  await expect(page.getByRole('heading', { name: campaignName, level: 1 })).toBeVisible();
+}

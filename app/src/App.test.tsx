@@ -6,6 +6,12 @@ import { AuthStateProvider, type AuthState } from './auth';
 
 vi.mock('../../site/src/logo.svg?raw', () => ({ default: '<svg></svg>' }));
 // No database in unit tests: the signed-in user simply has no characters.
+vi.mock('./data/campaigns', () => ({
+  watchMemberships: (_uid: string, onChange: (items: unknown[]) => void) => {
+    onChange([]);
+    return () => {};
+  },
+}));
 vi.mock('./data/characters', () => ({
   characterId: (uid: string, slot: number) => `${uid}_${slot}`,
   watchCharacters: (_uid: string, onChange: (docs: unknown[]) => void) => {
@@ -23,6 +29,7 @@ function renderApp(user: AuthState['user'], path = '/') {
     error: null,
     signInWithGoogle: async () => {},
     signInAsGuest: async () => {},
+    upgradeWithGoogle: async () => {},
     signOut: async () => {},
   };
   return render(

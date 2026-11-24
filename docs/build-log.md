@@ -5,9 +5,9 @@ The memory between build sessions. Read `docs/instructions.md` first.
 ## Current position
 
 - **Phase:** 3 (Campaigns and joining), in progress
-- **Task:** phase 3, task 1 (Cloud Functions set-up)
+- **Task:** phase 3 built; gate pending CI and the first Cloud Functions deploy (needs John's phase 3 set-up)
 - **Last verified commit:** 3227ec5 (CI run 45471350857: verify, deploy and Lighthouse all green)
-- **To run everything in a build container:** `WAYMARK_NO_GOOGLE_NETWORK=1 npm run verify` (see decision 1). CI runs plain `npm run verify`.
+- **To run everything in a build container:** `npm run verify:container` (see decisions 1 and 22). CI runs plain `npm run verify`.
 
 ## Phase status
 
@@ -56,16 +56,16 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Phase 3 tasks
 
-- [ ] 1. Cloud Functions set-up, tested in the emulator, deployed from CI
-- [ ] 2. Create a campaign (one for free accounts)
-- [ ] 3. Join by code, link or QR
-- [ ] 4. Three kinds of character; Warden-run capped at six
-- [ ] 5. Hand-over with a one-time code
-- [ ] 6. Warden brings their own character
-- [ ] 7. Guest becomes an account holder and keeps everything
-- [ ] 8. Summaries for other members
-- [ ] 9. Permission choice per member
-- [ ] 10. Leaving, removing members, deleting a campaign
+- [x] 1. Cloud Functions set-up, tested in the emulator, deployed from CI
+- [x] 2. Create a campaign (one for free accounts)
+- [x] 3. Join by code, link or QR
+- [x] 4. Three kinds of character; Warden-run capped at six
+- [x] 5. Hand-over with a one-time code
+- [x] 6. Warden brings their own character
+- [x] 7. Guest becomes an account holder and keeps everything
+- [x] 8. Summaries for other members
+- [x] 9. Permission choice per member
+- [x] 10. Leaving, removing members, deleting a campaign
 
 ## Gate evidence
 
@@ -99,6 +99,14 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - Security rules: owner-only characters, well-formedness, the one-character limit (including for guests, and slot numbers of zero or below), and entitlements that only the server can write.
 - Defects the tests found and that were fixed: orange small text had too little contrast (now a darker `--blaze-text`, applied to the site as well); quick taps in a row could lose a change because the screen waited for the database (saves now update the screen at once); the Google sign-in window was opened after an `await` (fixed in phase 0).
 
+### Phase 3
+
+- Local `verify`: 244 rules, 44 app, 47 security-rules, 32 Cloud Functions and 42 end-to-end tests, all passing.
+- Security-rules matrix (`tests/rules/phase3-campaigns.test.ts`): Warden, player, guest and stranger against the campaign record, member list, players' characters, summaries, Warden-run characters, memberships, join codes and hand-over codes, each with allowed and refused cases.
+- Cloud Functions (`tests/functions/campaigns.test.ts`): good and bad join codes; used, bad and orphaned hand-over codes; the one-campaign limit including three simultaneous requests; paid plans; leaving, removing and deleting with full clean-up; summaries following characters; malformed sheets.
+- End to end, three devices: a Warden starts a campaign; an account holder joins by code and brings a character in; a guest follows the join link while signed out; the Warden adds a character to run; all three see the right summaries and only the Warden sees the join code and the full Warden-run sheet; a change to a sheet reaches the others' summaries; another player cannot open a full sheet by its address; the permission choice shows for the Warden; hand-over works once; a guest becomes an account holder and keeps everything; leaving, removing and deleting.
+- Defects the tests found and that were fixed: screens did not refresh after a guest created an account; a removed player's open screen did not show they had been removed; the permission choice lagged until the server answered; the summary trigger crashed on a malformed sheet.
+
 ## Decisions made without asking
 
 1. **2026-11-24. One end-to-end test is left out in build containers.** "The Google button opens the sign-in window" loads a script from Google's servers, which the build container's network blocks. It is tagged `@google-network`; setting `WAYMARK_NO_GOOGLE_NETWORK=1` leaves it out locally. CI does not set the variable and runs it. A second test, "a Google user is greeted by name", covers the signed-in result everywhere using the Auth emulator's stand-in identity.
@@ -128,6 +136,14 @@ The memory between build sessions. Read `docs/instructions.md` first.
 20. **2026-11-24. First paint.** Lighthouse scored the deployed sign-in screen 71 for performance. Three changes: a static shell in `index.html` paints before any script runs; signed-in screens (with the rules library and database code) load only after sign-in; web fonts no longer block rendering. Locally the score rose to 94; deployed it reached 86. Two further changes: the sign-in library now loads after the first screen paints (a first-time visitor sees the sign-in screen at once, with its buttons enabled a moment later), and the offline cache starts three seconds after load. Locally: 98; deployed: 78, with a blocking time of 550 ms that the local run did not show. Deployed scores on GitHub's shared machines swung between 71, 86 and 78, so the gate now takes the median of three runs. The app also bundles its own fonts, removing the last outside request from the first screen and making the app look right offline.
 
 21. **2026-11-24. Item ids are random and unique.** They were a per-session counter, which could repeat across sessions. A randomized rules test in CI then showed that if two items shared an id, dropping one to make room for Fatigue could remove the wrong one and leave a character over capacity. The drop now always removes an item that frees a slot, and ids are UUIDs. Both have regression tests.
+
+22. **2026-11-24. `npm run verify:container`** runs verify with the proxy variables unset and the Google-window test left out. In the build container the functions emulator's call to the Firestore emulator on 127.0.0.1 was being sent through the outbound proxy and refused. CI is unaffected.
+23. **2026-11-24. Campaign ids are `<warden uid>_<slot>`,** the same device used for characters, so the one-campaign limit holds even when several requests arrive together. Warden-run characters use ids `w1` to `w6`, which makes the cap of six a security rule.
+24. **2026-11-24. Each user has a `memberships` list** under their own record, written by the functions, so the home screen can show their campaigns without searching every campaign.
+25. **2026-11-24. New players start on "ask me first"** and the Warden's own entry is "direct". Players change theirs on the campaign page.
+26. **2026-11-24. Summaries are written by two Firestore triggers** using the rules library's `status`. The functions are bundled into one file with esbuild so the rules library ships inside them; the functions package lists only its two runtime dependencies.
+27. **2026-11-24. Join links for signed-out visitors.** The path is remembered for the session, and the join form opens after sign-in with the code filled in.
+28. **2026-11-24. A removed player learns of it from the member list.** Firestore does not close a listener when access is withdrawn, so the campaign page treats "I am no longer in the member list" as removal.
 
 ## Changed tests
 
