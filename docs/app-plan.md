@@ -1,6 +1,6 @@
 # Waymark companion app: plan
 
-**Status:** draft 1, for review. Nothing here is built yet.
+**Status:** draft 2, for review. Nothing here is built yet.
 
 ## What it is
 
@@ -16,6 +16,11 @@ A web app that players and Wardens use at the table. Players keep their characte
 | Warden's authority | Each player chooses, per campaign: let the Warden change their sheet directly, or have every change arrive as a request to accept. |
 | Dice | The app can roll. Players can also type in a result from real dice. Both always available. |
 | AI | Calls go through a Cloud Function to OpenRouter. The key never reaches the browser. |
+| Address | Its own address, separate from the rules site (for example `app.` on the project's domain once there is one). The rules site links straight into it. |
+| Framework | React, TypeScript and Vite. This builds to plain static files, so Firebase Hosting is enough and App Hosting is not needed. |
+| Other players' sheets | Players see a summary of each other's characters (name, HP, conditions), not the full sheet. The Warden sees everything. |
+| Rules lists | The example Origins, Affinities, Abilities, gear and creatures are data files: the default pool everyone can pick from. Wardens, players and AI add custom content on top. The rulebook's tables are produced from the same files. |
+| Free and paid | See "Free and paid". |
 | Maps | Not part of this app. See "Later: maps". |
 
 ## Stages
@@ -74,7 +79,7 @@ A campaign with no human Warden. The main design rule, drawn from why AI Wardens
 
 ## How it is built
 
-- **App:** a single-page web app, installable to a phone's home screen. Proposed: React, TypeScript and Vite.
+- **App:** a single-page web app, installable to a phone's home screen, built with React, TypeScript and Vite. It compiles to static files served by Firebase Hosting.
 - **Rules as code:** one small library that knows the rules (damage, saves, slots, Fatigue, rests, Ability use). The app uses it now and the AI Warden uses it later. It gets thorough automated tests.
 - **Rules as data:** Origins, Affinities, Abilities, gear and creatures stored as structured files in this repository, with a version number, so that the app and the rulebook cannot drift apart.
 - **Sign-in:** Google sign-in for accounts. Guests get an anonymous sign-in behind the scenes, which can be upgraded to an account without losing anything.
@@ -97,7 +102,7 @@ A campaign with no human Warden. The main design rule, drawn from why AI Wardens
 | Person | Can |
 |---|---|
 | A character's owner | Read and change their own character |
-| A campaign member | See the campaign, its feed, and the other characters' sheets |
+| A campaign member | See the campaign, its feed, and a summary of the other characters (name, HP, conditions) |
 | The Warden | Change a character in their campaign only if its player chose "direct", or the Warden runs it. Otherwise the Warden can only create a request. |
 | Anyone else | Nothing |
 
@@ -118,16 +123,36 @@ This is a cooperative game, so the plan does not try to stop a player from editi
 | 6 | Warden tools (stage 3) |
 | 7 | AI help (stage 4) |
 
+## Free and paid
+
+Proposed limits. Prices and the payment provider are not decided.
+
+| | Free | Paid |
+|---|---|---|
+| Your own characters | 1 | Unlimited |
+| Campaigns you run as Warden | 1 | Unlimited |
+| Campaigns you join as a player | Any, with a character you own | Any |
+| Warden-run characters | Do not count against your own limit. Up to 6 in a campaign. | Same, with a higher cap |
+| AI help | A small monthly allowance | A much larger allowance |
+| Everything else in stages 1 to 3 | Included | Included |
+
+**Two buckets of characters.** "Your characters" are the ones you play, and they count toward your limit. "Warden-run characters" belong to a campaign, exist for players without a device or account, and never count toward the Warden's own limit.
+
+- A Warden-run character can only be used inside its campaign. It leaves that campaign only by being handed to a player, at which point it becomes that player's character and counts toward their limit. This stops the bucket being used to dodge the cap.
+- A Warden can also bring one of their own characters into a campaign they run, and play it alongside the others.
+- Guests have no account, so their one character lives in the campaign they joined.
+
+## Children
+
+The app is not aimed at children, and accounts are for people aged 13 and over. Younger players take part as guests, who give no personal details, or through a Warden-run character. This needs a short privacy policy and a review by someone qualified before any paid plan launches, because the responsibility for a child's data rests with the app's operator, not with the sign-in provider.
+
 ## Later: maps
 
 A map tool is a separate product and is not planned here. One small provision keeps the door open: the fight tracker records each combatant's distance band, and campaign state is stored in a structured way. A future map app, or an integration with an existing one, could read and move those positions, so that "the scout moves closer to the raptor" shows on a shared screen.
 
 ## Open questions
 
-1. **Framework.** Is React with TypeScript acceptable, or is there a stack you prefer?
-2. **Address.** Should the app live at its own address (for example `app.` on a custom domain), and is there a domain yet?
-3. **Seeing other sheets.** Can players see each other's full sheets, or only a summary (name, HP, conditions)?
-4. **Free and paid.** Proposed: everything in stages 1 to 3 is free, and AI features are the paid part. To be decided before stage 4.
-5. **Children.** Guests give no personal details, which keeps this simple. If under-13s are to have accounts, the app needs a privacy policy and parental-consent approach reviewed by someone qualified.
-6. **One source for the rules.** The 40 Abilities and other lists currently live in the rulebook text. Should the data files become the source, with the rulebook's tables generated from them?
-7. **Limits.** Any cap on characters or campaigns per person?
+1. **Domain.** Which domain will the site and app use?
+2. **Prices and payments.** What the paid plan costs, and which payment provider handles it. Needed before stage 4.
+3. **AI allowance.** How many AI requests a free account gets each month.
+4. **Privacy policy and terms.** Needed before accounts open to the public.
