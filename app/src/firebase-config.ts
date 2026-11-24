@@ -4,13 +4,17 @@ import type { FirebaseOptions } from 'firebase/app';
  * The project's public web configuration. These values identify the project
  * to Firebase; they are not secrets. Access is controlled by security rules.
  *
- * Leave `apiKey` empty until the web app is registered. While it is empty,
- * the app asks Firebase Hosting for the configuration at start-up instead.
+ * If `apiKey` is ever emptied, the app falls back to asking Firebase Hosting
+ * for the configuration at start-up.
  */
 export const committedConfig: FirebaseOptions = {
-  apiKey: '',
+  apiKey: 'AIzaSyA7GfExjMTyfSryQrqp7hGR0zOsi0i79VI',
   authDomain: 'waymark-rpg.firebaseapp.com',
   projectId: 'waymark-rpg',
+  storageBucket: 'waymark-rpg.firebasestorage.app',
+  messagingSenderId: '786714793025',
+  appId: '1:786714793025:web:eefedf57f7c5e95ad0e2c0',
+  measurementId: 'G-Y2719ZT0BX',
 };
 
 export const emulatorConfig: FirebaseOptions = {
