@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:emulator": "vite build --mode emulator --outDir dist-emulator",
-    "preview:emulator": "vite preview --outDir dist-emulator --port 4173 --strictPort",
+    "preview:emulator": "vite preview --outDir dist-emulator --host 127.0.0.1 --port 4173 --strictPort",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
