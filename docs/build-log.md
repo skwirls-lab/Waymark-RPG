@@ -4,17 +4,17 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Current position
 
-- **Phase:** 0 (Foundations), built, gate not yet passed
-- **Task:** waiting on John's phase 0 set-up (Hosting site, Firestore, sign-in methods, deploy permission), then confirm CI deploys the app and rules
-- **Last verified commit:** see "Gate evidence"
+- **Phase:** 1 (Rules as data and code), in progress
+- **Task:** 1. Data files
+- **Last verified commit:** c77692e (CI run 45458501566: verify and deploy both green)
 - **To run everything in a build container:** `WAYMARK_NO_GOOGLE_NETWORK=1 npm run verify` (see decision 1). CI runs plain `npm run verify`.
 
 ## Phase status
 
 | Phase | Status | Gate passed on |
 |---|---|---|
-| 0 Foundations | Built; waiting on set-up and first full deploy | |
-| 1 Rules as data and code | Not started | |
+| 0 Foundations | Complete | 2026-11-24 |
+| 1 Rules as data and code | In progress | |
 | 2 Character sheets | Not started | |
 | 3 Campaigns and joining | Not started | |
 | 4 Live play | Not started | |
@@ -36,14 +36,22 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - [x] 8. Link from the rules site to the app
 - [x] 9. Build log up to date
 
+## Phase 1 tasks
+
+- [ ] 1. Data files with schemas
+- [ ] 2. Rules library
+- [ ] 3. Rulebook lists produced from the data
+- [ ] 4. `rules/COVERAGE.md`
+
 ## Gate evidence
 
-### Phase 0 (in progress)
+### Phase 0 (gate passed 2026-11-24)
 
 - Local `verify` from the build container: format, lint, types, 5 unit tests, both builds, 8 security-rules tests, 10 end-to-end tests (5 flows at phone and tablet sizes), all passing. One test left out locally, per decision 1.
 - Rules site: builds, search returns results, colours unchanged after the token split.
 - CI run 45455147031 on commit ad22e06: `verify` passed, including the Google-window test (12 end-to-end tests). The rules site deployed.
-- Still needed: app and rules deployed, and both addresses responding. The deploy stopped with "Permission denied to get service firestore.googleapis.com", which John's phase 0 set-up resolves.
+- CI run 45458501566 on commit c77692e: `verify` passed; rules site, app and security rules deployed; the workflow's final step fetched both addresses and the site's search index successfully.
+- Summary: npm workspace, app shell with Google and guest sign-in, deny-all rules, emulator-backed tests, one verify-then-deploy workflow. Nothing left over.
 
 ## Decisions made without asking
 
@@ -65,7 +73,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Questions for John
 
-1. **Phase 0 set-up (asked 2026-11-24).** Create Hosting site `waymark-rpg-app`; create the Firestore database; turn on Google and Anonymous sign-in and authorise the app's domain; grant `github-deploy` the Firebase Rules Admin and Service Usage Viewer roles; register a web app and send its config. Then re-run the CI workflow.
+*(None open. Phase 0 set-up was completed on 2026-11-24.)*
 
 ## Suggestions
 
