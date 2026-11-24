@@ -4,9 +4,9 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Current position
 
-- **Phase:** 2 (Character sheets), in progress
-- **Task:** phase 2 built; gate pending CI
-- **Last verified commit:** 654577d (CI run 45461173372: verify and deploy both green)
+- **Phase:** 3 (Campaigns and joining), in progress
+- **Task:** phase 3, task 1 (Cloud Functions set-up)
+- **Last verified commit:** 3227ec5 (CI run 45471350857: verify, deploy and Lighthouse all green)
 - **To run everything in a build container:** `WAYMARK_NO_GOOGLE_NETWORK=1 npm run verify` (see decision 1). CI runs plain `npm run verify`.
 
 ## Phase status
@@ -15,8 +15,8 @@ The memory between build sessions. Read `docs/instructions.md` first.
 |---|---|---|
 | 0 Foundations | Complete | 2026-11-24 |
 | 1 Rules as data and code | Complete | 2026-11-24 |
-| 2 Character sheets | Not started | |
-| 3 Campaigns and joining | Not started | |
+| 2 Character sheets | Complete | 2026-11-24 |
+| 3 Campaigns and joining | In progress | |
 | 4 Live play | Not started | |
 | 5 Warden tools and campaign record | Not started | |
 | 6 Plans, payments and policies | Not started | |
@@ -54,6 +54,19 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - [x] 7. Offline use
 - [x] 8. Home screen lists characters
 
+## Phase 3 tasks
+
+- [ ] 1. Cloud Functions set-up, tested in the emulator, deployed from CI
+- [ ] 2. Create a campaign (one for free accounts)
+- [ ] 3. Join by code, link or QR
+- [ ] 4. Three kinds of character; Warden-run capped at six
+- [ ] 5. Hand-over with a one-time code
+- [ ] 6. Warden brings their own character
+- [ ] 7. Guest becomes an account holder and keeps everything
+- [ ] 8. Summaries for other members
+- [ ] 9. Permission choice per member
+- [ ] 10. Leaving, removing members, deleting a campaign
+
 ## Gate evidence
 
 ### Phase 0 (gate passed 2026-11-24)
@@ -75,7 +88,11 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - A real defect found by the tests: kit entries such as "Great hammer (d10, bulky)" were being split at the comma inside the brackets. Fixed in the data.
 - Summary: `rules/` holds 14 data files with schemas and a pure library covering dice, saves, creation, inventory, Fatigue, armor, attacks, harm, Scars, rest, Abilities and their costs, Tiers, corruption, imbuing, special items, reactions, morale, crowds and tabletop distances. Nothing left over.
 
-### Phase 2
+### Phase 2 (gate passed 2026-11-24)
+
+- CI run 45471350857 on commit 3227ec5: `verify` passed (244 rules, 44 app, 23 security-rules, 34 end-to-end tests including the Google sign-in window); site, app and rules deployed.
+- Lighthouse on the deployed app, three runs: performance 100, 99, 99 (median 99); accessibility 100 each time.
+- Phone-size screenshot of the sheet sent to John.
 
 - Local `verify`: 242 rules tests, 44 app component tests, 23 security-rules tests, 32 end-to-end tests (16 flows at phone and tablet sizes), all passing.
 - End-to-end flows: build Wren from typed rolls with an accessibility and layout check on every step; saved character survives reload; no second character offered; half-made character survives leaving; damage into Strength with a Strength save; exactly 0 HP leads to a Scar; Ability misfire under danger; every slot full means 0 HP and rest behaves correctly; a change made offline reaches the server after reconnecting; dice and saves; delete frees the slot.
