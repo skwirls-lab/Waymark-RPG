@@ -24,9 +24,9 @@ afterAll(async () => {
 
 // Paths nothing has opened yet. As later phases open a path, it moves out of
 // this list and into that phase's own matrix of allowed and refused cases.
-const unopenedPaths = ['users/alice', 'characters/c1', 'campaigns/k1', 'anything/else'];
+const unopenedPaths = ['campaigns/k1', 'anything/else', 'entitlements/alice/extra/x'];
 
-describe('phase 0: nothing is readable or writable', () => {
+describe('paths no phase has opened stay closed', () => {
   for (const path of unopenedPaths) {
     it(`refuses a signed-out visitor at ${path}`, async () => {
       const db = env.unauthenticatedContext().firestore();

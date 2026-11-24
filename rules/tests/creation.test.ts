@@ -14,6 +14,7 @@ import {
   rollStartingKit,
   sequenceRng,
   slotsUsed,
+  startingKitItems,
   swapAttributes,
 } from '../src/index.ts';
 import { item } from './helpers.ts';
@@ -230,5 +231,53 @@ describe('Making a character: the numbers must be possible', () => {
 
   it('records the rules version the character was made with', () => {
     expect(createCharacter(base).rulesVersion).toBe(data.meta.version);
+  });
+});
+
+describe('Making a character, step 6: the general starting kit as items', () => {
+  const rows = (weapon: number, armor: number, tools: number) =>
+    startingKitItems(rollStartingKit(sequenceRng([weapon, armor, tools])));
+
+  it('the rulebook example: a 3, a 4 and a 1', () => {
+    expect(rows(3, 4, 1)).toMatchObject([
+      { name: 'Standard weapon', kind: 'weapon', damage: 8, slots: 1 },
+      { name: 'Light armor', kind: 'armor', armor: 1, slots: 1 },
+      { name: 'Rope', kind: 'tool' },
+      { name: 'Grappling hook', kind: 'tool' },
+    ]);
+  });
+
+  it('a roll of "None" for armor gives no armor', () => {
+    expect(rows(1, 1, 4).map((i) => i.name)).toEqual(['Light weapon', "Healer's kit"]);
+  });
+
+  it('bulky weapons and armor take two slots, and a shield stacks', () => {
+    expect(rows(6, 6, 6)).toMatchObject([
+      { name: 'Heavy weapon', damage: 10, slots: 2 },
+      { name: 'Medium armor', armor: 2, slots: 2 },
+      { name: 'Spyglass' },
+      { name: 'Chalk' },
+    ]);
+    expect(rows(5, 5, 5)).toMatchObject([
+      { name: 'Ranged weapon', damage: 6, slots: 2 },
+      { name: 'Shield', armor: 1, stacks: true },
+      { name: 'Shovel' },
+      { name: 'Large sack' },
+    ]);
+  });
+
+  it('every combination of rolls fits in ten slots with rations and a light', () => {
+    for (let w = 1; w <= 6; w++)
+      for (let a = 1; a <= 6; a++)
+        for (let t = 1; t <= 6; t++) {
+          const c = createCharacter({ ...base, items: rows(w, a, t) });
+          expect(slotsUsed(c)).toBeLessThanOrEqual(8);
+        }
+  });
+
+  it('a kit with no recognisable weapon gives none', () => {
+    expect(
+      startingKitItems({ weapon: 'None', armor: 'None', tools: 'Chalk' }).map((i) => i.name),
+    ).toEqual(['Chalk']);
   });
 });

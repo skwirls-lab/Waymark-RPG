@@ -62,6 +62,8 @@ async function startDb(): Promise<Firestore> {
   const [{ app }, firestore] = await Promise.all([getServices(), import('firebase/firestore')]);
   // Offline persistence: sheets must keep working without a connection.
   const db = firestore.initializeFirestore(app, {
+    // Sheets have optional fields; leave them out rather than refuse the write.
+    ignoreUndefinedProperties: true,
     localCache: firestore.persistentLocalCache({
       tabManager: firestore.persistentMultipleTabManager(),
     }),

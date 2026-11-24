@@ -1,13 +1,5 @@
-import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
-
-async function expectNoSeriousAccessibilityIssues(page: Page) {
-  const results = await new AxeBuilder({ page }).analyze();
-  const serious = results.violations.filter(
-    (v) => v.impact === 'serious' || v.impact === 'critical',
-  );
-  expect(serious.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
-}
+import { expect, test } from '@playwright/test';
+import { expectNoSeriousAccessibilityIssues } from '../helpers';
 
 test.describe('phase 0: signing in', () => {
   test('a signed-out visitor lands on the sign-in screen', async ({ page }) => {

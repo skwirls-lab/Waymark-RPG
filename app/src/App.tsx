@@ -1,7 +1,10 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth';
+import { CharacterStoreProvider } from './data/useCharacters';
 import { Logo } from './Logo';
+import { Builder } from './pages/Builder';
 import { Home } from './pages/Home';
+import { Sheet } from './pages/Sheet';
 import { SignIn } from './pages/SignIn';
 
 export function App() {
@@ -16,11 +19,23 @@ export function App() {
     );
   }
 
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/sign-in" element={<SignIn />} />
+        <Route path="*" element={<Navigate to="/sign-in" replace />} />
+      </Routes>
+    );
+  }
+
   return (
-    <Routes>
-      <Route path="/sign-in" element={user ? <Navigate to="/" replace /> : <SignIn />} />
-      <Route path="/" element={user ? <Home /> : <Navigate to="/sign-in" replace />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <CharacterStoreProvider>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/new" element={<Builder />} />
+        <Route path="/c/:id" element={<Sheet />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </CharacterStoreProvider>
   );
 }

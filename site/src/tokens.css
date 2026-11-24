@@ -6,6 +6,8 @@
   --line: #e0d8c6;
   --forest: #2f5d4a;
   --blaze: #c2481a;
+  /* A darker orange for small text, which needs more contrast than buttons do. */
+  --blaze-text: #a33a0f;
   --blaze-ink: #ffffff;
   --stone: #a9a394;
   --display: 'Fraunces', Georgia, serif;
@@ -23,6 +25,7 @@
     --line: #313c36;
     --forest: #86c9aa;
     --blaze: #f0894a;
+    --blaze-text: #f0894a;
     --blaze-ink: #1a120c;
     --stone: #6f7a73;
   }

@@ -220,7 +220,7 @@ h4 {
   font: 700 0.8rem var(--body);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--blaze);
+  color: var(--blaze-text);
   margin: 0 0 0.4rem;
 }
 .anchor {
@@ -614,7 +614,7 @@ button.link {
   font-size: 0.78rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--blaze);
+  color: var(--blaze-text);
   font-weight: 700;
 }
 .toc-subs {

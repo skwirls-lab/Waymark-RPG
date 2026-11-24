@@ -68,6 +68,10 @@ Each phase is a list of tasks. For each task, repeat this loop until it exits:
 
 This is the loop to keep running. A session that is told "go" or "continue" re-enters it at whatever task the build log shows as current. If the session supports recurring runs, the loop can be driven that way; the build log is what makes each run pick up where the last one stopped.
 
+**Do not stop at a phase boundary.** Passing a gate is not a reason to end the session or to wait for a reply. Record the gate in the build log and begin the next phase's first task in the same turn. John assumes the build is running unless he has been asked for something. Progress reports go in the build log; they are not a reason to pause. Asking John to say "continue" is a failure of this procedure.
+
+When something only John can do is coming up, ask for it early, in passing, and keep working on everything that does not depend on it.
+
 **When to stop looping and ask John.** Stop, write up what you tried in the build log, and ask, if any of these is true:
 
 - The same failure survives five genuinely different attempts to fix it.
@@ -98,7 +102,7 @@ A phase is complete only when all of these are true:
 5. Every gate condition listed for the phase is met and noted in the build log with evidence (test names, numbers, links).
 6. The build log has a short phase summary: what was built, decisions made, anything left over.
 
-Do not start the next phase until the gate is recorded as passed. If a gate needs John's sign-off, stop and ask.
+Do not start the next phase until the gate is recorded as passed. Then start it immediately. Only a gate that lists John's sign-off, or a prerequisite from section 6 that has not been met, justifies stopping.
 
 ### 4.5 Limits
 

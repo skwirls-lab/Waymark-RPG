@@ -4,8 +4,8 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Current position
 
-- **Phase:** 2 (Character sheets), not started
-- **Task:** phase 2, task 1 (Firestore `users` and `characters`, owner-only rules)
+- **Phase:** 2 (Character sheets), in progress
+- **Task:** phase 2 built; gate pending CI
 - **Last verified commit:** 654577d (CI run 45461173372: verify and deploy both green)
 - **To run everything in a build container:** `WAYMARK_NO_GOOGLE_NETWORK=1 npm run verify` (see decision 1). CI runs plain `npm run verify`.
 
@@ -45,14 +45,14 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Phase 2 tasks
 
-- [ ] 1. Firestore `users` and `characters`, owner-only rules
-- [ ] 2. Character builder (six steps)
-- [ ] 3. The sheet
-- [ ] 4. Sheet actions through the rules library
-- [ ] 5. Dice roller
-- [ ] 6. One-character limit for free accounts
-- [ ] 7. Offline use
-- [ ] 8. Home screen lists characters
+- [x] 1. Firestore `users` and `characters`, owner-only rules
+- [x] 2. Character builder (six steps)
+- [x] 3. The sheet
+- [x] 4. Sheet actions through the rules library
+- [x] 5. Dice roller
+- [x] 6. One-character limit for free accounts
+- [x] 7. Offline use
+- [x] 8. Home screen lists characters
 
 ## Gate evidence
 
@@ -75,6 +75,13 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - A real defect found by the tests: kit entries such as "Great hammer (d10, bulky)" were being split at the comma inside the brackets. Fixed in the data.
 - Summary: `rules/` holds 14 data files with schemas and a pure library covering dice, saves, creation, inventory, Fatigue, armor, attacks, harm, Scars, rest, Abilities and their costs, Tiers, corruption, imbuing, special items, reactions, morale, crowds and tabletop distances. Nothing left over.
 
+### Phase 2
+
+- Local `verify`: 242 rules tests, 44 app component tests, 23 security-rules tests, 32 end-to-end tests (16 flows at phone and tablet sizes), all passing.
+- End-to-end flows: build Wren from typed rolls with an accessibility and layout check on every step; saved character survives reload; no second character offered; half-made character survives leaving; damage into Strength with a Strength save; exactly 0 HP leads to a Scar; Ability misfire under danger; every slot full means 0 HP and rest behaves correctly; a change made offline reaches the server after reconnecting; dice and saves; delete frees the slot.
+- Security rules: owner-only characters, well-formedness, the one-character limit (including for guests, and slot numbers of zero or below), and entitlements that only the server can write.
+- Defects the tests found and that were fixed: orange small text had too little contrast (now a darker `--blaze-text`, applied to the site as well); quick taps in a row could lose a change because the screen waited for the database (saves now update the screen at once); the Google sign-in window was opened after an `await` (fixed in phase 0).
+
 ## Decisions made without asking
 
 1. **2026-11-24. One end-to-end test is left out in build containers.** "The Google button opens the sign-in window" loads a script from Google's servers, which the build container's network blocks. It is tagged `@google-network`; setting `WAYMARK_NO_GOOGLE_NETWORK=1` leaves it out locally. CI does not set the variable and runs it. A second test, "a Google user is greeted by name", covers the signed-in result everywhere using the Auth emulator's stand-in identity.
@@ -93,13 +100,19 @@ The memory between build sessions. Read `docs/instructions.md` first.
 12. **2026-11-24. Places where the rulebook leaves room** (how a Scar's raised score treats lost points, the 18 cap, when a second Affinity can be learned from, what "Drained" means under other costs) are listed at the end of `rules/COVERAGE.md`.
 13. **2026-11-24. Ability effects are narrated, not coded.** The library runs the procedure for using any Ability (cost, save, misfire). The forty individual effects stay as text, with their numeric parts using the general functions.
 
+14. **2026-11-24. The one-character limit is enforced by the character's id.** A character's document id is `<owner uid>_<slot>`. Security rules allow slot 1 for free accounts and up to 50 for paid plans, read from an `entitlements` record only the server can write. No counter that a browser could tamper with.
+15. **2026-11-24. A half-made character is kept in the browser** (local storage, per user), not in the database, so it does not use the account's one slot.
+16. **2026-11-24. Manual corrections.** The sheet has plus and minus buttons for HP and attributes, limited to between 0 and the full value, for Warden rulings the app cannot know about.
+17. **2026-11-24. Lighthouse runs in CI against the deployed app** after each deploy, since the build container cannot reach it. It checks the sign-in screen, the only one reachable without an account.
+18. **2026-11-24. Not yet on the sheet:** choosing which Abilities to lose when corruption burns a Tier above Tier 1. Characters cannot rise above Tier 1 until phase 4 adds awarding Tiers, so this is deferred to that phase.
+
 ## Changed tests
 
-*(Old expectation, new expectation, reason.)*
+- **Phase 0 "nothing is readable or writable".** Old: `users/alice` and `characters/c1` were refused for everyone. New: those two paths are opened by phase 2 with their own allowed-and-refused tests; the deny-all test now covers only paths no phase has opened. Reason: phase 2 legitimately opens them, as the test's own comment anticipated.
 
 ## Questions for John
 
-*(None open. Phase 0 set-up was completed on 2026-11-24.)*
+1. **Phase 3 set-up (asked 2026-11-24, not blocking yet).** Upgrade the project to the Blaze plan; enable the Cloud Functions, Cloud Build, Artifact Registry, Cloud Run, Eventarc, Pub/Sub and Secret Manager APIs; grant `github-deploy` the roles for deploying Functions and Firestore indexes. No reply needed: phase 3's first deploy will show whether it is done.
 
 ## Suggestions
 

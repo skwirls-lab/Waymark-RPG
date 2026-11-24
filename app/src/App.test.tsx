@@ -5,6 +5,16 @@ import { App } from './App';
 import { AuthStateProvider, type AuthState } from './auth';
 
 vi.mock('../../site/src/logo.svg?raw', () => ({ default: '<svg></svg>' }));
+// No database in unit tests: the signed-in user simply has no characters.
+vi.mock('./data/characters', () => ({
+  characterId: (uid: string, slot: number) => `${uid}_${slot}`,
+  watchCharacters: (_uid: string, onChange: (docs: unknown[]) => void) => {
+    onChange([]);
+    return () => {};
+  },
+  saveCharacter: async () => {},
+  deleteCharacter: async () => {},
+}));
 
 function renderApp(user: AuthState['user'], path = '/') {
   const state: AuthState = {
@@ -36,18 +46,19 @@ describe('App', () => {
   });
 
   it('greets a guest and offers sign-out', () => {
-    renderApp({ isAnonymous: true, displayName: null } as User);
+    renderApp({ uid: 'g1', isAnonymous: true, displayName: null } as User);
     expect(screen.getByRole('heading', { name: 'Welcome, guest' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Make a character' })).toBeInTheDocument();
   });
 
   it('greets an account holder by name', () => {
-    renderApp({ isAnonymous: false, displayName: 'Esme' } as User);
+    renderApp({ uid: 'u1', isAnonymous: false, displayName: 'Esme' } as User);
     expect(screen.getByRole('heading', { name: 'Welcome, Esme' })).toBeInTheDocument();
   });
 
   it('keeps a signed-in user off the sign-in screen', () => {
-    renderApp({ isAnonymous: true, displayName: null } as User, '/sign-in');
+    renderApp({ uid: 'g1', isAnonymous: true, displayName: null } as User, '/sign-in');
     expect(screen.getByRole('heading', { name: 'Welcome, guest' })).toBeInTheDocument();
   });
 });

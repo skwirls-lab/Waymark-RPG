@@ -1,10 +1,64 @@
 rules_version = '2';
 
-// Phase 0: nothing is stored yet, so nothing may be read or written.
-// Each later phase opens exactly the access it needs, with a test for
-// both the allowed and the refused case.
+// Each phase opens exactly the access it needs. Every permission here has a
+// test in tests/rules for both the allowed and the refused case.
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Plans are written only by the server. No entitlements record means free.
+    function plan() {
+      let path = /databases/$(database)/documents/entitlements/$(request.auth.uid);
+      return exists(path) ? get(path).data.plan : 'free';
+    }
+
+    // A free account may own one character.
+    function characterSlots() {
+      return plan() == 'free' ? 1 : 50;
+    }
+
+    match /users/{uid} {
+      allow read: if isUser(uid);
+      allow create, update: if isUser(uid)
+        && request.resource.data.keys().hasOnly(['displayName', 'updatedAt'])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 80;
+    }
+
+    match /entitlements/{uid} {
+      allow read: if isUser(uid);
+      allow write: if false;
+    }
+
+    // A character's id is its owner's uid and a slot number, so the number of
+    // characters an account can hold cannot be exceeded from the browser.
+    match /characters/{characterId} {
+      function wellFormed() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['ownerUid', 'slot', 'name', 'description', 'age', 'notes', 'sheet', 'createdAt', 'updatedAt'])
+          && d.ownerUid == request.auth.uid
+          && d.slot is int
+          && characterId == request.auth.uid + '_' + string(d.slot)
+          && d.name is string && d.name.size() > 0 && d.name.size() <= 80
+          && d.sheet is map;
+      }
+
+      allow read, delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow create: if signedIn() && wellFormed()
+        && request.resource.data.slot >= 1
+        && request.resource.data.slot <= characterSlots();
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && wellFormed()
+        && request.resource.data.slot == resource.data.slot;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

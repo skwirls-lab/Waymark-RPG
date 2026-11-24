@@ -142,3 +142,38 @@ export function applyDoomedReward(character: Character, total: number): Characte
   raiseHpIfHigher(c, between(total, 3, 18));
   return c;
 }
+
+export interface DiceSpec {
+  count: number;
+  sides: 4 | 6;
+}
+
+/** What has to be rolled to apply each scar, so a screen can ask for exactly that. */
+export function scarNeeds(scar: number): { d6?: string; total?: DiceSpec; d20?: boolean } {
+  assertRoll(scar, 12);
+  const d6 = (count: number): DiceSpec => ({ count, sides: 6 });
+  switch (scar) {
+    case 1:
+      return { d6: 'Where the scar is', total: d6(1) };
+    case 2:
+      return { total: d6(1) };
+    case 4:
+      return { d6: 'Which limb' };
+    case 6:
+      return { d6: 'Which attribute', total: d6(3) };
+    case 8:
+      return { d20: true, total: { count: 1, sides: 4 } };
+    case 9:
+      return { total: d6(3) };
+    case 10:
+      return { d20: true, total: d6(1) };
+    default:
+      return {};
+  }
+}
+
+/** The dice rolled when a pending scar is recovered from. */
+export function scarRecoveryNeeds(scar: number): DiceSpec {
+  if (!DELAYED.has(scar)) throw new RulesError('no-scar', 'That scar has no recovery roll.');
+  return { count: scar === 3 ? 1 : scar === 7 ? 3 : 2, sides: 6 };
+}

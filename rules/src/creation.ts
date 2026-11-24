@@ -165,3 +165,48 @@ export function createCharacter(input: NewCharacter): Character {
   }
   return settle(character);
 }
+
+/**
+ * Turns a row of the general starting kit table into items, for a character
+ * with no Origin. "Standard weapon (d8)" becomes a weapon; "Rope and a
+ * grappling hook" becomes two tools.
+ */
+export function startingKitItems(kit: { weapon: string; armor: string; tools: string }): Item[] {
+  const items: Item[] = [];
+  const bulky = (text: string): 1 | 2 => (text.includes('bulky') ? 2 : 1);
+  const label = (text: string) => text.replace(/ \(.*\)$/, '');
+
+  const damage = kit.weapon.match(/d(\d+)/);
+  if (damage) {
+    items.push({
+      id: newId(),
+      name: label(kit.weapon),
+      kind: 'weapon',
+      slots: bulky(kit.weapon),
+      place: 'pack',
+      damage: Number(damage[1]) as Die,
+    });
+  }
+  const armor = kit.armor.match(/\+?(\d) Armor/);
+  if (armor) {
+    items.push({
+      id: newId(),
+      name: label(kit.armor),
+      kind: 'armor',
+      slots: bulky(kit.armor),
+      place: 'pack',
+      armor: Number(armor[1]),
+      ...(kit.armor.includes('+') ? { stacks: true } : {}),
+    });
+  }
+  for (const tool of kit.tools.split(/ and (?:an? )?/)) {
+    items.push({
+      id: newId(),
+      name: tool.charAt(0).toUpperCase() + tool.slice(1),
+      kind: 'tool',
+      slots: 1,
+      place: 'pack',
+    });
+  }
+  return items;
+}

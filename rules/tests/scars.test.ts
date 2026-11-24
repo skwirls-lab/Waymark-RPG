@@ -5,6 +5,8 @@ import {
   applyScar,
   data,
   recoverFromScar,
+  scarNeeds,
+  scarRecoveryNeeds,
   status,
 } from '../src/index.ts';
 import { wren } from './helpers.ts';
@@ -135,5 +137,33 @@ describe('The Scars table', () => {
     expect(() => recoverFromScar(wren(), 0, 3)).toThrow(/no scar/);
     const done = recoverFromScar(applyScar(wren(), 3), 0, 3);
     expect(() => recoverFromScar(done, 0, 3)).toThrow(/no scar/);
+  });
+});
+
+describe('What each scar asks to be rolled', () => {
+  it('matches what applying the scar actually requires', () => {
+    for (let scar = 1; scar <= 12; scar++) {
+      const needs = scarNeeds(scar);
+      const input = {
+        d6: needs.d6 ? 1 : undefined,
+        total: needs.total ? needs.total.count : undefined,
+        d20: needs.d20 ? 1 : undefined,
+      };
+      expect(() => applyScar(wren(), scar, input)).not.toThrow();
+      // Leaving out anything it asks for is refused.
+      if (needs.total)
+        expect(() => applyScar(wren(), scar, { ...input, total: undefined })).toThrow();
+      if (needs.d6) expect(() => applyScar(wren(), scar, { ...input, d6: undefined })).toThrow();
+      if (needs.d20) expect(() => applyScar(wren(), scar, { ...input, d20: undefined })).toThrow();
+    }
+  });
+
+  it('gives the recovery dice for the five delayed scars only', () => {
+    expect([3, 4, 5, 7, 11].map((s) => scarRecoveryNeeds(s).count)).toEqual([1, 2, 2, 3, 2]);
+    expect(() => scarRecoveryNeeds(1)).toThrow(RulesError);
+  });
+
+  it('refuses a scar number off the table', () => {
+    expect(() => scarNeeds(0)).toThrow(RulesError);
   });
 });

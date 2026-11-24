@@ -1,0 +1,674 @@
+import {
+  RulesError,
+  addFatigue,
+  applyDamage,
+  applyScar,
+  armorValue,
+  checkSave,
+  corruptionDailySave,
+  data,
+  freeSlots,
+  nightRest,
+  recoverFromScar,
+  resolveStrengthSave,
+  scarNeeds,
+  scarRecoveryNeeds,
+  shortRest,
+  useAbility as applyAbility,
+  weekRest,
+  type AttributeKey,
+  type Character,
+  type Die,
+  type Item,
+} from '@waymark/rules';
+import { useState } from 'react';
+import { Dialog } from '../ui/Dialog';
+import { RollInput } from '../ui/RollInput';
+
+export const ATTRIBUTE_NAMES: Record<AttributeKey, string> = {
+  str: 'Strength',
+  dex: 'Dexterity',
+  wil: 'Willpower',
+};
+
+/** What a dialog hands back: the changed sheet, a line saying what happened, and any follow-up. */
+export interface Outcome {
+  sheet: Character;
+  message: string;
+  next?: DialogState;
+}
+
+export type DialogState =
+  | { kind: 'damage' }
+  | { kind: 'strength-save' }
+  | { kind: 'scar' }
+  | { kind: 'scar-recovery'; index: number }
+  | { kind: 'ability'; abilityId: string }
+  | { kind: 'rest' }
+  | { kind: 'save' }
+  | { kind: 'dice' }
+  | { kind: 'add-item' }
+  | { kind: 'fatigue-drop' }
+  | { kind: 'corruption' };
+
+interface Props {
+  sheet: Character;
+  onDone: (outcome: Outcome) => void;
+  onClose: () => void;
+}
+
+const explain = (problem: unknown) =>
+  problem instanceof RulesError ? problem.message : 'Something went wrong.';
+
+export function DamageDialog({ sheet, onDone, onClose }: Props) {
+  const [amount, setAmount] = useState('');
+  const value = Number(amount);
+  const valid = amount !== '' && Number.isInteger(value) && value >= 0;
+  const armor = armorValue(sheet);
+  const apply = () => {
+    const r = applyDamage(sheet, value);
+    let message =
+      r.taken === 0
+        ? 'Armor stopped it all.'
+        : `Took ${r.taken} after Armor. HP ${r.character.hp.current}.`;
+    let next: DialogState | undefined;
+    if (r.strengthLost > 0)
+      message += ` Strength down ${r.strengthLost} to ${r.character.attributes.str.current}.`;
+    if (r.dead) message += ' Strength is 0. This character has died.';
+    else if (r.strengthSaveRequired) next = { kind: 'strength-save' };
+    else if (r.scarRequired) next = { kind: 'scar' };
+    onDone({ sheet: r.character, message, next });
+  };
+  return (
+    <Dialog title="Take damage" onClose={onClose}>
+      <label className="form-row">
+        Damage rolled against you
+        <input
+          className="number"
+          type="number"
+          inputMode="numeric"
+          min={0}
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          autoFocus
+        />
+      </label>
+      <p className="hint">Your Armor ({armor}) is subtracted for you.</p>
+      <button type="button" className="button primary wide" disabled={!valid} onClick={apply}>
+        Apply damage
+      </button>
+    </Dialog>
+  );
+}
+
+export function StrengthSaveDialog({ sheet, onDone, onClose }: Props) {
+  const [d20, setD20] = useState<number>();
+  const target = sheet.attributes.str.current;
+  const apply = () => {
+    const r = resolveStrengthSave(sheet, d20!);
+    const message = r.dead
+      ? 'The save failed, and they were Doomed. This character has died.'
+      : r.success
+        ? `Rolled ${d20} against Strength ${target}: wounded, but still up.${r.doomedRewardDue ? ' No longer Doomed.' : ''}`
+        : `Rolled ${d20} against Strength ${target}: critical damage. They collapse, and need help within the hour.`;
+    onDone({ sheet: r.character, message });
+  };
+  return (
+    <Dialog title="Strength save" onClose={onClose}>
+      <p>
+        You lost Strength. Roll {target} or less to stay on your feet. Fail, and you have{' '}
+        <strong>critical damage</strong>.
+      </p>
+      <RollInput label="Your roll" spec={{ count: 1, sides: 20 }} value={d20} onChange={setD20} />
+      <button
+        type="button"
+        className="button primary wide"
+        disabled={d20 === undefined}
+        onClick={apply}
+      >
+        Resolve
+      </button>
+    </Dialog>
+  );
+}
+
+export function ScarDialog({ sheet, onDone, onClose }: Props) {
+  const [scar, setScar] = useState<number>();
+  const [d6, setD6] = useState<number>();
+  const [total, setTotal] = useState<number>();
+  const [d20, setD20] = useState<number>();
+  const entry = scar ? data.scars[scar - 1]! : null;
+  const needs = scar ? scarNeeds(scar) : {};
+  const ready =
+    scar !== undefined &&
+    (!needs.d6 || d6 !== undefined) &&
+    (!needs.total || total !== undefined) &&
+    (!needs.d20 || d20 !== undefined);
+  const apply = () =>
+    onDone({
+      sheet: applyScar(sheet, scar!, { d6, total, d20 }),
+      message: `Scar: ${entry!.name}.`,
+    });
+  return (
+    <Dialog title="Roll a Scar" onClose={onClose}>
+      <p>Your HP reached exactly 0. Roll on the Scars table.</p>
+      <RollInput
+        label="Scar"
+        spec={{ count: 1, sides: 12 }}
+        value={scar}
+        onChange={(v) => {
+          setScar(v);
+          setD6(undefined);
+          setTotal(undefined);
+          setD20(undefined);
+        }}
+      />
+      {entry && (
+        <p className="note">
+          <strong>{entry.name}.</strong> {entry.text}
+        </p>
+      )}
+      {needs.d6 && (
+        <RollInput label={needs.d6} spec={{ count: 1, sides: 6 }} value={d6} onChange={setD6} />
+      )}
+      {needs.d20 && (
+        <RollInput
+          label="Willpower save"
+          spec={{ count: 1, sides: 20 }}
+          value={d20}
+          onChange={setD20}
+          hint={`Roll ${sheet.attributes.wil.current} or less to pass.`}
+        />
+      )}
+      {needs.total && (
+        <RollInput
+          label="Roll for the scar"
+          spec={{ count: needs.total.count, sides: needs.total.sides as Die }}
+          value={total}
+          onChange={setTotal}
+        />
+      )}
+      <button type="button" className="button primary wide" disabled={!ready} onClick={apply}>
+        Record scar
+      </button>
+    </Dialog>
+  );
+}
+
+export function ScarRecoveryDialog({ sheet, index, onDone, onClose }: Props & { index: number }) {
+  const [total, setTotal] = useState<number>();
+  const scar = sheet.scars[index]!;
+  const spec = scarRecoveryNeeds(scar.roll);
+  return (
+    <Dialog title={`Recovered: ${scar.name}`} onClose={onClose}>
+      <p className="note">{data.scars[scar.roll - 1]!.text}</p>
+      <RollInput
+        label="Recovery roll"
+        spec={{ count: spec.count, sides: spec.sides as Die }}
+        value={total}
+        onChange={setTotal}
+      />
+      <button
+        type="button"
+        className="button primary wide"
+        disabled={total === undefined}
+        onClick={() =>
+          onDone({
+            sheet: recoverFromScar(sheet, index, total!),
+            message: `Recovered from ${scar.name}.`,
+          })
+        }
+      >
+        Apply
+      </button>
+    </Dialog>
+  );
+}
+
+/** Lets the player pick what to put down when Fatigue has nowhere to go. */
+function DropPicker({
+  items,
+  count,
+  value,
+  onChange,
+}: {
+  items: Item[];
+  count: number;
+  value: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  return (
+    <fieldset className="choices">
+      <legend>No free slot. Choose {count === 1 ? 'an item' : `${count} items`} to drop.</legend>
+      {items
+        .filter((i) => i.slots > 0)
+        .map((i) => (
+          <label key={i.id} className="choice">
+            <input
+              type="checkbox"
+              checked={value.includes(i.id)}
+              disabled={!value.includes(i.id) && value.length >= count}
+              onChange={() =>
+                onChange(value.includes(i.id) ? value.filter((v) => v !== i.id) : [...value, i.id])
+              }
+            />
+            <span>{i.name}</span>
+          </label>
+        ))}
+    </fieldset>
+  );
+}
+
+export function AbilityDialog({
+  sheet,
+  abilityId,
+  onDone,
+  onClose,
+}: Props & { abilityId: string }) {
+  const ability = data.affinities.flatMap((a) => a.abilities).find((a) => a.id === abilityId)!;
+  const [danger, setDanger] = useState<boolean | undefined>(sheet.deprived ? true : undefined);
+  const [d20, setD20] = useState<number>();
+  const [misfire, setMisfire] = useState<number>();
+  const [backlash, setBacklash] = useState<number>();
+  const [drops, setDrops] = useState<string[]>([]);
+  const [error, setError] = useState<string>();
+
+  const failed = danger && d20 !== undefined && !checkSave(sheet.attributes.wil.current, d20);
+  const fatigueGained = failed && misfire === 2 ? 2 : 1;
+  const droppable = sheet.items.some((i) => i.slots > 0);
+  const dropsNeeded = droppable ? Math.max(0, fatigueGained - Math.max(0, freeSlots(sheet))) : 0;
+  const ready =
+    danger !== undefined &&
+    (!danger || d20 !== undefined) &&
+    (!failed || misfire !== undefined) &&
+    (!(failed && misfire === 3) || backlash !== undefined) &&
+    drops.length >= Math.min(dropsNeeded, sheet.items.filter((i) => i.slots > 0).length);
+
+  const apply = () => {
+    try {
+      const r = applyAbility(sheet, {
+        abilityId,
+        inDanger: danger!,
+        saveRolls: danger ? [d20!] : undefined,
+        misfireRoll: misfire,
+        backlashDamage: backlash,
+        dropItemIds: drops,
+      });
+      const entry = r.misfire ? data.misfires.find((m) => m.id === r.misfire)! : null;
+      const message = entry
+        ? `${ability.name} misfired: ${entry.name}. ${entry.text}`
+        : `${ability.name} works.${r.canStretch ? ' With time and safety, you may stretch it further.' : ''}`;
+      const cost = r.fatigue.includes('strength')
+        ? ' Every slot is Fatigue, so it cost 1 Strength.'
+        : ` Fatigue ${r.character.fatigue + r.character.taintedFatigue}.`;
+      onDone({ sheet: r.character, message: message + cost });
+    } catch (problem) {
+      setError(explain(problem));
+    }
+  };
+
+  return (
+    <Dialog title={`Use ${ability.name}`} onClose={onClose}>
+      <p className="note">{ability.text}</p>
+      <p>Using an Ability takes your turn and costs 1 Fatigue, whether or not it works.</p>
+      <fieldset className="choices">
+        <legend>Are you in danger right now?</legend>
+        <label className="choice">
+          <input
+            type="radio"
+            name="danger"
+            checked={danger === false}
+            disabled={sheet.deprived}
+            onChange={() => setDanger(false)}
+          />
+          <span>No. I am safe and unhurried.</span>
+        </label>
+        <label className="choice">
+          <input
+            type="radio"
+            name="danger"
+            checked={danger === true}
+            onChange={() => setDanger(true)}
+          />
+          <span>Yes. In a fight, being chased, falling, or deprived.</span>
+        </label>
+      </fieldset>
+      {danger && (
+        <RollInput
+          label="Willpower save"
+          spec={{ count: 1, sides: 20 }}
+          value={d20}
+          onChange={setD20}
+          hint={`Roll ${sheet.attributes.wil.current} or less to keep control.`}
+        />
+      )}
+      {failed && (
+        <>
+          <p className="error" role="status">
+            The save failed. The Ability misfires.
+          </p>
+          <RollInput
+            label="Misfire"
+            spec={{ count: 1, sides: 6 }}
+            value={misfire}
+            onChange={setMisfire}
+          />
+        </>
+      )}
+      {failed && misfire === 3 && (
+        <RollInput
+          label="Backlash damage"
+          spec={{ count: 1, sides: 6 }}
+          value={backlash}
+          onChange={setBacklash}
+        />
+      )}
+      {dropsNeeded > 0 && (
+        <DropPicker items={sheet.items} count={dropsNeeded} value={drops} onChange={setDrops} />
+      )}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      <button type="button" className="button primary wide" disabled={!ready} onClick={apply}>
+        Use Ability
+      </button>
+    </Dialog>
+  );
+}
+
+export function FatigueDropDialog({ sheet, onDone, onClose }: Props) {
+  const [drops, setDrops] = useState<string[]>([]);
+  return (
+    <Dialog title="Gain Fatigue" onClose={onClose}>
+      <DropPicker items={sheet.items} count={1} value={drops} onChange={setDrops} />
+      <button
+        type="button"
+        className="button primary wide"
+        disabled={drops.length !== 1}
+        onClick={() =>
+          onDone({
+            sheet: addFatigue(sheet, { dropItemId: drops[0] }).character,
+            message: 'Gained 1 Fatigue and dropped an item to make room.',
+          })
+        }
+      >
+        Drop it and gain Fatigue
+      </button>
+    </Dialog>
+  );
+}
+
+export function RestDialog({ sheet, onDone, onClose }: Props) {
+  const rest = (after: Character, what: string) => {
+    const hp = after.hp.current > sheet.hp.current ? ` HP back to ${after.hp.current}.` : '';
+    const why =
+      after.hp.current < after.hp.full
+        ? ' HP did not fully return: check for deprivation, a full pack, or critical damage.'
+        : '';
+    onDone({ sheet: after, message: `${what}.${hp}${why}` });
+  };
+  return (
+    <Dialog title="Rest" onClose={onClose}>
+      <div className="stack-full">
+        <button
+          type="button"
+          className="button wide"
+          onClick={() => rest(shortRest(sheet), 'Short rest')}
+        >
+          Short rest
+          <small>A few minutes and a drink. All HP returns.</small>
+        </button>
+        <button
+          type="button"
+          className="button wide"
+          onClick={() => rest(nightRest(sheet, { safe: true }), "Night's rest")}
+        >
+          Night's rest, somewhere safe
+          <small>Removes all Fatigue.</small>
+        </button>
+        <button
+          type="button"
+          className="button wide"
+          onClick={() => rest(weekRest(sheet), "Week's rest")}
+        >
+          Week's rest, with care
+          <small>Restores lost attribute points.</small>
+        </button>
+      </div>
+    </Dialog>
+  );
+}
+
+export function SaveDialog({ sheet, onClose }: Omit<Props, 'onDone'>) {
+  const [key, setKey] = useState<AttributeKey>('dex');
+  const [d20, setD20] = useState<number>();
+  const score = sheet.attributes[key].current;
+  return (
+    <Dialog title="Make a save" onClose={onClose}>
+      <label className="form-row">
+        Attribute
+        <select
+          value={key}
+          onChange={(e) => {
+            setKey(e.target.value as AttributeKey);
+            setD20(undefined);
+          }}
+        >
+          {(Object.keys(ATTRIBUTE_NAMES) as AttributeKey[]).map((k) => (
+            <option key={k} value={k}>
+              {ATTRIBUTE_NAMES[k]} ({sheet.attributes[k].current})
+            </option>
+          ))}
+        </select>
+      </label>
+      <RollInput
+        label={`${ATTRIBUTE_NAMES[key]} save`}
+        spec={{ count: 1, sides: 20 }}
+        value={d20}
+        onChange={setD20}
+        hint={`Roll ${score} or less.`}
+      />
+      {d20 !== undefined && (
+        <p className={checkSave(score, d20) ? 'result good' : 'result bad'} role="status">
+          {d20} against {score}: {checkSave(score, d20) ? 'success' : 'failure'}
+          {d20 === 1 ? ' (a 1 always succeeds)' : d20 === 20 ? ' (a 20 always fails)' : ''}.
+        </p>
+      )}
+    </Dialog>
+  );
+}
+
+const DICE: Die[] = [4, 6, 8, 10, 12, 20];
+
+export function DiceDialog({ onClose }: { onClose: () => void }) {
+  const [rolls, setRolls] = useState<{ die: Die; value: number }[]>([]);
+  return (
+    <Dialog title="Roll dice" onClose={onClose}>
+      <div className="dice-buttons">
+        {DICE.map((die) => (
+          <button
+            key={die}
+            type="button"
+            className="button"
+            onClick={() =>
+              setRolls([{ die, value: Math.floor(Math.random() * die) + 1 }, ...rolls].slice(0, 8))
+            }
+          >
+            d{die}
+          </button>
+        ))}
+      </div>
+      <ol className="rolls" aria-live="polite" aria-label="Recent rolls">
+        {rolls.map((r, i) => (
+          <li key={rolls.length - i} className={i === 0 ? 'latest' : ''}>
+            <span>d{r.die}</span>
+            <strong>{r.value}</strong>
+          </li>
+        ))}
+      </ol>
+      {rolls.length === 0 && <p className="hint">Tap a die to roll it.</p>}
+    </Dialog>
+  );
+}
+
+export function AddItemDialog({ sheet, onDone, onClose }: Props) {
+  const [name, setName] = useState('');
+  const [kind, setKind] = useState<Item['kind']>('tool');
+  const [slots, setSlots] = useState<0 | 1 | 2>(1);
+  const [damage, setDamage] = useState<Die>(6);
+  const [armor, setArmor] = useState(1);
+  const fits = slots <= freeSlots(sheet);
+  const add = () => {
+    const item: Item = {
+      id: `item-${Date.now()}`,
+      name: name.trim(),
+      kind,
+      slots,
+      place: 'pack',
+      ...(kind === 'weapon' ? { damage } : {}),
+      ...(kind === 'armor' ? { armor } : {}),
+    };
+    const after = structuredClone(sheet);
+    after.items.push(item);
+    const full = freeSlots(after) <= 0;
+    if (full) after.hp.current = 0;
+    onDone({
+      sheet: after,
+      message: `Added ${item.name}.${full ? ' Every slot is now full, so HP drops to 0.' : ''}`,
+    });
+  };
+  return (
+    <Dialog title="Add an item" onClose={onClose}>
+      <div className="form">
+        <label>
+          Name
+          <input
+            type="text"
+            value={name}
+            maxLength={60}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+          />
+        </label>
+        <label>
+          What it is
+          <select value={kind} onChange={(e) => setKind(e.target.value as Item['kind'])}>
+            <option value="tool">A tool or supply</option>
+            <option value="weapon">A weapon</option>
+            <option value="armor">Armor</option>
+            <option value="special">A special item</option>
+          </select>
+        </label>
+        <label>
+          Size
+          <select value={slots} onChange={(e) => setSlots(Number(e.target.value) as 0 | 1 | 2)}>
+            <option value={1}>Ordinary: 1 slot</option>
+            <option value={2}>Bulky: 2 slots</option>
+            <option value={0}>Small: no slot</option>
+          </select>
+        </label>
+        {kind === 'weapon' && (
+          <label>
+            Damage die
+            <select value={damage} onChange={(e) => setDamage(Number(e.target.value) as Die)}>
+              {[4, 6, 8, 10].map((d) => (
+                <option key={d} value={d}>
+                  d{d}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {kind === 'armor' && (
+          <label>
+            Armor
+            <select value={armor} onChange={(e) => setArmor(Number(e.target.value))}>
+              {[1, 2, 3].map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+      {!fits && (
+        <p className="error" role="alert">
+          There is no room to carry that. Drop something first.
+        </p>
+      )}
+      <button
+        type="button"
+        className="button primary wide"
+        disabled={name.trim() === '' || !fits}
+        onClick={add}
+      >
+        Add item
+      </button>
+    </Dialog>
+  );
+}
+
+export function CorruptionDialog({ sheet, onDone, onClose }: Props) {
+  const [d20, setD20] = useState<number>();
+  const [loss, setLoss] = useState<number>();
+  const [error, setError] = useState<string>();
+  const failing = d20 !== undefined && !checkSave(sheet.attributes.wil.current, d20);
+  const third = failing && sheet.corruption.failedSaves === 2;
+  const needsLoss = third && sheet.abilities.length === 0;
+  const apply = () => {
+    try {
+      const r = corruptionDailySave(sheet, { d20: d20!, willpowerLoss: loss });
+      const message = r.saved
+        ? 'The corruption is held back today.'
+        : r.character.lost
+          ? 'The corruption has taken this character.'
+          : r.burned === 'tier'
+            ? `Three failures. A Tier is burned away: now Tier ${r.character.tier}.`
+            : r.burned === 'willpower'
+              ? `Three failures. Willpower is burned away: now ${r.character.attributes.wil.full}.`
+              : `The corruption spreads: ${r.character.corruption.failedSaves} of 3 failed saves.`;
+      onDone({ sheet: r.character, message });
+    } catch (problem) {
+      setError(explain(problem));
+    }
+  };
+  return (
+    <Dialog title="Daily corruption save" onClose={onClose}>
+      <p>
+        At the start of each day, make a Willpower save. Three failures burn something away for
+        good.
+      </p>
+      <RollInput
+        label="Willpower save"
+        spec={{ count: 1, sides: 20 }}
+        value={d20}
+        onChange={setD20}
+        hint={`Roll ${sheet.attributes.wil.current} or less.`}
+      />
+      {needsLoss && (
+        <RollInput
+          label="Willpower lost"
+          spec={{ count: 1, sides: 4 }}
+          value={loss}
+          onChange={setLoss}
+        />
+      )}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      <button
+        type="button"
+        className="button primary wide"
+        disabled={d20 === undefined || (needsLoss && loss === undefined)}
+        onClick={apply}
+      >
+        Resolve
+      </button>
+    </Dialog>
+  );
+}
