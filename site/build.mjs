@@ -58,7 +58,7 @@ function render(md) {
 for (const p of pages) Object.assign(p, render(p.md));
 
 // ---- Templates
-const logo = `<svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="24" cy="38" rx="17" ry="6.5"/><ellipse cx="25" cy="26" rx="12" ry="5.5"/><ellipse cx="23" cy="15.5" rx="7.5" ry="4.5"/><circle class="blaze" cx="24" cy="6" r="3"/></svg>`;
+const logo = fs.readFileSync(path.join(here, 'src', 'logo.svg'), 'utf8').replace('<svg ', '<svg class="logo" aria-hidden="true" ');
 
 function layout({ title, description, body, sidebar = '', active = '', search = true, bodyClass = '' }) {
   const nav = [['/rules/', 'Rules', 'rules'], ['/sheet/', 'Character sheet', 'sheet'], ['/about/', 'About', 'about']]
