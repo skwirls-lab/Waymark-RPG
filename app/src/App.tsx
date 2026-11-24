@@ -1,23 +1,17 @@
+import { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth';
-import { CharacterStoreProvider } from './data/useCharacters';
 import { Logo } from './Logo';
-import { Builder } from './pages/Builder';
-import { Home } from './pages/Home';
-import { Sheet } from './pages/Sheet';
 import { SignIn } from './pages/SignIn';
+
+// Signed-in screens carry the rules library and the database code, so they
+// load only once someone is signed in. The sign-in screen stays small.
+const SignedIn = lazy(() => import('./SignedIn'));
 
 export function App() {
   const { user } = useAuth();
 
-  if (user === undefined) {
-    return (
-      <main className="screen center" aria-busy="true">
-        <Logo size={72} />
-        <p className="lede">Loading…</p>
-      </main>
-    );
-  }
+  if (user === undefined) return <Loading />;
 
   if (!user) {
     return (
@@ -29,13 +23,17 @@ export function App() {
   }
 
   return (
-    <CharacterStoreProvider>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/new" element={<Builder />} />
-        <Route path="/c/:id" element={<Sheet />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </CharacterStoreProvider>
+    <Suspense fallback={<Loading />}>
+      <SignedIn />
+    </Suspense>
+  );
+}
+
+function Loading() {
+  return (
+    <main className="screen center" aria-busy="true">
+      <Logo size={72} />
+      <p className="lede">Loading…</p>
+    </main>
   );
 }

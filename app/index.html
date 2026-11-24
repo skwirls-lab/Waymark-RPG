@@ -9,14 +9,66 @@
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Fonts load without holding up the first paint; text shows in a system font until they arrive. -->
     <link
+      rel="preload"
+      as="style"
       href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap"
-      rel="stylesheet"
+      onload="
+        this.onload = null;
+        this.rel = 'stylesheet';
+      "
     />
+    <noscript
+      ><link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap"
+    /></noscript>
+    <!-- Enough styling to paint the first screen before any script runs. -->
+    <style>
+      html {
+        background: #f7f3ea;
+        color: #23302b;
+      }
+      @media (prefers-color-scheme: dark) {
+        html {
+          background: #161c19;
+          color: #ebe6d8;
+        }
+      }
+      .boot {
+        min-height: 100dvh;
+        display: grid;
+        place-content: center;
+        justify-items: center;
+        gap: 0.5rem;
+        font-family: Georgia, serif;
+        text-align: center;
+      }
+      .boot h1 {
+        font-size: 2rem;
+        margin: 0;
+      }
+      .boot p {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        opacity: 0.75;
+      }
+    </style>
     <title>Waymark</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Shown until the app starts, then replaced. -->
+      <main class="boot" aria-busy="true">
+        <h1>Waymark</h1>
+        <p>Character sheets and campaigns for your table.</p>
+        <p class="boot-note">
+          Guests need no account and give no personal details. You can create an account later and
+          keep everything.
+        </p>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

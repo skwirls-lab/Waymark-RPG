@@ -108,6 +108,8 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 19. **2026-11-24. The Google sign-in window test waits for the emulator's page to be ready.** In CI the test clicked "Add new account" before that page had attached its handlers, so the click was ignored. The test now repeats that one click until the form opens. This handles a load race in a page we do not control; it is not a retry of the test.
 
+20. **2026-11-24. First paint.** Lighthouse scored the deployed sign-in screen 71 for performance. Three changes: a static shell in `index.html` paints before any script runs; signed-in screens (with the rules library and database code) load only after sign-in; web fonts no longer block rendering. Locally the score rose to 94.
+
 ## Changed tests
 
 - **Phase 0 "nothing is readable or writable".** Old: `users/alice` and `characters/c1` were refused for everyone. New: those two paths are opened by phase 2 with their own allowed-and-refused tests; the deny-all test now covers only paths no phase has opened. Reason: phase 2 legitimately opens them, as the test's own comment anticipated.

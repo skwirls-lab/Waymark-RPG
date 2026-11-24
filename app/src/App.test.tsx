@@ -45,20 +45,20 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Continue as a guest' })).toBeInTheDocument();
   });
 
-  it('greets a guest and offers sign-out', () => {
+  it('greets a guest and offers sign-out', async () => {
     renderApp({ uid: 'g1', isAnonymous: true, displayName: null } as User);
-    expect(screen.getByRole('heading', { name: 'Welcome, guest' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Welcome, guest' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Make a character' })).toBeInTheDocument();
   });
 
-  it('greets an account holder by name', () => {
+  it('greets an account holder by name', async () => {
     renderApp({ uid: 'u1', isAnonymous: false, displayName: 'Esme' } as User);
-    expect(screen.getByRole('heading', { name: 'Welcome, Esme' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Welcome, Esme' })).toBeInTheDocument();
   });
 
-  it('keeps a signed-in user off the sign-in screen', () => {
+  it('keeps a signed-in user off the sign-in screen', async () => {
     renderApp({ uid: 'g1', isAnonymous: true, displayName: null } as User, '/sign-in');
-    expect(screen.getByRole('heading', { name: 'Welcome, guest' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Welcome, guest' })).toBeInTheDocument();
   });
 });
