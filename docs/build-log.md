@@ -4,9 +4,9 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Current position
 
-- **Phase:** 1 (Rules as data and code), built; gate pending CI on the phase 1 commit
-- **Task:** next is phase 2, task 1 (Firestore `users` and `characters`, owner-only rules)
-- **Last verified commit:** see "Gate evidence"
+- **Phase:** 2 (Character sheets), not started
+- **Task:** phase 2, task 1 (Firestore `users` and `characters`, owner-only rules)
+- **Last verified commit:** 654577d (CI run 45461173372: verify and deploy both green)
 - **To run everything in a build container:** `WAYMARK_NO_GOOGLE_NETWORK=1 npm run verify` (see decision 1). CI runs plain `npm run verify`.
 
 ## Phase status
@@ -14,7 +14,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 | Phase | Status | Gate passed on |
 |---|---|---|
 | 0 Foundations | Complete | 2026-11-24 |
-| 1 Rules as data and code | Built; gate pending CI | |
+| 1 Rules as data and code | Complete | 2026-11-24 |
 | 2 Character sheets | Not started | |
 | 3 Campaigns and joining | Not started | |
 | 4 Live play | Not started | |
@@ -43,6 +43,17 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - [x] 3. Rulebook lists produced from the data
 - [x] 4. `rules/COVERAGE.md`
 
+## Phase 2 tasks
+
+- [ ] 1. Firestore `users` and `characters`, owner-only rules
+- [ ] 2. Character builder (six steps)
+- [ ] 3. The sheet
+- [ ] 4. Sheet actions through the rules library
+- [ ] 5. Dice roller
+- [ ] 6. One-character limit for free accounts
+- [ ] 7. Offline use
+- [ ] 8. Home screen lists characters
+
 ## Gate evidence
 
 ### Phase 0 (gate passed 2026-11-24)
@@ -53,7 +64,9 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - CI run 45458501566 on commit c77692e: `verify` passed; rules site, app and security rules deployed; the workflow's final step fetched both addresses and the site's search index successfully.
 - Summary: npm workspace, app shell with Google and guest sign-in, deny-all rules, emulator-backed tests, one verify-then-deploy workflow. Nothing left over.
 
-### Phase 1
+### Phase 1 (gate passed 2026-11-24)
+
+- CI run 45461173372 on commit 654577d: `verify` passed and the deploy succeeded.
 
 - Local `verify`: 234 rules tests in 13 files, all passing; coverage of `rules/src` at 100% lines, 100% functions, 99.79% branches (thresholds are 95%). Phase 0's 5 unit, 8 security-rules and 10 end-to-end tests still pass.
 - `rules/COVERAGE.md` lists all 38 rulebook sections with the code and tests for each, or a note that the section is advice. A test fails if a section is missing or a named function does not exist.
