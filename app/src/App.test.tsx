@@ -49,7 +49,7 @@ describe('App', () => {
     renderApp({ uid: 'g1', isAnonymous: true, displayName: null } as User);
     expect(await screen.findByRole('heading', { name: 'Welcome, guest' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Make a character' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Make a character' })).toBeInTheDocument();
   });
 
   it('greets an account holder by name', async () => {
