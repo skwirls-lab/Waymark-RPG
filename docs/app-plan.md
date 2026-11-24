@@ -1,6 +1,6 @@
 # Waymark companion app: plan
 
-**Status:** draft 3, for review. Nothing here is built yet.
+**Status:** draft 4. The build itself is governed by `docs/instructions.md`. Nothing here is built yet.
 
 ## What it is
 
@@ -61,10 +61,12 @@ For a group at the table.
 
 - **Creatures.** The rulebook's creatures, plus the Warden's own, using the rulebook's template.
 - **Fight tracker.** Who has acted, creature HP, reminders for morale checks, a reaction roll, and each combatant's distance band (Close, Near, Far).
-- **Campaign record.** The app keeps track of the campaign itself, in three layers:
+- **Campaign brief.** Where the full context lives. When a campaign is created, the Warden (or AI, or both) writes the setting and backdrop: the world, the trouble, who the characters are and why they are involved. Each session or adventure gets its own short brief: the mission, quest or dungeon, what is at stake, and what the Warden expects to happen.
+- **Timeline of story beats.** An ordered, timestamped log of what happened in the story, in the Warden's words. A beat is one line or a short paragraph: "The party crossed the rope bridge and met Orla." Beats can be marked as milestones, and can link to the cards they involve. Adding one takes a single tap and a sentence, typed or dictated. This is how the order of events is kept without a transcript.
+- **Campaign record.** Alongside the brief and the timeline, the app keeps track of the campaign in three layers:
   - *Automatic.* The activity feed already records every roll, wound, item and fight, and who was present. Nothing extra to do.
   - *Cards.* People, places, creatures, factions, items, and open threads (unfinished business, promises, mysteries). Each card has a status: planned, met, changed, gone. The Warden prepares "planned" cards before a session and reveals them during it. Past, present and future are the same cards at different statuses, on a session-by-session timeline.
-  - *Quick notes.* A one-line note box, always within reach during play: "Met Orla the ferryman. She owes the party a favor." The phone keyboard's own microphone button makes this hands-free dictation at no cost.
+  - *Quick notes.* A one-line box, always within reach during play. Each note is saved to the timeline as a story beat, with the time it was written. The phone keyboard's own microphone button makes this hands-free dictation at no cost.
 - **Custom content.** Origins, Affinities, Abilities and gear made with the rulebook's fill-in forms, available to that campaign's players in the builder.
 - **Worlds.** A set of custom content saved as a pack and reused across campaigns. Sylvanholt would be the first.
 - **Wider layout** for laptops.
@@ -83,7 +85,9 @@ For a group at the table.
 
 A campaign with no human Warden. The main design rule, drawn from why AI Wardens tend to go wrong: **the AI narrates and decides what characters in the world do, and the app's own rules code does all the arithmetic.** The AI asks the app to deal damage or call for a save. It never invents numbers. It works from the campaign's stored state, not from its memory of the chat. It relies on the campaign record from stage 3 as its memory.
 
-The first version is text and taps: players choose or type what they do, and can dictate with the phone keyboard's microphone. Spoken, always-listening play is a later step, after its cost and reliability have been measured. This stage needs its own plan once stages 1 to 3 exist.
+The first version is text and taps: players choose or type what they do, and can dictate with the phone keyboard's microphone. **The AI Warden speaks.** Reading every line of narration breaks the mood, so narration is read aloud by default, with the text on screen as well. The first version uses the voice built into the phone or browser, which is free. Better hosted voices can be added later as an option once their cost is known. Players can pause, replay, change the voice, or turn speech off.
+
+Listening is the part that stays off: always-listening play is a later step, after its cost and reliability have been measured. This stage needs its own plan once stages 1 to 3 exist.
 
 ## How it is built
 
