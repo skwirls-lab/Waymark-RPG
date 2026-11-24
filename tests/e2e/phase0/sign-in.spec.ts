@@ -23,7 +23,8 @@ test.describe('phase 0: signing in', () => {
 
   test('a Google user is greeted by name', async ({ page }) => {
     await page.goto('/sign-in');
-    await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
+    // The buttons are enabled once the sign-in library has loaded.
+    await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeEnabled();
     // The Auth emulator accepts a stand-in Google identity directly.
     await page.evaluate(() =>
       window.__waymarkTest!.signInAsGoogleUser('Esme Harkness', 'esme@example.com'),

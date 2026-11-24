@@ -110,6 +110,8 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 20. **2026-11-24. First paint.** Lighthouse scored the deployed sign-in screen 71 for performance. Three changes: a static shell in `index.html` paints before any script runs; signed-in screens (with the rules library and database code) load only after sign-in; web fonts no longer block rendering. Locally the score rose to 94; deployed it reached 86. Two further changes: the sign-in library now loads after the first screen paints (a first-time visitor sees the sign-in screen at once, with its buttons enabled a moment later), and the offline cache starts three seconds after load. Locally: 98; deployed: 78, with a blocking time of 550 ms that the local run did not show. Deployed scores on GitHub's shared machines swung between 71, 86 and 78, so the gate now takes the median of three runs. The app also bundles its own fonts, removing the last outside request from the first screen and making the app look right offline.
 
+21. **2026-11-24. Item ids are random and unique.** They were a per-session counter, which could repeat across sessions. A randomized rules test in CI then showed that if two items shared an id, dropping one to make room for Fatigue could remove the wrong one and leave a character over capacity. The drop now always removes an item that frees a slot, and ids are UUIDs. Both have regression tests.
+
 ## Changed tests
 
 - **Phase 0 "nothing is readable or writable".** Old: `users/alice` and `characters/c1` were refused for everyone. New: those two paths are opened by phase 2 with their own allowed-and-refused tests; the deny-all test now covers only paths no phase has opened. Reason: phase 2 legitimately opens them, as the test's own comment anticipated.

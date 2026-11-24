@@ -44,8 +44,8 @@ export function rollStartingKit(rng: Rng): { weapon: string; armor: string; tool
   return { weapon: row().weapon, armor: row().armor, tools: row().tools };
 }
 
-let nextId = 0;
-const newId = () => `item-${++nextId}`;
+/** Ids must stay unique for the life of the character, across sessions and devices. */
+const newId = () => `item-${crypto.randomUUID()}`;
 
 /** Every character starts with three days of rations and a light source. */
 export function basicSupplies(): Item[] {

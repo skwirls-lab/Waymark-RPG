@@ -37,7 +37,9 @@ const aCharacter: fc.Arbitrary<Character> = fc
     str: fc.integer({ min: 1, max: 18 }),
   })
   .map(({ items, fatigue, tainted, hpFull, hpLost, str }) => {
-    const c = { ...wren(), items, fatigue: 0, taintedFatigue: 0 };
+    // Every carried item has its own id.
+    const unique = items.map((item, index) => ({ ...item, id: `${index}-${item.id}` }));
+    const c = { ...wren(), items: unique, fatigue: 0, taintedFatigue: 0 };
     const room = Math.max(0, c.slotCapacity - slotsUsed(c));
     c.fatigue = Math.min(fatigue, room);
     c.taintedFatigue = Math.min(tainted, room - c.fatigue);

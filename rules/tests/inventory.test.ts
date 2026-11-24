@@ -87,6 +87,21 @@ describe('Carrying things: Fatigue', () => {
     expect(() => addFatigue(full, { dropItemId: 'ring' })).toThrow(/cannot be dropped/);
   });
 
+  it("dropping always frees a slot, even if a small item shares the dropped item's id", () => {
+    // Found by the randomized tests: a small item and a bulky one with the same id.
+    const twins = {
+      ...wren(),
+      items: [
+        item({ id: 'same', slots: 0, name: 'Ring' }),
+        item({ id: 'same', slots: 2, name: 'Longbow' }),
+      ],
+      fatigue: 8,
+    };
+    const { character } = addFatigue(twins, { dropItemId: 'same' });
+    expect(character.items.map((i) => i.name)).toEqual(['Ring']);
+    expect(slotsUsed(character)).toBeLessThanOrEqual(character.slotCapacity);
+  });
+
   it('when every slot is already Fatigue, each further Fatigue costs 1 Strength', () => {
     const { character, outcome } = addFatigue(exhausted());
     expect(outcome).toBe('strength');

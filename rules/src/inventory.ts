@@ -64,7 +64,7 @@ export function addFatigue(
   character: Character,
   options: FatigueOptions = {},
 ): { character: Character; outcome: FatigueOutcome } {
-  let c = clone(character);
+  const c = clone(character);
   let outcome: FatigueOutcome = 'slot';
   if (freeSlots(c) < 1) {
     const droppable = c.items.filter((item) => item.slots > 0);
@@ -78,7 +78,9 @@ export function addFatigue(
     if (!droppable.some((item) => item.id === options.dropItemId)) {
       throw new RulesError('no-item', 'That item cannot be dropped to make room.');
     }
-    c = removeItem(c, options.dropItemId);
+    // Remove an item that actually frees a slot, even if a small item shares its id.
+    const index = c.items.findIndex((item) => item.id === options.dropItemId && item.slots > 0);
+    c.items.splice(index, 1);
     outcome = 'dropped';
   }
   if (options.tainted) c.taintedFatigue += 1;

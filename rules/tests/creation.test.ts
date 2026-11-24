@@ -86,6 +86,11 @@ describe('Making a character, step 4: Origin', () => {
     expect(kit[0]).toMatchObject({ kind: 'weapon', damage: 6, slots: 1 });
   });
 
+  it('gives every item its own id, however many characters are made', () => {
+    const ids = [1, 2, 3].flatMap(() => kitItems(origin('climber')).map((i) => i.id));
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
   it("makes a Packbearer's great hammer bulky", () => {
     expect(kitItems(origin('packbearer'))[0]).toMatchObject({
       name: 'Great hammer',
