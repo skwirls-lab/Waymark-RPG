@@ -157,6 +157,8 @@ test.describe('phase 3: handing over and keeping', () => {
     await jo.getByRole('button', { name: 'Take over' }).click();
     await expect(jo.getByRole('heading', { name: 'Pip', level: 1 })).toBeVisible();
     await expect(jo.getByTestId('fatigue')).toHaveText('1');
+    // Summaries settle within moments of a hand-over; wait for the settled list.
+    await expect(warden.getByTestId('summary-Pip')).toHaveCount(1);
     await expect(warden.getByTestId('summary-Pip')).toContainText('played by Jo');
     await expect(warden.getByRole('link', { name: 'Open' })).toHaveCount(0);
 

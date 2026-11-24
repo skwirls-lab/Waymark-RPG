@@ -17,6 +17,24 @@ export interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+/** Says why sign-in failed, in words, with the code for whoever has to fix it. */
+export function explainSignInFailure(code: string): string {
+  const reasons: Record<string, string> = {
+    'auth/operation-not-allowed': 'This way of signing in is not switched on for Waymark yet.',
+    'auth/admin-restricted-operation': 'This way of signing in is not switched on for Waymark yet.',
+    'auth/configuration-not-found': 'Sign-in has not been set up for Waymark yet.',
+    'auth/unauthorized-domain': 'This web address is not approved for sign-in yet.',
+    'auth/network-request-failed':
+      'Waymark could not reach the sign-in service. Check your connection.',
+    'auth/popup-blocked':
+      'Your browser blocked the sign-in window. Allow pop-ups for this site and try again.',
+    'auth/credential-already-in-use':
+      'That Google account already has a Waymark account. Sign out and sign in with it instead.',
+  };
+  const reason = reasons[code] ?? 'Sign-in did not work. Please try again.';
+  return code ? `${reason} (${code})` : reason;
+}
+
 /** Remembers whether this browser was signed in, so a new visitor sees the sign-in screen at once. */
 const SIGNED_IN_FLAG = 'waymark.signedIn';
 
@@ -66,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Closing the sign-in window is a choice, not an error.
         if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return;
         console.error('Sign-in failed:', code || problem);
-        setError('Sign-in did not work. Please try again.');
+        setError(explainSignInFailure(code));
       }
     };
     return {

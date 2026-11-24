@@ -149,6 +149,10 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 30. **2026-11-24. Local changes outrank older echoes from the database.** A rare lost update remained after decision 14's first fix: with several quick taps, the database's echo of an earlier save could briefly replace the newer on-screen sheet, and the next tap built on the stale copy. Each save now carries a strictly increasing timestamp, and a reported copy replaces the local one only when it is at least as new. Unit-tested in `useCharacters.test.ts`.
 
+31. **2026-11-24. Hand-over swaps the summaries in one transaction,** and the end-to-end test waits for one "Pip" row before reading it. For a moment after a hand-over the Warden's list could show the old and new summary together (1 run in 12 locally). Summaries are consistent within moments by design; the test now asserts the settled state.
+
+32. **2026-11-24. A live sign-in check after every deploy.** John found that neither guest nor Google sign-in worked on the deployed app, though every gate had passed. The emulator-backed tests cannot see whether sign-in is switched on in the real project, and the post-deploy check only fetched the page. CI now signs in as a guest on the deployed app after each deploy, and the app shows the reason and code when sign-in fails. This gap means the phase 0 and phase 2 gates were recorded without real sign-in ever having been exercised.
+
 ## Changed tests
 
 - **Cloud Functions summary assertions (phase 3, same day).** Old: checked the moment a function returned. New: wait up to five seconds for the settled state. Reason: summaries are kept by background triggers and are consistent within moments, not instantly; the emulator runs those triggers alongside the tests.

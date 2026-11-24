@@ -305,6 +305,12 @@ describe('handing a Warden-run character to a player', () => {
       description: 'Small',
     });
     expect(await exists(`campaigns/${campaignId}/characters/w1`)).toBe(false);
+    // The new owner's summary is written in the same step as the old one is removed.
+    expect((await db.doc(`campaigns/${campaignId}/summaries/jo_1`).get()).data()).toMatchObject({
+      name: 'Pip',
+      kind: 'owned',
+      ownerUid: 'jo',
+    });
     await summaryExists(`campaigns/${campaignId}/summaries/w1`, false);
     expect((await db.doc(`campaigns/${campaignId}/members/jo`).get()).data()).toMatchObject({
       role: 'player',

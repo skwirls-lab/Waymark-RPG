@@ -318,7 +318,14 @@ export async function redeemHandover(
       updatedAt: now,
     });
     tx.delete(source);
+    // Swap the summaries in the same step, so members never see the character twice or not at all.
     tx.delete(db.doc(`campaigns/${campaignId}/summaries/${source.id}`));
+    if (isSheet(character.get('sheet'))) {
+      tx.set(
+        db.doc(`campaigns/${campaignId}/summaries/${characterId}`),
+        summarize(character.get('name'), character.get('sheet'), 'owned', uid),
+      );
+    }
     tx.delete(handoverRef);
     if (!isMember) {
       tx.set(member, { role: 'player', displayName, control: 'ask', joinedAt: now });

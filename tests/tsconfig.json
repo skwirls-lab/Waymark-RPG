@@ -10,5 +10,10 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": [".", "../playwright.config.ts", "../app/src/vite-env.d.ts"]
+  "include": [
+    ".",
+    "../playwright.config.ts",
+    "../playwright.live.config.ts",
+    "../app/src/vite-env.d.ts"
+  ]
 }
