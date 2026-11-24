@@ -1,6 +1,6 @@
 # Waymark companion app: plan
 
-**Status:** draft 2, for review. Nothing here is built yet.
+**Status:** draft 3, for review. Nothing here is built yet.
 
 ## What it is
 
@@ -61,7 +61,10 @@ For a group at the table.
 
 - **Creatures.** The rulebook's creatures, plus the Warden's own, using the rulebook's template.
 - **Fight tracker.** Who has acted, creature HP, reminders for morale checks, a reaction roll, and each combatant's distance band (Close, Near, Far).
-- **Notes.** Places, people, and what happened last session.
+- **Campaign record.** The app keeps track of the campaign itself, in three layers:
+  - *Automatic.* The activity feed already records every roll, wound, item and fight, and who was present. Nothing extra to do.
+  - *Cards.* People, places, creatures, factions, items, and open threads (unfinished business, promises, mysteries). Each card has a status: planned, met, changed, gone. The Warden prepares "planned" cards before a session and reveals them during it. Past, present and future are the same cards at different statuses, on a session-by-session timeline.
+  - *Quick notes.* A one-line note box, always within reach during play: "Met Orla the ferryman. She owes the party a favor." The phone keyboard's own microphone button makes this hands-free dictation at no cost.
 - **Custom content.** Origins, Affinities, Abilities and gear made with the rulebook's fill-in forms, available to that campaign's players in the builder.
 - **Worlds.** A set of custom content saved as a pack and reused across campaigns. Sylvanholt would be the first.
 - **Wider layout** for laptops.
@@ -70,12 +73,17 @@ For a group at the table.
 
 - **Generate** a creature, a person, a place or an item from a short description. The result lands in the normal form for the Warden to edit before saving.
 - **Rules questions**, answered from the rulebook text with a link to the section.
-- **Session recap** written from the activity feed.
+- **Session recap** written from the activity feed and the quick notes.
+- **Filing.** After a session, the AI reads the feed and the notes and proposes updates: new and changed cards, new threads, threads resolved. The Warden reviews each one before it is saved.
+- **Most AI actions are buttons**, such as "generate a creature" or "recap this session", with tightly written instructions behind them. Free typing is the exception. This keeps results consistent and requests small.
+- **Session recording (later, optional).** Record the table, turn it into a transcript, and feed that to the same filing step. It is not the foundation, for three reasons: everyone present must agree to be recorded, a noisy table transcribes poorly, and it costs far more than text. The cards and notes work without it.
 - Usage limits per person. This is the natural place for a paid tier, since each call costs money.
 
 ### Stage 5: AI Warden
 
-A campaign with no human Warden. The main design rule, drawn from why AI Wardens tend to go wrong: **the AI narrates and decides what characters in the world do, and the app's own rules code does all the arithmetic.** The AI asks the app to deal damage or call for a save. It never invents numbers. It works from the campaign's stored state, not from its memory of the chat. This stage needs its own plan once stages 1 to 3 exist.
+A campaign with no human Warden. The main design rule, drawn from why AI Wardens tend to go wrong: **the AI narrates and decides what characters in the world do, and the app's own rules code does all the arithmetic.** The AI asks the app to deal damage or call for a save. It never invents numbers. It works from the campaign's stored state, not from its memory of the chat. It relies on the campaign record from stage 3 as its memory.
+
+The first version is text and taps: players choose or type what they do, and can dictate with the phone keyboard's microphone. Spoken, always-listening play is a later step, after its cost and reliability have been measured. This stage needs its own plan once stages 1 to 3 exist.
 
 ## How it is built
 
@@ -125,16 +133,21 @@ This is a cooperative game, so the plan does not try to stop a player from editi
 
 ## Free and paid
 
-Proposed limits. Prices and the payment provider are not decided.
+Three tiers. The paid plan is **$4.99 a month**, with a small discount for paying yearly.
 
-| | Free | Paid |
-|---|---|---|
-| Your own characters | 1 | Unlimited |
-| Campaigns you run as Warden | 1 | Unlimited |
-| Campaigns you join as a player | Any, with a character you own | Any |
-| Warden-run characters | Do not count against your own limit. Up to 6 in a campaign. | Same, with a higher cap |
-| AI help | A small monthly allowance | A much larger allowance |
-| Everything else in stages 1 to 3 | Included | Included |
+| | Free | Paid ($4.99 a month) | AI Warden (price not set) |
+|---|---|---|---|
+| Your own characters | 1 | Unlimited | Unlimited |
+| Campaigns you run as Warden | 1 | Unlimited | Unlimited |
+| Campaigns you join as a player | Any | Any | Any |
+| Warden-run characters | Do not count against your limit. Up to 6 in a campaign. | Same, with a higher cap | Same |
+| AI help | About 30 requests a month | About 1,000 requests a month | Same as Paid |
+| AI-run campaigns | No | No | Yes |
+| Everything else in stages 1 to 3 | Included | Included | Included |
+
+The AI allowances are starting guesses. A typical button request (instructions, the relevant rules, and a short result) is a few thousand tokens. At the model prices under consideration that is well under a tenth of a cent, so even the paid allowance costs far less than the plan brings in. The real numbers should be set after measuring actual use.
+
+An AI-run campaign is priced separately because it sends a request on every turn of a session, and each one carries the campaign's memory. Its price should be set once a real session's cost has been measured.
 
 **Two buckets of characters.** "Your characters" are the ones you play, and they count toward your limit. "Warden-run characters" belong to a campaign, exist for players without a device or account, and never count toward the Warden's own limit.
 
@@ -152,7 +165,7 @@ A map tool is a separate product and is not planned here. One small provision ke
 
 ## Open questions
 
-1. **Domain.** Which domain will the site and app use?
-2. **Prices and payments.** What the paid plan costs, and which payment provider handles it. Needed before stage 4.
-3. **AI allowance.** How many AI requests a free account gets each month.
-4. **Privacy policy and terms.** Needed before accounts open to the public.
+1. **Domain.** Not chosen yet. This blocks nothing: the app runs at its Firebase address until then.
+2. **Payment provider** and the exact yearly price. Needed before stage 4.
+3. **AI Warden price.** To be set from measured cost.
+4. **Privacy policy and terms.** To be drafted before sign-up opens to the public, then reviewed by someone qualified.
