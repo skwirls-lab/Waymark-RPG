@@ -10,6 +10,14 @@ for (const key of ['performance', 'accessibility']) {
   console.log(`${key}: ${score}`);
   if (score < MINIMUM) ok = false;
 }
+for (const key of [
+  'first-contentful-paint',
+  'largest-contentful-paint',
+  'total-blocking-time',
+  'speed-index',
+]) {
+  console.log(`  ${key}: ${report.audits[key]?.displayValue}`);
+}
 if (!ok) {
   console.error(`A Lighthouse score is below ${MINIMUM}.`);
   process.exit(1);

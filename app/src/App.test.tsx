@@ -19,6 +19,7 @@ vi.mock('./data/characters', () => ({
 function renderApp(user: AuthState['user'], path = '/') {
   const state: AuthState = {
     user,
+    ready: true,
     error: null,
     signInWithGoogle: async () => {},
     signInAsGuest: async () => {},

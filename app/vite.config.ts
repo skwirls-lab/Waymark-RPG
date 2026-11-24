@@ -8,6 +8,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Registered by hand in main.tsx, after the first screen has loaded.
+      injectRegister: null,
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
         name: 'Waymark',
@@ -37,7 +39,6 @@ export default defineConfig({
         // Separate, long-cached chunks for the libraries that rarely change.
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
-          'firebase-auth': ['firebase/app', 'firebase/auth'],
         },
       },
     },

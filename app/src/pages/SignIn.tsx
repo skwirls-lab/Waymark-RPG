@@ -2,17 +2,17 @@ import { useAuth } from '../auth';
 import { Logo } from '../Logo';
 
 export function SignIn() {
-  const { signInWithGoogle, signInAsGuest, error } = useAuth();
+  const { signInWithGoogle, signInAsGuest, ready, error } = useAuth();
   return (
     <main className="screen center">
       <Logo size={96} />
       <h1>Waymark</h1>
       <p className="lede">Character sheets and campaigns for your table.</p>
       <div className="stack">
-        <button className="button primary" onClick={signInWithGoogle}>
+        <button className="button primary" onClick={signInWithGoogle} disabled={!ready}>
           Continue with Google
         </button>
-        <button className="button" onClick={signInAsGuest}>
+        <button className="button" onClick={signInAsGuest} disabled={!ready}>
           Continue as a guest
         </button>
       </div>

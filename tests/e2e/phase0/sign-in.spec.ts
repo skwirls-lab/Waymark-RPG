@@ -77,5 +77,12 @@ test.describe('phase 0: signing in', () => {
     expect((await request.get('/sw.js')).ok()).toBe(true);
     await page.goto('/sign-in');
     await expect(page.locator('link[rel="manifest"]')).toHaveCount(1);
+    // The offline cache is registered a few seconds after the first screen loads.
+    await expect
+      .poll(
+        () => page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length),
+        { timeout: 15_000 },
+      )
+      .toBe(1);
   });
 });

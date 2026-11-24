@@ -15,3 +15,11 @@ createRoot(document.getElementById('root')!).render(
     </BrowserRouter>
   </StrictMode>,
 );
+
+// The offline cache downloads the whole app. Start it only after the first
+// screen has loaded, so it never competes with what the person is waiting for.
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    void import('virtual:pwa-register').then(({ registerSW }) => registerSW({ immediate: true }));
+  }, 3000);
+});
