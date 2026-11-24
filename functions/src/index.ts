@@ -40,21 +40,10 @@ export const redeemHandover = onCall(options, (request) =>
 export const onCharacterWritten = onDocumentWritten(
   { ...options, document: 'characters/{characterId}' },
   (event) =>
-    campaigns.syncOwnedSummary(
-      db,
-      event.params.characterId,
-      event.data?.before.data(),
-      event.data?.after.data(),
-    ),
+    campaigns.syncOwnedSummary(db, event.params.characterId, event.data?.before.data()?.campaignId),
 );
 
 export const onWardenCharacterWritten = onDocumentWritten(
   { ...options, document: 'campaigns/{campaignId}/characters/{characterId}' },
-  (event) =>
-    campaigns.syncWardenSummary(
-      db,
-      event.params.campaignId,
-      event.params.characterId,
-      event.data?.after.data(),
-    ),
+  (event) => campaigns.syncWardenSummary(db, event.params.campaignId, event.params.characterId),
 );

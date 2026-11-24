@@ -351,21 +351,56 @@ export function isSheet(sheet: unknown): sheet is Character {
   );
 }
 
+/**
+ * Applies a change that depends on a document, then checks the document did
+ * not change meanwhile, and goes round again if it did.
+ *
+ * Triggers can arrive late or out of order, so the summary functions never
+ * trust the event's own snapshot: they read the character as it is now. A
+ * transaction would do, but it would lock the character's document, which is
+ * the one players are writing to during play. This converges without a lock.
+ */
+async function converge(
+  source: FirebaseFirestore.DocumentReference,
+  apply: (current: FirebaseFirestore.DocumentSnapshot) => Promise<unknown>,
+): Promise<void> {
+  for (let round = 0; round < 5; round++) {
+    const before = await source.get();
+    await apply(before);
+    const after = await source.get();
+    if (before.exists === after.exists && before.updateTime?.isEqual(after.updateTime!) !== false)
+      return;
+  }
+}
+
 /** Keeps the summary other members see in step with a character a player owns. */
 export async function syncOwnedSummary(
   db: Firestore,
   characterId: string,
-  before: FirebaseFirestore.DocumentData | undefined,
-  after: FirebaseFirestore.DocumentData | undefined,
+  previousCampaignId?: string | null,
 ): Promise<void> {
-  const was = before?.campaignId as string | null | undefined;
-  const now = after?.campaignId as string | null | undefined;
-  if (was && was !== now) await db.doc(`campaigns/${was}/summaries/${characterId}`).delete();
-  if (after && now && isSheet(after.sheet)) {
-    await db
-      .doc(`campaigns/${now}/summaries/${characterId}`)
-      .set(summarize(after.name, after.sheet, 'owned', after.ownerUid));
-  }
+  await converge(db.doc(`characters/${characterId}`), async (character) => {
+    const campaignId = character.exists
+      ? (character.get('campaignId') as string | null | undefined)
+      : null;
+    if (previousCampaignId && previousCampaignId !== campaignId) {
+      await db.doc(`campaigns/${previousCampaignId}/summaries/${characterId}`).delete();
+    }
+    if (!campaignId) return;
+    const summary = db.doc(`campaigns/${campaignId}/summaries/${characterId}`);
+    if (isSheet(character.get('sheet'))) {
+      await summary.set(
+        summarize(
+          character.get('name'),
+          character.get('sheet'),
+          'owned',
+          character.get('ownerUid'),
+        ),
+      );
+    } else {
+      await summary.delete();
+    }
+  });
 }
 
 /** The same, for a character the Warden runs. */
@@ -373,9 +408,11 @@ export async function syncWardenSummary(
   db: Firestore,
   campaignId: string,
   characterId: string,
-  after: FirebaseFirestore.DocumentData | undefined,
 ): Promise<void> {
-  const ref = db.doc(`campaigns/${campaignId}/summaries/${characterId}`);
-  if (!after || !isSheet(after.sheet)) await ref.delete();
-  else await ref.set(summarize(after.name, after.sheet, 'warden', null));
+  const summary = db.doc(`campaigns/${campaignId}/summaries/${characterId}`);
+  await converge(db.doc(`campaigns/${campaignId}/characters/${characterId}`), (character) =>
+    character.exists && isSheet(character.get('sheet'))
+      ? summary.set(summarize(character.get('name'), character.get('sheet'), 'warden', null))
+      : summary.delete(),
+  );
 }

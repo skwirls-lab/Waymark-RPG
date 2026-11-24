@@ -382,38 +382,37 @@ describe('summaries', () => {
     expect(summarize('Wren', hurt, 'warden', null).status).toBe('critical');
   });
 
+  const place = (campaignId: string | null) =>
+    db.doc('characters/sam_1').set({ name: 'Wren', sheet: sheet(), ownerUid: 'sam', campaignId });
+
   it("follow a player's character into, between and out of campaigns", async () => {
-    const inK1 = { name: 'Wren', sheet: sheet(), ownerUid: 'sam', campaignId: 'k1' };
-    await syncOwnedSummary(db, 'sam_1', undefined, inK1);
+    await place('k1');
+    await syncOwnedSummary(db, 'sam_1');
     expect((await db.doc('campaigns/k1/summaries/sam_1').get()).data()).toMatchObject({
       name: 'Wren',
       kind: 'owned',
       ownerUid: 'sam',
     });
 
-    await syncOwnedSummary(db, 'sam_1', inK1, { ...inK1, campaignId: 'k2' });
+    await place('k2');
+    await syncOwnedSummary(db, 'sam_1', 'k1');
     expect(await exists('campaigns/k1/summaries/sam_1')).toBe(false);
     expect(await exists('campaigns/k2/summaries/sam_1')).toBe(true);
 
-    await syncOwnedSummary(
-      db,
-      'sam_1',
-      { ...inK1, campaignId: 'k2' },
-      { ...inK1, campaignId: null },
-    );
+    await place(null);
+    await syncOwnedSummary(db, 'sam_1', 'k2');
     expect(await exists('campaigns/k2/summaries/sam_1')).toBe(false);
 
-    await syncOwnedSummary(db, 'sam_1', inK1, undefined);
+    await place('k1');
+    await syncOwnedSummary(db, 'sam_1');
+    await db.doc('characters/sam_1').delete();
+    await syncOwnedSummary(db, 'sam_1', 'k1');
     expect(await exists('campaigns/k1/summaries/sam_1')).toBe(false);
   });
 
   it('a character outside any campaign has no summary', async () => {
-    await syncOwnedSummary(db, 'sam_1', undefined, {
-      name: 'Wren',
-      sheet: sheet(),
-      ownerUid: 'sam',
-      campaignId: null,
-    });
+    await place(null);
+    await syncOwnedSummary(db, 'sam_1');
     expect((await db.collectionGroup('summaries').get()).size).toBe(0);
   });
 
@@ -429,26 +428,44 @@ describe('summaries', () => {
     ]) {
       expect(isSheet(bad)).toBe(false);
     }
-    await syncOwnedSummary(db, 'sam_1', undefined, {
-      name: 'X',
-      sheet: { hp: { current: 4 } },
-      ownerUid: 'sam',
-      campaignId: 'k1',
-    });
+    await db
+      .doc('characters/sam_1')
+      .set({ name: 'X', sheet: { hp: { current: 4 } }, ownerUid: 'sam', campaignId: 'k1' });
+    await syncOwnedSummary(db, 'sam_1');
     expect(await exists('campaigns/k1/summaries/sam_1')).toBe(false);
+
     await db.doc('campaigns/k1/summaries/w1').set({ name: 'Old' });
-    await syncWardenSummary(db, 'k1', 'w1', { name: 'X', sheet: 'nonsense' });
+    await db.doc('campaigns/k1/characters/w1').set({ name: 'X', sheet: 'nonsense' });
+    await syncWardenSummary(db, 'k1', 'w1');
     expect(await exists('campaigns/k1/summaries/w1')).toBe(false);
   });
 
   it('follow a Warden-run character and go when it goes', async () => {
-    await syncWardenSummary(db, 'k1', 'w1', { name: 'Pip', sheet: sheet() });
+    await db.doc('campaigns/k1/characters/w1').set({ name: 'Pip', sheet: sheet() });
+    await syncWardenSummary(db, 'k1', 'w1');
     expect((await db.doc('campaigns/k1/summaries/w1').get()).data()).toMatchObject({
       name: 'Pip',
       kind: 'warden',
       ownerUid: null,
     });
-    await syncWardenSummary(db, 'k1', 'w1', undefined);
+    await db.doc('campaigns/k1/characters/w1').delete();
+    await syncWardenSummary(db, 'k1', 'w1');
     expect(await exists('campaigns/k1/summaries/w1')).toBe(false);
+  });
+
+  it('a late update for a character that has since been handed over does not bring its summary back', async () => {
+    // The order CI exposed: the Warden changes a character, hands it over, and
+    // only then does the trigger for the earlier change run.
+    const { campaignId } = await start();
+    await db.doc(`campaigns/${campaignId}/characters/w1`).set({ name: 'Pip', sheet: sheet() });
+    const { code } = await createHandover(db, 'dana', { campaignId, characterId: 'w1' });
+    await redeemHandover(db, 'jo', { code, displayName: 'Jo' });
+
+    await syncWardenSummary(db, campaignId, 'w1');
+    expect(await exists(`campaigns/${campaignId}/summaries/w1`)).toBe(false);
+
+    await syncOwnedSummary(db, 'jo_1');
+    const summaries = await db.collection(`campaigns/${campaignId}/summaries`).get();
+    expect(summaries.docs.map((d) => d.id)).toEqual(['jo_1']);
   });
 });

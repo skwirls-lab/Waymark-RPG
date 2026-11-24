@@ -145,8 +145,11 @@ The memory between build sessions. Read `docs/instructions.md` first.
 27. **2026-11-24. Join links for signed-out visitors.** The path is remembered for the session, and the join form opens after sign-in with the code filled in.
 28. **2026-11-24. A removed player learns of it from the member list.** Firestore does not close a listener when access is withdrawn, so the campaign page treats "I am no longer in the member list" as removal.
 
+29. **2026-11-24. Summary triggers read the character as it is now.** CI exposed a race: a trigger for an earlier change to a Warden-run character ran after the character had been handed over and recreated its old summary. The triggers no longer trust the event's snapshot. They read the current document, apply, re-read, and repeat if it changed. A transaction was tried first and rejected: it locks the character's document, the one players write to during play, and the emulator timed out other writers.
+
 ## Changed tests
 
+- **Cloud Functions summary tests (phase 3, same day).** Old: `syncOwnedSummary` and `syncWardenSummary` were given before-and-after snapshots. New: they are given only ids and read the stored document, so the tests now store the document first. Reason: decision 29.
 - **Phase 0 "nothing is readable or writable".** Old: `users/alice` and `characters/c1` were refused for everyone. New: those two paths are opened by phase 2 with their own allowed-and-refused tests; the deny-all test now covers only paths no phase has opened. Reason: phase 2 legitimately opens them, as the test's own comment anticipated.
 
 ## Questions for John
