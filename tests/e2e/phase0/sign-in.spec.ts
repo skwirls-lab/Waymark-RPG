@@ -42,8 +42,17 @@ test.describe('phase 0: signing in', () => {
       const popupOpens = page.waitForEvent('popup');
       await page.getByRole('button', { name: 'Continue with Google' }).click();
       const popup = await popupOpens;
-      await popup.getByRole('button', { name: /add new account/i }).click();
-      await popup.getByRole('button', { name: /auto-generate/i }).click();
+      // The emulator's sign-in page attaches its button handlers after it
+      // loads, so an early click can be ignored. Click until the form opens.
+      await popup.waitForLoadState('load');
+      const autoGenerate = popup.getByRole('button', { name: /auto-generate/i });
+      await expect(async () => {
+        if (!(await autoGenerate.isVisible())) {
+          await popup.getByRole('button', { name: /add new account/i }).click();
+        }
+        await expect(autoGenerate).toBeVisible({ timeout: 1000 });
+      }).toPass({ timeout: 15_000 });
+      await autoGenerate.click();
       await popup.getByRole('button', { name: /sign in with/i }).click();
       await expect(page.getByRole('heading', { name: /^Welcome, / })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
