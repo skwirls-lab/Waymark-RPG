@@ -205,6 +205,8 @@ HP comes back quickly. A new character has very little of it, so be careful.
 
 Choose or roll a background that suits your world. Here are three lists to start from. Roll a d20, or just pick.
 
+<!-- data:backgrounds -->
+
 | d20 | A fantasy world | A modern world | A science-fiction world |
 |---|---|---|---|
 | 1 | Alchemist | Paramedic | Mechanic |
@@ -228,11 +230,17 @@ Choose or roll a background that suits your world. Here are three lists to start
 | 19 | Servant | Office worker | Station hand |
 | 20 | Ranger | Park ranger | Surveyor |
 
+<!-- /data:backgrounds -->
+
 **Name.** Give your character a name that fits the world. If you are stuck, ask the Warden what names are common, or borrow one of these.
+
+<!-- data:names -->
 
 | A fantasy world | A modern world | A science-fiction world |
 |---|---|---|
 | Agune, Bevan, Esme, Emrys, Sybil, Wenlan | Dana, Marcus, Priya, Tom, Yusuf, Elena | Kessa, Oro, Tamsin-7, Vale, Idris, Juno |
+
+<!-- /data:names -->
 
 **Description.** Say a sentence or two about how your character looks, sounds, and carries themselves. Decide how old they are, or roll **2d20+10** (roll two twenty-sided dice, add them, then add 10).
 
@@ -252,6 +260,8 @@ An Origin gives your character three things:
 
 Use these as they are, rename them to fit your world, or treat them as models for your own.
 
+<!-- data:origins -->
+
 | Origin | Bonus | Trait | Starting kit |
 |---|---|---|---|
 | **Climber** (tree-dwelling folk, monkey-like aliens) | +1 DEX | You climb at your normal walking speed and never need a save to do it, unless the surface is slick or crumbling. | Two knives (d6 each), rope, climbing hooks |
@@ -261,6 +271,8 @@ Use these as they are, rename them to fit your world, or treat them as models fo
 | **Packbearer** (ox-folk, cargo-frame robots) | +1 STR | You have 12 inventory slots instead of 10. *Drawback:* you are large, and cannot fit through tight spaces or hide easily. | Great hammer (d10, bulky), work harness, saw, nails |
 | **Voidborn** (raised on ships and stations) | +1 DEX | You move freely without gravity and can hold your breath for several minutes. | Pistol (d6), pressure suit (1 Armor), tool roll, tether line |
 | **Built** (robots, golems, clockwork people) | +1 STR | You do not eat, breathe, or sleep. *Drawback:* rest and medicine do not heal you. You need tools and someone who can repair you. | Wrench (d6), plating (1 Armor), repair kit, spare cell |
+
+<!-- /data:origins -->
 
 ### Making your own Origin
 
@@ -295,6 +307,8 @@ Do not mix up Abilities and attributes. **Attributes** are the three numbers eve
 
 Abilities are sorted into families called **Affinities**. An Affinity says what kind of gifted or trained person your character is. This book provides ten.
 
+<!-- data:affinity-summary -->
+
 | Affinity | What it is about | A character with it might be... |
 |---|---|---|
 | **Mending** | Healing and repairing | A healer, a medic, a field mechanic |
@@ -307,6 +321,8 @@ Abilities are sorted into families called **Affinities**. An Affinity says what 
 | **Motion** | Speed and movement | An acrobat, a speedster, a wind-walker |
 | **Machine** | Devices and automation | A robot, a hacker, a tinkerer |
 | **Prowess** | A trained body and fighting skill | A veteran warrior, a martial artist, a super-soldier |
+
+<!-- /data:affinity-summary -->
 
 If your character has Abilities:
 
@@ -332,6 +348,8 @@ Every character begins with:
 
 **General starting kit.** Roll a d6 three times: once for a weapon, once for armor, and once for tools.
 
+<!-- data:starting-kit -->
+
 | d6 | Weapon | Armor | Tools |
 |---|---|---|---|
 | 1 | Light weapon (d6) | None | Rope and a grappling hook |
@@ -340,6 +358,8 @@ Every character begins with:
 | 4 | Standard weapon (d8) | Light armor (1 Armor) | Healer's kit |
 | 5 | Ranged weapon (d6, bulky) | Shield (+1 Armor) | Shovel and a large sack |
 | 6 | Heavy weapon (d10, bulky) | Medium armor (2 Armor, bulky) | Spyglass and chalk |
+
+<!-- /data:starting-kit -->
 
 What these words mean, and what each item does, is explained in the next two sections.
 
@@ -381,6 +401,8 @@ If every one of your slots is already filled with Fatigue, you have nothing left
 
 A weapon's **damage die** is the die you roll when you hit someone with it. A bigger die means a more dangerous weapon.
 
+<!-- data:weapons -->
+
 | Kind of weapon | Damage | Slots | Cost |
 |---|---|---|---|
 | **Unarmed.** Fists, feet. | d4 | none | — |
@@ -391,7 +413,11 @@ A weapon's **damage die** is the die you roll when you hit someone with it. A bi
 | **Ranged.** | d6 | 2 (bulky) | 20 |
 | **Powerful ranged.** | d8 | 2 (bulky) | 30 |
 
+<!-- /data:weapons -->
+
 What these look like depends on your world:
+
+<!-- data:weapon-examples -->
 
 | Kind | Fantasy | Modern | Science fiction |
 |---|---|---|---|
@@ -402,11 +428,15 @@ What these look like depends on your world:
 | Ranged | Short bow | Pistol | Laser pistol |
 | Powerful ranged | Longbow, crossbow | Rifle, shotgun | Laser rifle |
 
+<!-- /data:weapon-examples -->
+
 You do not need to count arrows or bullets. Assume a character has enough, unless the story makes it matter.
 
 ### Armor
 
 **Armor** reduces the damage you take. Each time you are hit, subtract your Armor from the damage.
+
+<!-- data:armor -->
 
 | Kind of armor | Armor | Slots | Cost | Examples |
 |---|---|---|---|---|
@@ -416,6 +446,8 @@ You do not need to count arrows or bullets. Assume a character has enough, unles
 | **Medium** | 2 | 2 (bulky) | 40 | Chainmail, armored vest, combat suit |
 | **Heavy** | 3 | 2 (bulky) | 60 | Plate armor, bomb suit, powered armor |
 
+<!-- /data:armor -->
+
 You can wear one suit of armor and add a shield, a helmet, or both. Add the numbers together. **Your total Armor can never be higher than 3**, however much you put on.
 
 ### Tools and supplies
@@ -423,6 +455,8 @@ You can wear one suit of armor and add a shield, a helmet, or both. Add the numb
 Anything that is not a weapon or armor is a **tool**. A tool lets you do something you could not do without it, or do it without risk. A rope lets you climb down a cliff. A crowbar lets you force a door.
 
 Tools do not need numbers. If a character has the right tool for a job and enough time, they usually just succeed.
+
+<!-- data:tools -->
 
 | Item | Cost | Item | Cost |
 |---|---|---|---|
@@ -436,6 +470,8 @@ Tools do not need numbers. If a character has the right tool for a job and enoug
 | Tent (bulky, sleeps two) | 20 | Mirror | 5 |
 | Net | 10 | Musical instrument | 10 |
 | Hand cart (+4 slots) | 30 | Pack animal (+6 slots) | 30 |
+
+<!-- /data:tools -->
 
 The Warden sets the price of anything not listed by comparing it to something that is.
 
@@ -603,6 +639,8 @@ Roll a d12 when your HP is reduced to exactly 0.
 
 In this table, "max" means your full score, before any losses.
 
+<!-- data:scars -->
+
 | d12 | Scar | Effect |
 |---|---|---|
 | 1 | **Lasting Scar** | Roll d6 for location: 1 neck, 2 hands, 3 eye, 4 chest, 5 legs, 6 ear. Roll 1d6; if it beats your max HP, that is your new max HP. |
@@ -617,6 +655,8 @@ In this table, "max" means your full score, before any losses.
 | 10 | **Sundered** | An appendage is torn off, crippled, or useless. The Warden says which. Make a WIL save; on a success raise your max WIL by 1d6. |
 | 11 | **Mortal Wound** | You are deprived and out of action. You die in an hour unless healed. On recovery roll 2d6; that is your new max HP. |
 | 12 | **Doomed** | You should have died. If you fail your next save against critical damage, you die horribly. If you pass it, roll 3d6; if it beats your max HP, take it. |
+
+<!-- /data:scars -->
 
 ## Rest and recovery
 
@@ -681,6 +721,8 @@ These rules are mostly for the Warden.
 
 When the characters meet someone, and the Warden has not already decided how that person feels about them, roll **2d6** and add the dice together.
 
+<!-- data:reactions -->
+
 | 2d6 | They are... |
 |---|---|
 | 2 | **Hostile.** They mean harm. |
@@ -688,6 +730,8 @@ When the characters meet someone, and the Warden has not already decided how tha
 | 6 to 8 | **Curious.** Interested, and willing to talk. |
 | 9 to 11 | **Kind.** Friendly, and open to helping. |
 | 12 | **Helpful.** They go out of their way for the characters. |
+
+<!-- /data:reactions -->
 
 This roll exists so that not every meeting turns into a fight. Most of the time the result will be somewhere in the middle, and the players' words and actions decide what happens next.
 
@@ -762,6 +806,8 @@ Either way, you still gain the Fatigue.
 
 When an Ability misfires, the Warden chooses what goes wrong. It should be about as serious as the Ability itself. A small Ability has a small misfire. Roll a d6, or pick what fits the story.
 
+<!-- data:misfires -->
+
 | d6 | What goes wrong |
 |---|---|
 | 1 | **Fizzle.** Nothing happens at all. |
@@ -770,6 +816,8 @@ When an Ability misfires, the Warden chooses what goes wrong. It should be about
 | 4 | **Astray.** The Ability hits the wrong target or lands in the wrong place. |
 | 5 | **Reversed.** The Ability does the opposite of what you intended. |
 | 6 | **Blackout.** The Ability works, but you pass out for a few minutes afterward. |
+
+<!-- /data:misfires -->
 
 > **Example.** Wren's friend Tobin has the Ability *Mend*. After the fight, with the bandits gone, he uses it on Wren's wound. They are safe, so it simply works, and Tobin gains 1 Fatigue.
 >
@@ -786,6 +834,8 @@ When you create a character with Abilities, you choose one Affinity as your **Pr
 Here are ten Affinities, with four Abilities each. They are written plainly so that they can fit any world. Rename and describe them to suit yours. *Energy* could be fire magic in one world, lightning from an implant in another, and a superhero's eye beams in a third.
 
 Unless an Ability says otherwise, it affects one target, and its effect is over as soon as it happens.
+
+<!-- data:affinities -->
 
 ### Mending: healing and repairing
 
@@ -857,6 +907,8 @@ Unless an Ability says otherwise, it affects one target, and its effect is over 
 - **Second Wind.** You immediately get back all of your lost HP.
 - **Feat of Strength.** Perform one act of raw strength beyond what a person should manage: lift a gate, bend a bar, hold a closing door. No save is needed.
 
+<!-- /data:affinities -->
+
 ## Making your own Abilities and Affinities
 
 ### An Affinity
@@ -924,6 +976,8 @@ Characters in Waymark do not earn points or levels. They change because of what 
 
 For characters with Abilities, growth is also measured in **Tiers**. A Tier shows how deeply a character has mastered their gift. There are five. Every character starts at Tier 1.
 
+<!-- data:tiers -->
+
 | Tier | Abilities the character can know | What opens up |
 |---|---|---|
 | 1 | Up to 2 | Abilities from the Primary Affinity only |
@@ -931,6 +985,8 @@ For characters with Abilities, growth is also measured in **Tiers**. A Tier show
 | 3 | Up to 6 | The character may choose a **Secondary Affinity** and begin learning its Abilities |
 | 4 | No limit | Full use of both Affinities |
 | 5 | No limit | A legend. The Warden and player decide together what this means. |
+
+<!-- /data:tiers -->
 
 The Secondary Affinity is how a character branches out. A healer might take up *Energy* and become someone who can both mend and destroy.
 
@@ -1019,6 +1075,8 @@ Everyone and everything the characters might meet is described the same way. The
 
 ### Example creatures
 
+<!-- data:creatures -->
+
 > **Bandit**
 > 4 HP, 1 Armor, 10 STR, 11 DEX, 8 WIL, sword (d8) or bow (d6)
 > - Hungry, ragged, and watching the road.
@@ -1073,6 +1131,8 @@ Everyone and everything the characters might meet is described the same way. The
 > - A hunting beast remade by something evil. Bone shows through its hide.
 > - Tracks anyone who has used an Ability in the last hour, and is not fooled by hiding.
 > - *Critical damage:* the victim catches lasting corruption.
+
+<!-- /data:creatures -->
 
 ### Making your own creatures
 

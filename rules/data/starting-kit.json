@@ -1,0 +1,38 @@
+[
+  {
+    "roll": 1,
+    "weapon": "Light weapon (d6)",
+    "armor": "None",
+    "tools": "Rope and a grappling hook"
+  },
+  {
+    "roll": 2,
+    "weapon": "Light weapon (d6)",
+    "armor": "None",
+    "tools": "Crowbar and a hammer"
+  },
+  {
+    "roll": 3,
+    "weapon": "Standard weapon (d8)",
+    "armor": "Light armor (1 Armor)",
+    "tools": "Lockpicks and a small mirror"
+  },
+  {
+    "roll": 4,
+    "weapon": "Standard weapon (d8)",
+    "armor": "Light armor (1 Armor)",
+    "tools": "Healer's kit"
+  },
+  {
+    "roll": 5,
+    "weapon": "Ranged weapon (d6, bulky)",
+    "armor": "Shield (+1 Armor)",
+    "tools": "Shovel and a large sack"
+  },
+  {
+    "roll": 6,
+    "weapon": "Heavy weapon (d10, bulky)",
+    "armor": "Medium armor (2 Armor, bulky)",
+    "tools": "Spyglass and chalk"
+  }
+]

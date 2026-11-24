@@ -8,6 +8,7 @@ A roleplaying game for any world, written for people who have never played one. 
 |---|---|
 | `Waymark-Rulebook.md` | The complete rulebook. Playable on its own. |
 | `site/` | The website. `npm run build` in `site/` turns the rulebook into pages in `site/dist/`. |
+| `rules/` | The game's rules as data files and a tested library. See `rules/COVERAGE.md`. |
 | `app/` | The companion app (React, TypeScript, Vite). Built in phases; see `docs/instructions.md`. |
 | `tests/` | Security-rules tests and end-to-end tests, run against the Firebase emulators |
 | `docs/` | The app plan, the build instructions, and the build log |

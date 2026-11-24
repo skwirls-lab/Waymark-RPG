@@ -1,0 +1,164 @@
+[
+  {
+    "id": "bandit",
+    "name": "Bandit",
+    "alsoKnownAs": null,
+    "hp": 4,
+    "armor": 1,
+    "str": 10,
+    "dex": 11,
+    "wil": 8,
+    "attack": "sword (d8) or bow (d6)",
+    "damage": [8, 6],
+    "notes": [
+      "Hungry, ragged, and watching the road.",
+      "Wants your money, not a fight. Runs if the leader goes down."
+    ]
+  },
+  {
+    "id": "wolf",
+    "name": "Wolf",
+    "alsoKnownAs": null,
+    "hp": 4,
+    "armor": 0,
+    "str": 10,
+    "dex": 14,
+    "wil": 8,
+    "attack": "bite (d6)",
+    "damage": [6],
+    "notes": [
+      "Lean and patient. Circles before it closes in.",
+      "Hunts in packs. Six or more fight as a crowd."
+    ]
+  },
+  {
+    "id": "tunnel-sneak",
+    "name": "Tunnel Sneak",
+    "alsoKnownAs": null,
+    "hp": 4,
+    "armor": 0,
+    "str": 8,
+    "dex": 14,
+    "wil": 8,
+    "attack": "spear (d6)",
+    "damage": [6],
+    "notes": [
+      "A small, sly thief that lives underground.",
+      "Avoids a fair fight. Loves special items and will trade secrets for them.",
+      "*Critical damage:* the spear tip snaps off in the wound. The victim cannot run until it is removed."
+    ]
+  },
+  {
+    "id": "cultist",
+    "name": "Cultist",
+    "alsoKnownAs": null,
+    "hp": 12,
+    "armor": 1,
+    "str": 9,
+    "dex": 12,
+    "wil": 14,
+    "attack": "staff (d8), one Ability",
+    "damage": [8],
+    "notes": [
+      "Robed and soft-spoken, with a hidden face.",
+      "Will not fight alone. Sends others first.",
+      "*Critical damage:* drains the victim's will. They lose 1d4 Willpower."
+    ]
+  },
+  {
+    "id": "guardian",
+    "name": "Guardian",
+    "alsoKnownAs": "a stone statue, or a security robot",
+    "hp": 12,
+    "armor": 2,
+    "str": 14,
+    "dex": 4,
+    "wil": 8,
+    "attack": "crushing fist (d10)",
+    "damage": [10],
+    "notes": [
+      "Set to protect one place. It never leaves its post.",
+      "Cannot be frightened or bribed. Can be tricked."
+    ]
+  },
+  {
+    "id": "brute",
+    "name": "Brute",
+    "alsoKnownAs": "a troll, a mutant, a hulking alien",
+    "hp": 12,
+    "armor": 0,
+    "str": 15,
+    "dex": 12,
+    "wil": 7,
+    "attack": "claws (d8+d8: roll both, use the higher)",
+    "damage": [8, 8],
+    "notes": [
+      "Huge, foul-smelling, and always hungry.",
+      "Can spend its turn to regain all of its lost HP. It must be finished off quickly.",
+      "*Critical damage:* the wound festers. The victim is deprived until it is cleaned with fire."
+    ]
+  },
+  {
+    "id": "raptor",
+    "name": "Raptor",
+    "alsoKnownAs": "a hunting dinosaur",
+    "hp": 6,
+    "armor": 1,
+    "str": 12,
+    "dex": 16,
+    "wil": 6,
+    "attack": "claws and teeth (d8)",
+    "damage": [8],
+    "notes": [
+      "Fast, clever, and never alone.",
+      "One holds your attention while the others come from the sides."
+    ]
+  },
+  {
+    "id": "sky-terror",
+    "name": "Sky Terror",
+    "alsoKnownAs": "a flying dinosaur, a giant bat, a small dragon",
+    "hp": 10,
+    "armor": 1,
+    "str": 14,
+    "dex": 15,
+    "wil": 8,
+    "attack": "talons (d10)",
+    "damage": [10],
+    "notes": [
+      "A huge shadow that drops from above.",
+      "Dives, strikes, and climbs out of reach. It can only be hit with ranged attacks, unless it is brought to the ground.",
+      "*Critical damage:* it carries the victim into the air."
+    ]
+  },
+  {
+    "id": "trooper",
+    "name": "Trooper",
+    "alsoKnownAs": null,
+    "hp": 5,
+    "armor": 2,
+    "str": 11,
+    "dex": 11,
+    "wil": 10,
+    "attack": "laser rifle (d8)",
+    "damage": [8],
+    "notes": ["Armored, trained, and following orders.", "Fights from cover and calls for backup."]
+  },
+  {
+    "id": "corrupted-hound",
+    "name": "Corrupted Hound",
+    "alsoKnownAs": null,
+    "hp": 10,
+    "armor": 2,
+    "str": 14,
+    "dex": 12,
+    "wil": 6,
+    "attack": "bite (d10)",
+    "damage": [10],
+    "notes": [
+      "A hunting beast remade by something evil. Bone shows through its hide.",
+      "Tracks anyone who has used an Ability in the last hour, and is not fooled by hiding.",
+      "*Critical damage:* the victim catches lasting corruption."
+    ]
+  }
+]

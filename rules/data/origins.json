@@ -1,0 +1,254 @@
+[
+  {
+    "id": "climber",
+    "name": "Climber",
+    "examples": "tree-dwelling folk, monkey-like aliens",
+    "bonus": {
+      "attribute": "dex",
+      "amount": 1
+    },
+    "trait": "You climb at your normal walking speed and never need a save to do it, unless the surface is slick or crumbling.",
+    "drawback": null,
+    "slots": 10,
+    "kitText": "Two knives (d6 each), rope, climbing hooks",
+    "kit": [
+      {
+        "name": "Knife",
+        "slots": 1,
+        "kind": "weapon",
+        "damage": 6,
+        "quantity": 2
+      },
+      {
+        "name": "Rope",
+        "slots": 1,
+        "kind": "tool"
+      },
+      {
+        "name": "Climbing hooks",
+        "slots": 1,
+        "kind": "tool"
+      }
+    ]
+  },
+  {
+    "id": "deep-dweller",
+    "name": "Deep-dweller",
+    "examples": "cave folk, tunnel-born miners",
+    "bonus": {
+      "attribute": "wil",
+      "amount": 1
+    },
+    "trait": "You can find your way in total darkness, and you sense danger in enclosed spaces a moment before it strikes.",
+    "drawback": null,
+    "slots": 10,
+    "kitText": "Staff (d6), padded coat (1 Armor), small shovel, chalk",
+    "kit": [
+      {
+        "name": "Staff",
+        "slots": 1,
+        "kind": "weapon",
+        "damage": 6
+      },
+      {
+        "name": "Padded coat",
+        "slots": 1,
+        "kind": "armor",
+        "armor": 1
+      },
+      {
+        "name": "Small shovel",
+        "slots": 1,
+        "kind": "tool"
+      },
+      {
+        "name": "Chalk",
+        "slots": 1,
+        "kind": "tool"
+      }
+    ]
+  },
+  {
+    "id": "stoneblood",
+    "name": "Stoneblood",
+    "examples": "dwarves, heavy-world colonists",
+    "bonus": {
+      "attribute": "str",
+      "amount": 1
+    },
+    "trait": "You cannot be knocked down or pushed back by anything smaller than a wagon.",
+    "drawback": null,
+    "slots": 10,
+    "kitText": "Mace (d8), leather apron (1 Armor), hammer, chisel",
+    "kit": [
+      {
+        "name": "Mace",
+        "slots": 1,
+        "kind": "weapon",
+        "damage": 8
+      },
+      {
+        "name": "Leather apron",
+        "slots": 1,
+        "kind": "armor",
+        "armor": 1
+      },
+      {
+        "name": "Hammer",
+        "slots": 1,
+        "kind": "tool"
+      },
+      {
+        "name": "Chisel",
+        "slots": 1,
+        "kind": "tool"
+      }
+    ]
+  },
+  {
+    "id": "quickblood",
+    "name": "Quickblood",
+    "examples": "shrew-folk, enhanced couriers",
+    "bonus": {
+      "attribute": "dex",
+      "amount": 1
+    },
+    "trait": "You always act first when an ambush is sprung, by either side.",
+    "drawback": "you burn energy fast and must eat twice as much as others.",
+    "slots": 10,
+    "kitText": "Short sword (d8), dark cloak, lockpicks, extra rations",
+    "kit": [
+      {
+        "name": "Short sword",
+        "slots": 1,
+        "kind": "weapon",
+        "damage": 8
+      },
+      {
+        "name": "Dark cloak",
+        "slots": 1,
+        "kind": "tool"
+      },
+      {
+        "name": "Lockpicks",
+        "slots": 1,
+        "kind": "tool"
+      },
+      {
+        "name": "Extra rations",
+        "slots": 1,
+        "kind": "tool"
+      }
+    ]
+  },
+  {
+    "id": "packbearer",
+    "name": "Packbearer",
+    "examples": "ox-folk, cargo-frame robots",
+    "bonus": {
+      "attribute": "str",
+      "amount": 1
+    },
+    "trait": "You have 12 inventory slots instead of 10.",
+    "drawback": "you are large, and cannot fit through tight spaces or hide easily.",
+    "slots": 12,
+    "kitText": "Great hammer (d10, bulky), work harness, saw, nails",
+    "kit": [
+      {
+        "name": "Great hammer",
+        "slots": 2,
+        "kind": "weapon",
+        "damage": 10
+      },
+      {
+        "name": "Work harness",
+        "slots": 1,
+        "kind": "tool"
+      },
+      {
+        "name": "Saw",
+        "slots": 1,
+        "kind": "tool"
+      },
+      {
+        "name": "Nails",
+        "slots": 1,
+        "kind": "tool"
+      }
+    ]
+  },
+  {
+    "id": "voidborn",
+    "name": "Voidborn",
+    "examples": "raised on ships and stations",
+    "bonus": {
+      "attribute": "dex",
+      "amount": 1
+    },
+    "trait": "You move freely without gravity and can hold your breath for several minutes.",
+    "drawback": null,
+    "slots": 10,
+    "kitText": "Pistol (d6), pressure suit (1 Armor), tool roll, tether line",
+    "kit": [
+      {
+        "name": "Pistol",
+        "slots": 1,
+        "kind": "weapon",
+        "damage": 6
+      },
+      {
+        "name": "Pressure suit",
+        "slots": 1,
+        "kind": "armor",
+        "armor": 1
+      },
+      {
+        "name": "Tool roll",
+        "slots": 1,
+        "kind": "tool"
+      },
+      {
+        "name": "Tether line",
+        "slots": 1,
+        "kind": "tool"
+      }
+    ]
+  },
+  {
+    "id": "built",
+    "name": "Built",
+    "examples": "robots, golems, clockwork people",
+    "bonus": {
+      "attribute": "str",
+      "amount": 1
+    },
+    "trait": "You do not eat, breathe, or sleep.",
+    "drawback": "rest and medicine do not heal you. You need tools and someone who can repair you.",
+    "slots": 10,
+    "kitText": "Wrench (d6), plating (1 Armor), repair kit, spare cell",
+    "kit": [
+      {
+        "name": "Wrench",
+        "slots": 1,
+        "kind": "weapon",
+        "damage": 6
+      },
+      {
+        "name": "Plating",
+        "slots": 1,
+        "kind": "armor",
+        "armor": 1
+      },
+      {
+        "name": "Repair kit",
+        "slots": 1,
+        "kind": "tool"
+      },
+      {
+        "name": "Spare cell",
+        "slots": 1,
+        "kind": "tool"
+      }
+    ]
+  }
+]

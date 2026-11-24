@@ -1,0 +1,62 @@
+[
+  {
+    "roll": 1,
+    "name": "Lasting Scar",
+    "text": "Roll d6 for location: 1 neck, 2 hands, 3 eye, 4 chest, 5 legs, 6 ear. Roll 1d6; if it beats your max HP, that is your new max HP."
+  },
+  {
+    "roll": 2,
+    "name": "Rattling Blow",
+    "text": "Shaken and disoriented. Say how you pull yourself together. Roll 1d6; if it beats your max HP, take it."
+  },
+  {
+    "roll": 3,
+    "name": "Walloped",
+    "text": "Thrown down and winded. You are deprived until you rest a few hours. Then roll 1d6 and add it to your max HP."
+  },
+  {
+    "roll": 4,
+    "name": "Broken Limb",
+    "text": "Roll d6: 1–2 leg, 3–4 arm, 5 rib, 6 skull. Once it mends, roll 2d6; if it beats your max HP, take it."
+  },
+  {
+    "roll": 5,
+    "name": "Diseased",
+    "text": "A foul infection sets in. When you recover, roll 2d6; if it beats your max HP, take it."
+  },
+  {
+    "roll": 6,
+    "name": "Reorienting Head Wound",
+    "text": "Roll d6: 1–2 STR, 3–4 DEX, 5–6 WIL. Roll 3d6; if it beats that score, take it."
+  },
+  {
+    "roll": 7,
+    "name": "Hamstrung",
+    "text": "You can barely move until you get real help and rest. Afterward roll 3d6; if it beats your max DEX, take it."
+  },
+  {
+    "roll": 8,
+    "name": "Deafened",
+    "text": "You cannot hear until you find extraordinary aid. Either way, make a WIL save; on a success raise your max WIL by 1d4."
+  },
+  {
+    "roll": 9,
+    "name": "Re-brained",
+    "text": "Something in your mind shakes loose. Roll 3d6; if it beats your max WIL, take it."
+  },
+  {
+    "roll": 10,
+    "name": "Sundered",
+    "text": "An appendage is torn off, crippled, or useless. The Warden says which. Make a WIL save; on a success raise your max WIL by 1d6."
+  },
+  {
+    "roll": 11,
+    "name": "Mortal Wound",
+    "text": "You are deprived and out of action. You die in an hour unless healed. On recovery roll 2d6; that is your new max HP."
+  },
+  {
+    "roll": 12,
+    "name": "Doomed",
+    "text": "You should have died. If you fail your next save against critical damage, you die horribly. If you pass it, roll 3d6; if it beats your max HP, take it."
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "roll": 1,
+    "id": "fizzle",
+    "name": "Fizzle",
+    "text": "Nothing happens at all."
+  },
+  {
+    "roll": 2,
+    "id": "drained",
+    "name": "Drained",
+    "text": "You gain 1 extra Fatigue."
+  },
+  {
+    "roll": 3,
+    "id": "backlash",
+    "name": "Backlash",
+    "text": "The Ability turns on you. You take d6 damage, and Armor does not help."
+  },
+  {
+    "roll": 4,
+    "id": "astray",
+    "name": "Astray",
+    "text": "The Ability hits the wrong target or lands in the wrong place."
+  },
+  {
+    "roll": 5,
+    "id": "reversed",
+    "name": "Reversed",
+    "text": "The Ability does the opposite of what you intended."
+  },
+  {
+    "roll": 6,
+    "id": "blackout",
+    "name": "Blackout",
+    "text": "The Ability works, but you pass out for a few minutes afterward."
+  }
+]

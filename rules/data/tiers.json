@@ -1,0 +1,32 @@
+[
+  {
+    "tier": 1,
+    "abilitiesText": "Up to 2",
+    "maxAbilities": 2,
+    "opens": "Abilities from the Primary Affinity only"
+  },
+  {
+    "tier": 2,
+    "abilitiesText": "Up to 4",
+    "maxAbilities": 4,
+    "opens": ""
+  },
+  {
+    "tier": 3,
+    "abilitiesText": "Up to 6",
+    "maxAbilities": 6,
+    "opens": "The character may choose a **Secondary Affinity** and begin learning its Abilities"
+  },
+  {
+    "tier": 4,
+    "abilitiesText": "No limit",
+    "maxAbilities": null,
+    "opens": "Full use of both Affinities"
+  },
+  {
+    "tier": 5,
+    "abilitiesText": "No limit",
+    "maxAbilities": null,
+    "opens": "A legend. The Warden and player decide together what this means."
+  }
+]

@@ -29,10 +29,13 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   {
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
+    rules: { 'no-restricted-properties': ['error', ...noSkippedTests] },
+  },
+  {
+    // React's hook rules apply only to the app. The rules library has a
+    // function called useAbility, which is a game action, not a hook.
+    files: ['app/**/*.{ts,tsx}'],
     plugins: { 'react-hooks': reactHooks },
-    rules: {
-      ...reactHooks.configs.recommended.rules,
-      'no-restricted-properties': ['error', ...noSkippedTests],
-    },
+    rules: reactHooks.configs.recommended.rules,
   },
 );

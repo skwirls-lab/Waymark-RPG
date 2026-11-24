@@ -1,0 +1,88 @@
+[
+  {
+    "id": "unarmed",
+    "name": "Unarmed",
+    "description": "Fists, feet.",
+    "damage": 4,
+    "slots": 0,
+    "cost": null
+  },
+  {
+    "id": "light",
+    "name": "Light",
+    "description": "Small, easy to carry or hide.",
+    "damage": 6,
+    "slots": 1,
+    "cost": 5,
+    "examples": {
+      "fantasy": "Dagger, club, staff",
+      "modern": "Knife, baton",
+      "scifi": "Shock stick, utility blade"
+    }
+  },
+  {
+    "id": "standard",
+    "name": "Standard",
+    "description": "A proper weapon used in one hand.",
+    "damage": 8,
+    "slots": 1,
+    "cost": 10,
+    "examples": {
+      "fantasy": "Sword, axe, spear, mace",
+      "modern": "Machete, fire axe",
+      "scifi": "Energy blade, power maul"
+    }
+  },
+  {
+    "id": "heavy",
+    "name": "Heavy",
+    "description": "Needs both hands.",
+    "damage": 10,
+    "slots": 2,
+    "cost": 20,
+    "examples": {
+      "fantasy": "Great hammer, halberd",
+      "modern": "Sledgehammer, chainsaw",
+      "scifi": "Plasma cutter, heavy maul"
+    }
+  },
+  {
+    "id": "thrown-or-simple-ranged",
+    "name": "Thrown or simple ranged",
+    "description": "",
+    "damage": 4,
+    "slots": 1,
+    "cost": 5,
+    "examples": {
+      "fantasy": "Sling, throwing knife",
+      "modern": "Thrown rock, slingshot",
+      "scifi": "Throwing disc"
+    }
+  },
+  {
+    "id": "ranged",
+    "name": "Ranged",
+    "description": "",
+    "damage": 6,
+    "slots": 2,
+    "cost": 20,
+    "examples": {
+      "fantasy": "Short bow",
+      "modern": "Pistol",
+      "scifi": "Laser pistol"
+    }
+  },
+  {
+    "id": "powerful-ranged",
+    "name": "Powerful ranged",
+    "description": "",
+    "damage": 8,
+    "slots": 2,
+    "cost": 30,
+    "examples": {
+      "fantasy": "Longbow, crossbow",
+      "modern": "Rifle, shotgun",
+      "scifi": "Laser rifle"
+    }
+  }
+]

@@ -1,0 +1,292 @@
+[
+  {
+    "id": "mending",
+    "name": "Mending",
+    "heading": "healing and repairing",
+    "about": "Healing and repairing",
+    "suits": "A healer, a medic, a field mechanic",
+    "abilities": [
+      {
+        "id": "mend",
+        "name": "Mend",
+        "text": "Touch a living creature to restore 1d6 points of lost Strength."
+      },
+      {
+        "id": "repair",
+        "name": "Repair",
+        "text": "Touch a broken object, such as a snapped rope, a cracked beam, or a split handle. It becomes whole again."
+      },
+      {
+        "id": "cleanse",
+        "name": "Cleanse",
+        "text": "Remove ordinary poison, sickness, or blindness from a creature you can touch."
+      },
+      {
+        "id": "deep-rest",
+        "name": "Deep Rest",
+        "text": "Use this when your group settles down for the night. Everyone wakes fully rested, even if the night was short or the camp uncomfortable."
+      }
+    ]
+  },
+  {
+    "id": "warding",
+    "name": "Warding",
+    "heading": "protecting and strengthening",
+    "about": "Protecting and strengthening",
+    "suits": "A guardian, a shield-bearer, a force-field projector",
+    "abilities": [
+      {
+        "id": "harden",
+        "name": "Harden",
+        "text": "Touch an object. For ten minutes, it is twice as tough and twice as heavy."
+      },
+      {
+        "id": "shelter",
+        "name": "Shelter",
+        "text": "A dome of protection surrounds you and everyone Close to you. For three rounds, everyone inside has +2 Armor against attacks from outside. Armor still cannot go above 3."
+      },
+      {
+        "id": "boundary",
+        "name": "Boundary",
+        "text": "Draw a circle on the ground and name one kind of creature. Creatures of that kind must succeed at a Willpower save to cross the line."
+      },
+      {
+        "id": "brace",
+        "name": "Brace",
+        "text": "Touch a structure, such as a bridge, a wall, or a doorway. For one hour, it cannot collapse or be broken down."
+      }
+    ]
+  },
+  {
+    "id": "energy",
+    "name": "Energy",
+    "heading": "fire, lightning, force, and light",
+    "about": "Fire, lightning, force, and light",
+    "suits": "A battle mage, a fire-starter, a hero who throws lightning",
+    "abilities": [
+      {
+        "id": "bolt",
+        "name": "Bolt",
+        "text": "Strike one target that is Near or Far for d8 damage."
+      },
+      {
+        "id": "sweep",
+        "name": "Sweep",
+        "text": "Release a wave of energy in front of you. Everyone in an area about 15 feet wide takes d6 damage. This is a Blast attack."
+      },
+      {
+        "id": "beacon",
+        "name": "Beacon",
+        "text": "Create a floating light that follows you and lights up everything Near. At any time you can make it burst, doing d6 Blast damage to everything Close to it. That ends the Ability."
+      },
+      {
+        "id": "overheat",
+        "name": "Overheat",
+        "text": "Choose one object you can see. It becomes too hot to hold. Anyone holding it takes d6 damage each round until they let go."
+      }
+    ]
+  },
+  {
+    "id": "shaping",
+    "name": "Shaping",
+    "heading": "reshaping the surroundings",
+    "about": "Reshaping the surroundings",
+    "suits": "A druid, an earth-mover, a builder with living tools",
+    "abilities": [
+      {
+        "id": "lash",
+        "name": "Lash",
+        "text": "A vine, cable, or tendril whips out from a nearby surface at a target that is Near. The target takes d6 damage and must succeed at a Dexterity save or be tangled up and unable to move."
+      },
+      {
+        "id": "listen",
+        "name": "Listen",
+        "text": "Touch the ground, a wall, or a tree. For one minute you can hear any movement or speech within 500 feet that is touching the same surface."
+      },
+      {
+        "id": "barrier",
+        "name": "Barrier",
+        "text": "A wall rises from the ground, about 10 feet long and 5 feet high. It gives cover. Anyone forcing their way through takes d6 damage."
+      },
+      {
+        "id": "bridge",
+        "name": "Bridge",
+        "text": "Nearby material slowly reshapes itself into a ladder, a stair, or a bridge across a gap up to 20 feet wide."
+      }
+    ]
+  },
+  {
+    "id": "bonding",
+    "name": "Bonding",
+    "heading": "animals and other creatures",
+    "about": "Animals and other creatures",
+    "suits": "A beast-speaker, a ranger, a handler",
+    "abilities": [
+      {
+        "id": "speak",
+        "name": "Speak",
+        "text": "For ten minutes, you can talk with and understand ordinary animals."
+      },
+      {
+        "id": "calm",
+        "name": "Calm",
+        "text": "Angry or frightened creatures nearby settle down. They will not attack unless something attacks them first. This does not work on creatures that have been corrupted or are being controlled."
+      },
+      {
+        "id": "ally",
+        "name": "Ally",
+        "text": "Touch a wild creature and make a Willpower save. If you succeed, it helps you with one task, such as tracking, carrying, or guiding, and then goes on its way."
+      },
+      {
+        "id": "swarm",
+        "name": "Swarm",
+        "text": "Call up a cloud of tiny creatures or lights. Use it to light a dark place, to blind an enemy for a round, or to show up things that are hidden, such as tripwires."
+      }
+    ]
+  },
+  {
+    "id": "shadow",
+    "name": "Shadow",
+    "heading": "hiding and deceiving",
+    "about": "Hiding and deceiving",
+    "suits": "An illusionist, a spy, a trickster",
+    "abilities": [
+      {
+        "id": "vanish",
+        "name": "Vanish",
+        "text": "You cannot be seen for one minute, or until you attack or use another Ability. You still make noise and leave footprints."
+      },
+      {
+        "id": "disguise",
+        "name": "Disguise",
+        "text": "For ten minutes, you look and sound like another person of about your size. Someone who knows that person well may make a Willpower save to notice that something is wrong."
+      },
+      {
+        "id": "mirage",
+        "name": "Mirage",
+        "text": "Create an image, with sound, of anything up to the size of a wagon. It lasts ten minutes, and you can make it move. It has no substance, and anything that touches it passes through."
+      },
+      {
+        "id": "snuff",
+        "name": "Snuff",
+        "text": "Every ordinary light that is Near goes out: torches, lanterns, lamps, screens."
+      }
+    ]
+  },
+  {
+    "id": "insight",
+    "name": "Insight",
+    "heading": "sensing and knowing",
+    "about": "Sensing and knowing",
+    "suits": "A seer, a detective, a mind-reader",
+    "abilities": [
+      {
+        "id": "sense",
+        "name": "Sense",
+        "text": "Name a kind of thing, such as water, metal, or a living creature. You know the direction and distance to the nearest example that is Near or Far."
+      },
+      {
+        "id": "read",
+        "name": "Read",
+        "text": "Touch an object. You learn who last held it and what they were feeling at the time."
+      },
+      {
+        "id": "glimpse",
+        "name": "Glimpse",
+        "text": "Ask the Warden one yes-or-no question about something you could find out in the next few minutes, such as what is behind a door or whether a bridge will hold. The Warden answers truthfully."
+      },
+      {
+        "id": "link",
+        "name": "Link",
+        "text": "Touch two willing creatures. One of them can be you. For one hour they can hear each other's thoughts, however far apart they are."
+      }
+    ]
+  },
+  {
+    "id": "motion",
+    "name": "Motion",
+    "heading": "speed and movement",
+    "about": "Speed and movement",
+    "suits": "An acrobat, a speedster, a wind-walker",
+    "abilities": [
+      {
+        "id": "leap",
+        "name": "Leap",
+        "text": "Jump to any spot that is Near, including straight up, and land safely."
+      },
+      {
+        "id": "rush",
+        "name": "Rush",
+        "text": "Move three times this turn."
+      },
+      {
+        "id": "cling",
+        "name": "Cling",
+        "text": "For ten minutes, you can walk on walls and ceilings as easily as on the floor."
+      },
+      {
+        "id": "push",
+        "name": "Push",
+        "text": "Shove one creature or object that is Near directly away from you, as far as one move. A creature may make a Strength save to stand its ground. Anything pushed into a solid surface takes d6 damage."
+      }
+    ]
+  },
+  {
+    "id": "machine",
+    "name": "Machine",
+    "heading": "devices and automation",
+    "about": "Devices and automation",
+    "suits": "A robot, a hacker, a tinkerer",
+    "abilities": [
+      {
+        "id": "multitask",
+        "name": "Multitask",
+        "text": "Do two things this turn instead of one. Neither can be another Ability."
+      },
+      {
+        "id": "interface",
+        "name": "Interface",
+        "text": "Touch a lock, a device, or a machine. You can operate it without the key, the code, or the controls."
+      },
+      {
+        "id": "jury-rig",
+        "name": "Jury-rig",
+        "text": "Build a crude, working version of any simple tool from whatever is lying around. It lasts ten minutes and then falls apart."
+      },
+      {
+        "id": "shut-down",
+        "name": "Shut Down",
+        "text": "One device or machine that is Near stops working for three rounds. A machine that can think for itself may make a Willpower save to resist."
+      }
+    ]
+  },
+  {
+    "id": "prowess",
+    "name": "Prowess",
+    "heading": "a trained body and fighting skill",
+    "about": "A trained body and fighting skill",
+    "suits": "A veteran warrior, a martial artist, a super-soldier",
+    "abilities": [
+      {
+        "id": "mighty-blow",
+        "name": "Mighty Blow",
+        "text": "Attack a target that is Close. The attack is enhanced."
+      },
+      {
+        "id": "guard",
+        "name": "Guard",
+        "text": "Choose an ally who is Close. Until your next turn, any attack aimed at them hits you instead, and is impaired."
+      },
+      {
+        "id": "second-wind",
+        "name": "Second Wind",
+        "text": "You immediately get back all of your lost HP."
+      },
+      {
+        "id": "feat-of-strength",
+        "name": "Feat of Strength",
+        "text": "Perform one act of raw strength beyond what a person should manage: lift a gate, bend a bar, hold a closing door. No save is needed."
+      }
+    ]
+  }
+]

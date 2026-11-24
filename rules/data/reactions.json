@@ -1,0 +1,42 @@
+[
+  {
+    "min": 2,
+    "max": 2,
+    "rollText": "2",
+    "id": "hostile",
+    "name": "Hostile",
+    "text": "They mean harm."
+  },
+  {
+    "min": 3,
+    "max": 5,
+    "rollText": "3 to 5",
+    "id": "wary",
+    "name": "Wary",
+    "text": "Suspicious, and keeping their distance."
+  },
+  {
+    "min": 6,
+    "max": 8,
+    "rollText": "6 to 8",
+    "id": "curious",
+    "name": "Curious",
+    "text": "Interested, and willing to talk."
+  },
+  {
+    "min": 9,
+    "max": 11,
+    "rollText": "9 to 11",
+    "id": "kind",
+    "name": "Kind",
+    "text": "Friendly, and open to helping."
+  },
+  {
+    "min": 12,
+    "max": 12,
+    "rollText": "12",
+    "id": "helpful",
+    "name": "Helpful",
+    "text": "They go out of their way for the characters."
+  }
+]

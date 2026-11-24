@@ -1,0 +1,57 @@
+[
+  {
+    "id": "shield",
+    "name": "Shield",
+    "armor": 1,
+    "stacks": true,
+    "slots": 1,
+    "place": "hand",
+    "slotsText": "1 (a hand)",
+    "cost": 10,
+    "examples": "Wooden shield, riot shield, energy buckler"
+  },
+  {
+    "id": "helmet",
+    "name": "Helmet",
+    "armor": 1,
+    "stacks": true,
+    "slots": 1,
+    "place": "body",
+    "slotsText": "1 (body)",
+    "cost": 10,
+    "examples": "Iron helm, hard hat, visor"
+  },
+  {
+    "id": "light",
+    "name": "Light",
+    "armor": 1,
+    "stacks": false,
+    "slots": 1,
+    "place": "body",
+    "slotsText": "1 (body)",
+    "cost": 15,
+    "examples": "Padded coat, leather jacket, flight suit"
+  },
+  {
+    "id": "medium",
+    "name": "Medium",
+    "armor": 2,
+    "stacks": false,
+    "slots": 2,
+    "place": "body",
+    "slotsText": "2 (bulky)",
+    "cost": 40,
+    "examples": "Chainmail, armored vest, combat suit"
+  },
+  {
+    "id": "heavy",
+    "name": "Heavy",
+    "armor": 3,
+    "stacks": false,
+    "slots": 2,
+    "place": "body",
+    "slotsText": "2 (bulky)",
+    "cost": 60,
+    "examples": "Plate armor, bomb suit, powered armor"
+  }
+]

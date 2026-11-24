@@ -1,0 +1,82 @@
+[
+  {
+    "name": "Rations (three days)",
+    "cost": 10
+  },
+  {
+    "name": "Light source (torch, flashlight)",
+    "cost": 1
+  },
+  {
+    "name": "Lantern or lamp (burns longer)",
+    "cost": 10
+  },
+  {
+    "name": "Rope (25 feet)",
+    "cost": 5
+  },
+  {
+    "name": "Grappling hook",
+    "cost": 25
+  },
+  {
+    "name": "Crowbar",
+    "cost": 10
+  },
+  {
+    "name": "Hammer, saw, or shovel",
+    "cost": 5
+  },
+  {
+    "name": "Lockpicks",
+    "cost": 25
+  },
+  {
+    "name": "Healer's kit",
+    "cost": 25
+  },
+  {
+    "name": "Spyglass or binoculars",
+    "cost": 40
+  },
+  {
+    "name": "Fire-starter",
+    "cost": 1
+  },
+  {
+    "name": "Chalk",
+    "cost": 1
+  },
+  {
+    "name": "Large sack",
+    "cost": 5
+  },
+  {
+    "name": "Bedroll",
+    "cost": 5
+  },
+  {
+    "name": "Tent (bulky, sleeps two)",
+    "cost": 20
+  },
+  {
+    "name": "Mirror",
+    "cost": 5
+  },
+  {
+    "name": "Net",
+    "cost": 10
+  },
+  {
+    "name": "Musical instrument",
+    "cost": 10
+  },
+  {
+    "name": "Hand cart (+4 slots)",
+    "cost": 30
+  },
+  {
+    "name": "Pack animal (+6 slots)",
+    "cost": 30
+  }
+]
