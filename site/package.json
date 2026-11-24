@@ -1,0 +1,13 @@
+{
+  "name": "waymark-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs && pagefind --site dist",
+    "serve": "npx --yes serve dist -l 5050"
+  },
+  "devDependencies": {
+    "marked": "^14.1.0",
+    "pagefind": "^1.1.0"
+  }
+}
