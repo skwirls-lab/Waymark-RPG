@@ -1,0 +1,77 @@
+name: Verify and deploy
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'archive/**'
+      - 'sources/**'
+      - 'README.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-main
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('package-lock.json') }}
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run verify
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
+
+  deploy:
+    name: Deploy
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/786714793025/locations/global/workloadIdentityPools/github/providers/waymark-rpg
+          service_account: github-deploy@waymark-rpg.iam.gserviceaccount.com
+      - name: Deploy the rules site
+        run: npx firebase deploy --only hosting:site --project waymark-rpg --non-interactive
+      - name: Deploy the app and the security rules
+        run: npx firebase deploy --only hosting:app,firestore:rules --project waymark-rpg --non-interactive
+      - name: Check that both are up
+        run: |
+          curl --fail --silent --show-error --retry 5 --retry-delay 5 https://waymark-rpg.web.app/ | grep -q "Waymark"
+          curl --fail --silent --show-error --retry 5 --retry-delay 5 https://waymark-rpg-app.web.app/ | grep -q "Waymark"
+          curl --fail --silent --show-error https://waymark-rpg.web.app/pagefind/pagefind.js > /dev/null

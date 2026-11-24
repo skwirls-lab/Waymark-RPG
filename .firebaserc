@@ -1,5 +1,13 @@
 {
   "projects": {
     "default": "waymark-rpg"
+  },
+  "targets": {
+    "waymark-rpg": {
+      "hosting": {
+        "site": ["waymark-rpg"],
+        "app": ["waymark-rpg-app"]
+      }
+    }
   }
 }

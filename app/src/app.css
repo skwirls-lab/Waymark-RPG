@@ -1,0 +1,140 @@
+/* Colours and typefaces come from the rules site's tokens.css. */
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  min-height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 1.0625rem/1.6 var(--body);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+h1,
+h2,
+h3 {
+  font-family: var(--display);
+  line-height: 1.2;
+  margin: 0 0 0.5rem;
+  text-wrap: balance;
+}
+h1 {
+  font-size: 2rem;
+}
+a {
+  color: var(--forest);
+  text-underline-offset: 0.15em;
+}
+:focus-visible {
+  outline: 3px solid var(--blaze);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.logo {
+  display: inline-block;
+  flex: none;
+}
+.logo svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  padding-top: calc(0.6rem + env(safe-area-inset-top));
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font: 700 1.25rem var(--display);
+}
+
+.screen {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem calc(2rem + env(safe-area-inset-bottom));
+}
+.screen.center {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.25rem;
+}
+.lede {
+  color: var(--muted);
+  margin: 0 0 1.5rem;
+}
+.stack {
+  display: grid;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 20rem;
+}
+.fineprint {
+  color: var(--muted);
+  font-size: 0.9rem;
+  max-width: 22rem;
+  margin: 1.25rem 0 0;
+}
+.note {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--forest);
+  border-radius: 0 10px 10px 0;
+  padding: 0.75rem 1rem;
+}
+.error {
+  color: var(--blaze);
+  font-weight: 700;
+  margin: 1rem 0 0;
+}
+
+.button {
+  min-height: 3rem; /* comfortably above the 44px touch-target minimum */
+  padding: 0.7rem 1.25rem;
+  border-radius: 999px;
+  border: 2px solid var(--forest);
+  background: transparent;
+  color: var(--forest);
+  font: 700 1rem var(--body);
+  cursor: pointer;
+}
+.button.primary {
+  background: var(--blaze);
+  border-color: var(--blaze);
+  color: var(--blaze-ink);
+}
+.button.small {
+  min-height: 2.75rem;
+  padding: 0.4rem 1rem;
+  font-size: 0.95rem;
+}
+.button:active {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

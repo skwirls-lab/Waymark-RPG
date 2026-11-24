@@ -1,0 +1,14 @@
+node_modules
+dist
+dist-emulator
+archive
+sources
+*.md
+package-lock.json
+site/src/*.html
+site/src/*.svg
+app/public
+playwright-report
+test-results
+coverage
+.firebase

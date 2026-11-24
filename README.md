@@ -8,7 +8,10 @@ A roleplaying game for any world, written for people who have never played one. 
 |---|---|
 | `Waymark-Rulebook.md` | The complete rulebook. Playable on its own. |
 | `site/` | The website. `npm run build` in `site/` turns the rulebook into pages in `site/dist/`. |
-| `firebase.json`, `.github/workflows/deploy-site.yml` | Firebase Hosting config and automatic deploy on push to `main` |
+| `app/` | The companion app (React, TypeScript, Vite). Built in phases; see `docs/instructions.md`. |
+| `tests/` | Security-rules tests and end-to-end tests, run against the Firebase emulators |
+| `docs/` | The app plan, the build instructions, and the build log |
+| `firebase.json`, `.github/workflows/ci.yml` | Firebase config, and CI that runs `npm run verify` and then deploys |
 | `sources/` | The original Cairn reference, Sylvanholt rules, and planning documents |
 | `archive/` | Earlier drafts (v0.1 too long, v0.2 too short) |
 

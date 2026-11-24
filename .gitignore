@@ -1,5 +1,10 @@
 node_modules/
-site/dist/
+dist/
+dist-emulator/
 .firebase/
 *.log
 .DS_Store
+playwright-report/
+test-results/
+coverage/
+.env.local

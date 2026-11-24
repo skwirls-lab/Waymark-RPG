@@ -1,0 +1,29 @@
+:root {
+  --paper: #f7f3ea;
+  --card: #fffdf8;
+  --ink: #23302b;
+  --muted: #5d6b64;
+  --line: #e0d8c6;
+  --forest: #2f5d4a;
+  --blaze: #c2481a;
+  --blaze-ink: #ffffff;
+  --stone: #a9a394;
+  --display: 'Fraunces', Georgia, serif;
+  --body: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --wide: 72rem;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #161c19;
+    --card: #1e2622;
+    --ink: #ebe6d8;
+    --muted: #a3aea7;
+    --line: #313c36;
+    --forest: #86c9aa;
+    --blaze: #f0894a;
+    --blaze-ink: #1a120c;
+    --stone: #6f7a73;
+  }
+}
