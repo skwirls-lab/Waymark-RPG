@@ -8,12 +8,16 @@ test('a guest can sign in on the deployed app, and sign out again', async ({ pag
 
   await page.goto('/');
   await page.getByRole('button', { name: 'Continue as a guest' }).click();
-  await expect(
-    page.getByRole('heading', { name: 'Welcome, guest' }),
-    `Sign-in failed. Browser errors: ${problems.join(' | ')}`,
-  ).toBeVisible({
-    timeout: 20_000,
-  });
+
+  // Either the home screen appears, or the app says why sign-in failed.
+  const welcome = page.getByRole('heading', { name: 'Welcome, guest' });
+  const failure = page.getByRole('alert');
+  await expect(welcome.or(failure)).toBeVisible({ timeout: 20_000 });
+  if (await failure.isVisible()) {
+    throw new Error(
+      `Guest sign-in failed on the deployed app: "${await failure.textContent()}". Browser errors: ${problems.join(' | ')}`,
+    );
+  }
   // The database answers too: the character list loads rather than hanging.
   await expect(page.getByText('You have no character yet.')).toBeVisible({ timeout: 20_000 });
   await page.getByRole('button', { name: 'Sign out' }).click();

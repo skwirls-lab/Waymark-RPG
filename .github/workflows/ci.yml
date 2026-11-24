@@ -70,11 +70,6 @@ jobs:
         run: npx firebase deploy --only hosting:site --project waymark-rpg --non-interactive
       - name: Deploy the app and the security rules
         run: npx firebase deploy --only hosting:app,firestore:rules --project waymark-rpg --non-interactive
-      # One-off: earlier failed deploys left these two half-created without
-      # their triggers, and they cannot be converted in place. Remove this
-      # step once a deploy has succeeded.
-      - name: Remove half-created trigger functions
-        run: npx firebase functions:delete onCharacterWritten onWardenCharacterWritten --region us-central1 --project waymark-rpg --force || true
       - name: Deploy the Cloud Functions
         run: npx firebase deploy --only functions --project waymark-rpg --non-interactive --force
       - name: Check that both are up
