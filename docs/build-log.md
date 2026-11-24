@@ -5,7 +5,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 ## Current position
 
 - **Phase:** 3 (Campaigns and joining), in progress
-- **Task:** phase 3 built and verified in CI (run 45480932323 on fa71a9b); gate waits only on the first Cloud Functions deploy, which needs three one-time permissions from John (see Questions). When that deploy succeeds: record the gate and start phase 4 at once.
+- **Task:** phase 3 built, verified in CI, and all nine Cloud Functions deployed (run 45489688381). The gate now waits on the live sign-in check, which fails because sign-in methods are not enabled in the project (see Questions). When that check and Lighthouse pass: record the gate and start phase 4 at once.
 - **Last verified commit:** 3227ec5 (CI run 45471350857: verify, deploy and Lighthouse all green)
 - **To run everything in a build container:** `npm run verify:container` (see decisions 1 and 22). CI runs plain `npm run verify`.
 
@@ -161,11 +161,9 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Questions for John
 
-1. **Three one-time permissions for Cloud Functions (asked 2026-11-24, blocking the phase 3 gate).** John's earlier set-up is done (the APIs are on). The first deploy of functions with Firestore triggers needs three bindings that only a project owner can add; the deploy log names them:
-   - `gcloud projects add-iam-policy-binding waymark-rpg --member=serviceAccount:service-786714793025@gcp-sa-pubsub.iam.gserviceaccount.com --role=roles/iam.serviceAccountTokenCreator`
-   - `gcloud projects add-iam-policy-binding waymark-rpg --member=serviceAccount:786714793025-compute@developer.gserviceaccount.com --role=roles/run.invoker`
-   - `gcloud projects add-iam-policy-binding waymark-rpg --member=serviceAccount:786714793025-compute@developer.gserviceaccount.com --role=roles/eventarc.eventReceiver`
-   Then re-run the failed "Deploy" job of the latest "Verify and deploy" run.
+1. **Switch on the two sign-in methods (asked 2026-11-24, blocking the phase 3 gate).** The live check added in decision 32 fails with `auth/admin-restricted-operation`: Anonymous sign-in is not enabled in the Firebase project. John also reports Google sign-in failing. In the Firebase console, under Authentication, "Sign-in method": enable **Anonymous** and **Google**. Under "Settings", "Authorized domains": make sure `waymark-rpg-app.web.app` is listed. Then re-run the failed Deploy job of the latest "Verify and deploy" run; its live sign-in step must pass.
+
+*(Resolved 2026-11-24: Cloud Functions permissions. All nine functions deployed in CI run 45489688381.)*
 
 ## Suggestions
 
