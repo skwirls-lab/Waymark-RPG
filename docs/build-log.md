@@ -42,7 +42,8 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 - Local `verify` from the build container: format, lint, types, 5 unit tests, both builds, 8 security-rules tests, 10 end-to-end tests (5 flows at phone and tablet sizes), all passing. One test left out locally, per decision 1.
 - Rules site: builds, search returns results, colours unchanged after the token split.
-- Still needed: CI green including the Google-window test; app and rules deployed; both addresses responding.
+- CI run 45455147031 on commit ad22e06: `verify` passed, including the Google-window test (12 end-to-end tests). The rules site deployed.
+- Still needed: app and rules deployed, and both addresses responding. The deploy stopped with "Permission denied to get service firestore.googleapis.com", which John's phase 0 set-up resolves.
 
 ## Decisions made without asking
 
@@ -64,7 +65,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Questions for John
 
-*(Open items that block or will soon block work.)*
+1. **Phase 0 set-up (asked 2026-11-24).** Create Hosting site `waymark-rpg-app`; create the Firestore database; turn on Google and Anonymous sign-in and authorise the app's domain; grant `github-deploy` the Firebase Rules Admin and Service Usage Viewer roles; register a web app and send its config. Then re-run the CI workflow.
 
 ## Suggestions
 
