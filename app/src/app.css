@@ -1,4 +1,8 @@
-/* Colours and typefaces come from the rules site's tokens.css. */
+/* Colours and typefaces come from the rules site's tokens.css. The app bundles
+   its own copy of the Fraunces font, which is published under this name. */
+:root {
+  --display: 'Fraunces Variable', 'Fraunces', Georgia, serif;
+}
 * {
   box-sizing: border-box;
 }

@@ -1,6 +1,12 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+// The typefaces are bundled with the app, so the first screen needs no other
+// site and the app looks right offline.
+import '@fontsource/atkinson-hyperlegible/latin-400.css';
+import '@fontsource/atkinson-hyperlegible/latin-700.css';
+import '@fontsource/atkinson-hyperlegible/latin-400-italic.css';
+import '@fontsource-variable/fraunces/opsz.css';
 import '../../site/src/tokens.css';
 import './app.css';
 import { App } from './App';

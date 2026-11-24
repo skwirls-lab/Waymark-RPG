@@ -26,6 +26,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Include the bundled fonts, so the app looks right offline.
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: '/index.html',
         // Firebase's reserved paths must reach the network, not the app shell.
         navigateFallbackDenylist: [/^\/__\//],
