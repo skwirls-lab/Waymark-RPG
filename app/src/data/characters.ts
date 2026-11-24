@@ -55,7 +55,7 @@ export function watchCharacters(
 export async function saveCharacter(doc: CharacterDoc): Promise<void> {
   const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
   const { id, ...data } = doc;
-  await fs.setDoc(fs.doc(db, 'characters', id), { ...data, updatedAt: Date.now() });
+  await fs.setDoc(fs.doc(db, 'characters', id), data);
 }
 
 export async function deleteCharacter(id: string): Promise<void> {

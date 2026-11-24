@@ -1,7 +1,7 @@
 import { createCharacter } from '@waymark/rules';
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   CODE_LENGTH,
   createCampaign,
@@ -45,6 +45,14 @@ const sheet = () =>
     items: [],
   });
 const exists = async (path: string) => (await db.doc(path).get()).exists;
+/**
+ * Summaries are kept by background triggers, which the emulator also runs
+ * while these tests call the same functions directly. They settle within
+ * moments, so assertions about summaries wait for the settled state.
+ */
+const settles = (check: () => Promise<void>) => vi.waitFor(check, { timeout: 5000, interval: 50 });
+const summaryExists = (path: string, expected: boolean) =>
+  settles(async () => expect(await exists(path), path).toBe(expected));
 const start = (uid = 'dana') =>
   createCampaign(db, uid, { name: 'The Rope Bridge', displayName: 'Dana' });
 const ownCharacter = (uid: string, campaignId: string | null) =>
@@ -197,7 +205,7 @@ describe('leaving and removing', () => {
     await leaveCampaign(db, 'sam', { campaignId });
     expect(await exists(`campaigns/${campaignId}/members/sam`)).toBe(false);
     expect(await exists(`users/sam/memberships/${campaignId}`)).toBe(false);
-    expect(await exists(`campaigns/${campaignId}/summaries/sam_1`)).toBe(false);
+    await summaryExists(`campaigns/${campaignId}/summaries/sam_1`, false);
     expect((await db.doc('characters/sam_1').get()).get('campaignId')).toBeNull();
   });
 
@@ -260,7 +268,7 @@ describe('deleting a campaign', () => {
       `users/sam/memberships/${campaignId}`,
       `users/dana/memberships/${campaignId}`,
     ]) {
-      expect(await exists(path), path).toBe(false);
+      await summaryExists(path, false);
     }
     expect(await exists('characters/sam_1')).toBe(true);
     expect((await db.doc('characters/sam_1').get()).get('campaignId')).toBeNull();
@@ -297,7 +305,7 @@ describe('handing a Warden-run character to a player', () => {
       description: 'Small',
     });
     expect(await exists(`campaigns/${campaignId}/characters/w1`)).toBe(false);
-    expect(await exists(`campaigns/${campaignId}/summaries/w1`)).toBe(false);
+    await summaryExists(`campaigns/${campaignId}/summaries/w1`, false);
     expect((await db.doc(`campaigns/${campaignId}/members/jo`).get()).data()).toMatchObject({
       role: 'player',
       control: 'ask',
@@ -388,32 +396,34 @@ describe('summaries', () => {
   it("follow a player's character into, between and out of campaigns", async () => {
     await place('k1');
     await syncOwnedSummary(db, 'sam_1');
-    expect((await db.doc('campaigns/k1/summaries/sam_1').get()).data()).toMatchObject({
-      name: 'Wren',
-      kind: 'owned',
-      ownerUid: 'sam',
-    });
+    await settles(async () =>
+      expect((await db.doc('campaigns/k1/summaries/sam_1').get()).data()).toMatchObject({
+        name: 'Wren',
+        kind: 'owned',
+        ownerUid: 'sam',
+      }),
+    );
 
     await place('k2');
     await syncOwnedSummary(db, 'sam_1', 'k1');
-    expect(await exists('campaigns/k1/summaries/sam_1')).toBe(false);
-    expect(await exists('campaigns/k2/summaries/sam_1')).toBe(true);
+    await summaryExists('campaigns/k1/summaries/sam_1', false);
+    await summaryExists('campaigns/k2/summaries/sam_1', true);
 
     await place(null);
     await syncOwnedSummary(db, 'sam_1', 'k2');
-    expect(await exists('campaigns/k2/summaries/sam_1')).toBe(false);
+    await summaryExists('campaigns/k2/summaries/sam_1', false);
 
     await place('k1');
     await syncOwnedSummary(db, 'sam_1');
     await db.doc('characters/sam_1').delete();
     await syncOwnedSummary(db, 'sam_1', 'k1');
-    expect(await exists('campaigns/k1/summaries/sam_1')).toBe(false);
+    await summaryExists('campaigns/k1/summaries/sam_1', false);
   });
 
   it('a character outside any campaign has no summary', async () => {
     await place(null);
     await syncOwnedSummary(db, 'sam_1');
-    expect((await db.collectionGroup('summaries').get()).size).toBe(0);
+    await settles(async () => expect((await db.collectionGroup('summaries').get()).size).toBe(0));
   });
 
   it('a malformed sheet gets no summary and does not stop anything', async () => {
@@ -432,25 +442,51 @@ describe('summaries', () => {
       .doc('characters/sam_1')
       .set({ name: 'X', sheet: { hp: { current: 4 } }, ownerUid: 'sam', campaignId: 'k1' });
     await syncOwnedSummary(db, 'sam_1');
-    expect(await exists('campaigns/k1/summaries/sam_1')).toBe(false);
+    await summaryExists('campaigns/k1/summaries/sam_1', false);
 
     await db.doc('campaigns/k1/summaries/w1').set({ name: 'Old' });
     await db.doc('campaigns/k1/characters/w1').set({ name: 'X', sheet: 'nonsense' });
     await syncWardenSummary(db, 'k1', 'w1');
-    expect(await exists('campaigns/k1/summaries/w1')).toBe(false);
+    await summaryExists('campaigns/k1/summaries/w1', false);
   });
 
   it('follow a Warden-run character and go when it goes', async () => {
     await db.doc('campaigns/k1/characters/w1').set({ name: 'Pip', sheet: sheet() });
     await syncWardenSummary(db, 'k1', 'w1');
-    expect((await db.doc('campaigns/k1/summaries/w1').get()).data()).toMatchObject({
-      name: 'Pip',
-      kind: 'warden',
-      ownerUid: null,
-    });
+    await settles(async () =>
+      expect((await db.doc('campaigns/k1/summaries/w1').get()).data()).toMatchObject({
+        name: 'Pip',
+        kind: 'warden',
+        ownerUid: null,
+      }),
+    );
     await db.doc('campaigns/k1/characters/w1').delete();
     await syncWardenSummary(db, 'k1', 'w1');
-    expect(await exists('campaigns/k1/summaries/w1')).toBe(false);
+    await summaryExists('campaigns/k1/summaries/w1', false);
+  });
+
+  it('a sync that starts while the character is in a campaign cleans up if it leaves meanwhile', async () => {
+    // Simulates the slow trigger CI exposed: the character leaves between the
+    // sync's write and its re-check. Done by leaving from inside the first write.
+    await place('k1');
+    let left = false;
+    const original = db.doc.bind(db);
+    const spy = (path: string) => {
+      const ref = original(path);
+      if (path === 'campaigns/k1/summaries/sam_1' && !left) {
+        const set = ref.set.bind(ref);
+        ref.set = (async (data: FirebaseFirestore.DocumentData) => {
+          const result = await set(data);
+          left = true;
+          await original('characters/sam_1').update({ campaignId: null });
+          return result;
+        }) as typeof ref.set;
+      }
+      return ref;
+    };
+    await syncOwnedSummary({ doc: spy } as unknown as Firestore, 'sam_1');
+    expect(left).toBe(true);
+    await summaryExists('campaigns/k1/summaries/sam_1', false);
   });
 
   it('a late update for a character that has since been handed over does not bring its summary back', async () => {
@@ -462,10 +498,12 @@ describe('summaries', () => {
     await redeemHandover(db, 'jo', { code, displayName: 'Jo' });
 
     await syncWardenSummary(db, campaignId, 'w1');
-    expect(await exists(`campaigns/${campaignId}/summaries/w1`)).toBe(false);
+    await summaryExists(`campaigns/${campaignId}/summaries/w1`, false);
 
     await syncOwnedSummary(db, 'jo_1');
-    const summaries = await db.collection(`campaigns/${campaignId}/summaries`).get();
-    expect(summaries.docs.map((d) => d.id)).toEqual(['jo_1']);
+    await settles(async () => {
+      const summaries = await db.collection(`campaigns/${campaignId}/summaries`).get();
+      expect(summaries.docs.map((d) => d.id)).toEqual(['jo_1']);
+    });
   });
 });

@@ -379,14 +379,20 @@ export async function syncOwnedSummary(
   characterId: string,
   previousCampaignId?: string | null,
 ): Promise<void> {
+  // Every campaign this character may have a summary in: where it was before
+  // this change, and anywhere this run has written one. Any that is not
+  // where the character is now gets its summary removed.
+  const candidates = new Set<string>(previousCampaignId ? [previousCampaignId] : []);
   await converge(db.doc(`characters/${characterId}`), async (character) => {
     const campaignId = character.exists
-      ? (character.get('campaignId') as string | null | undefined)
+      ? ((character.get('campaignId') as string | null | undefined) ?? null)
       : null;
-    if (previousCampaignId && previousCampaignId !== campaignId) {
-      await db.doc(`campaigns/${previousCampaignId}/summaries/${characterId}`).delete();
+    for (const candidate of candidates) {
+      if (candidate !== campaignId)
+        await db.doc(`campaigns/${candidate}/summaries/${characterId}`).delete();
     }
     if (!campaignId) return;
+    candidates.add(campaignId);
     const summary = db.doc(`campaigns/${campaignId}/summaries/${characterId}`);
     if (isSheet(character.get('sheet'))) {
       await summary.set(

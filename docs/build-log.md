@@ -145,10 +145,13 @@ The memory between build sessions. Read `docs/instructions.md` first.
 27. **2026-11-24. Join links for signed-out visitors.** The path is remembered for the session, and the join form opens after sign-in with the code filled in.
 28. **2026-11-24. A removed player learns of it from the member list.** Firestore does not close a listener when access is withdrawn, so the campaign page treats "I am no longer in the member list" as removal.
 
-29. **2026-11-24. Summary triggers read the character as it is now.** CI exposed a race: a trigger for an earlier change to a Warden-run character ran after the character had been handed over and recreated its old summary. The triggers no longer trust the event's snapshot. They read the current document, apply, re-read, and repeat if it changed. A transaction was tried first and rejected: it locks the character's document, the one players write to during play, and the emulator timed out other writers.
+29. **2026-11-24. Summary triggers read the character as it is now.** CI exposed a race: a trigger for an earlier change to a Warden-run character ran after the character had been handed over and recreated its old summary. The triggers no longer trust the event's snapshot. They read the current document, apply, re-read, and repeat if it changed, removing any summary they wrote for a campaign the character has since left. A transaction was tried first and rejected: it locks the character's document, the one players write to during play, and the emulator timed out other writers.
+
+30. **2026-11-24. Local changes outrank older echoes from the database.** A rare lost update remained after decision 14's first fix: with several quick taps, the database's echo of an earlier save could briefly replace the newer on-screen sheet, and the next tap built on the stale copy. Each save now carries a strictly increasing timestamp, and a reported copy replaces the local one only when it is at least as new. Unit-tested in `useCharacters.test.ts`.
 
 ## Changed tests
 
+- **Cloud Functions summary assertions (phase 3, same day).** Old: checked the moment a function returned. New: wait up to five seconds for the settled state. Reason: summaries are kept by background triggers and are consistent within moments, not instantly; the emulator runs those triggers alongside the tests.
 - **Cloud Functions summary tests (phase 3, same day).** Old: `syncOwnedSummary` and `syncWardenSummary` were given before-and-after snapshots. New: they are given only ids and read the stored document, so the tests now store the document first. Reason: decision 29.
 - **Phase 0 "nothing is readable or writable".** Old: `users/alice` and `characters/c1` were refused for everyone. New: those two paths are opened by phase 2 with their own allowed-and-refused tests; the deny-all test now covers only paths no phase has opened. Reason: phase 2 legitimately opens them, as the test's own comment anticipated.
 
