@@ -84,6 +84,8 @@ export interface Card {
 export interface CardDetails {
   /** For a creature card: which creature's numbers it uses. */
   creatureId?: string | null;
+  /** For an item card: which piece of the world's gear it is. */
+  gearId?: string | null;
   /** For a fight card: who is in it. */
   enemies?: { creatureId: string; count: number }[];
 }
@@ -182,6 +184,7 @@ export async function saveCard(
   batch.set(fs.doc(db, `campaigns/${campaignId}/cardNotes/${id}`), {
     text: notes,
     creatureId: details.creatureId ?? null,
+    gearId: details.gearId ?? null,
     enemies: details.enemies ?? [],
   });
   await batch.commit();
@@ -331,6 +334,7 @@ export function useCardDetails(campaignId: string, enabled: boolean): Record<str
         id,
         {
           creatureId: (d.creatureId as string | null | undefined) ?? null,
+          gearId: (d.gearId as string | null | undefined) ?? null,
           enemies: Array.isArray(d.enemies) ? (d.enemies as CardDetails['enemies']) : [],
         },
       ],

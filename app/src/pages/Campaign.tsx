@@ -24,7 +24,7 @@ import { useContent } from '../data/record';
 import { useCharacterStore } from '../data/useCharacters';
 import { ActivityFeed, WardenParty } from './Party';
 import { Play } from './Play';
-import { Story } from './Story';
+import { Story, type Loot } from './Story';
 
 // Only the Warden needs these, so only the Warden downloads them.
 const Fight = lazy(() => import('./Fight').then((m) => ({ default: m.Fight })));
@@ -85,6 +85,7 @@ export function Campaign() {
   const content = useContent(isWarden ? cid! : null);
   const [params, setParams] = useSearchParams();
   const wide = useWide();
+  const [offer, setOffer] = useState<Loot | null>(null);
   const account = useAccount(uid);
   const myName = members.find((m) => m.uid === uid)?.displayName ?? user?.displayName ?? 'Someone';
   const present = usePresence(memberList ? cid! : null, uid, myName);
@@ -197,6 +198,8 @@ export function Campaign() {
           requests={requests}
           canAddCharacter={!!freeWardenSlot}
           gear={content.gear}
+          offer={offer}
+          onOfferDone={() => setOffer(null)}
         />
       ) : (
         <section aria-labelledby="party">
@@ -243,7 +246,7 @@ export function Campaign() {
             <>
               <p>
                 Let an AI run this campaign. It tells the story and reads it aloud; the app&rsquo;s
-                rules decide every roll. Needs the AI Warden plan.
+                rules decide every roll. Needs the AI Warden plan, which is coming soon.
               </p>
               <button
                 type="button"
@@ -415,6 +418,11 @@ export function Campaign() {
                   isWarden={isWarden}
                   party={summaries.map((s) => ({ id: s.id, name: s.name }))}
                   onFight={() => setParams({ tab: 'fight' }, { replace: true })}
+                  onGive={(loot) => {
+                    setOffer(loot);
+                    // The party list is where it is handed over.
+                    if (!split) setParams({}, { replace: true });
+                  }}
                 />
               )}
               <Suspense fallback={<p className="lede">Loading…</p>}>

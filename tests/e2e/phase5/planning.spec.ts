@@ -153,3 +153,64 @@ test('a world made outside any campaign can be used to build a character', async
   await expect(page.getByText('Navigator · Riverfolk · Tier 1')).toBeVisible();
   await expect(page.getByText('Fishing spear')).toBeVisible();
 });
+
+test("loot on a card is a piece of the world's gear, and is handed to a character from the card", async ({
+  page,
+}) => {
+  await signInAsAccount(page, 'Dana');
+  await startCampaign(page, 'The Drowned Valley', 'Dana');
+
+  // A character the Warden runs, to receive it.
+  await page.getByRole('link', { name: 'Add a character you run' }).click();
+  const next = () => page.getByRole('button', { name: 'Next' }).click();
+  await page.getByLabel('Strength').fill('9');
+  await page.getByLabel('Dexterity').fill('13');
+  await page.getByLabel('Willpower').fill('11');
+  await next();
+  await page.getByLabel('Hit Protection').fill('4');
+  await next();
+  await page.getByLabel('Name', { exact: true }).fill('Pip');
+  await page.getByLabel('Background').fill('Scout');
+  await next();
+  await page.getByRole('radio', { name: /No Origin/ }).check();
+  await next();
+  await page.getByLabel(/^No\./).check();
+  await next();
+  await page.getByLabel('Coins').fill('10');
+  await page.getByLabel('Weapon').fill('3');
+  await page.getByLabel('Armor').fill('4');
+  await page.getByLabel('Tools').fill('1');
+  await page.getByRole('button', { name: 'Finish character' }).click();
+  await expect(page.getByTestId('summary-Pip')).toBeVisible();
+
+  // Gear made in the workshop.
+  await openTab(page, 'Workshop');
+  await page.getByRole('button', { name: 'New item' }).click();
+  const gear = page.getByRole('form', { name: 'New gear' });
+  await gear.getByLabel('Item name').fill('Tide hook');
+  await gear.getByLabel('Damage').selectOption('8');
+  await gear.getByRole('button', { name: 'Save item' }).click();
+  await expect(page.getByText(/Tide hook saved/)).toBeVisible();
+
+  // A loot card that is that piece of gear.
+  await openTab(page, 'Story');
+  await page.getByRole('button', { name: 'New card' }).click();
+  const card = page.getByRole('form', { name: 'New card' });
+  await card.getByLabel('Kind').selectOption('item');
+  await card.getByLabel('Name', { exact: true }).fill("The ferryman's hook");
+  await card.getByLabel('Which item it is').selectOption({ label: 'Tide hook' });
+  await card.getByRole('button', { name: 'Save card' }).click();
+  const loot = page.getByTestId("card-The ferryman's hook");
+  await expect(loot).toContainText('Tide hook: weapon · d8');
+  await expectNoSeriousAccessibilityIssues(page);
+
+  // Handing it over: choose who gets it, and it is on their sheet.
+  await loot.getByRole('button', { name: /^Give/ }).click();
+  const giving = page.getByRole('group', { name: 'Give an item' });
+  await expect(giving).toContainText('Who gets Tide hook?');
+  await expectNoSidewaysScroll(page);
+  await giving.getByRole('button', { name: 'Give to Pip' }).click();
+  await expect(giving).toHaveCount(0);
+  await page.getByTestId('summary-Pip').getByRole('link', { name: 'Open' }).click();
+  await expect(page.getByText('Tide hook')).toBeVisible();
+});

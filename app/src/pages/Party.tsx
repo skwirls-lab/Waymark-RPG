@@ -67,6 +67,9 @@ interface Props {
   canAddCharacter: boolean;
   /** Gear made for this world, offered when giving an item. */
   gear?: CustomGear[];
+  /** Loot from a card, waiting to be handed to someone. */
+  offer?: Pick<Item, 'name' | 'kind' | 'slots' | 'damage' | 'armor'> | null;
+  onOfferDone?: () => void;
 }
 
 type ActionKind =
@@ -93,6 +96,8 @@ export function WardenParty({
   requests,
   canAddCharacter,
   gear = [],
+  offer = null,
+  onOfferDone,
 }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
   const [acting, setActing] = useState<Target | null>(null);
@@ -225,6 +230,36 @@ export function WardenParty({
   return (
     <section aria-labelledby="party">
       <h2 id="party">The party</h2>
+      {offer && (
+        <div className="panel alert" role="group" aria-label="Give an item">
+          <p>
+            <strong>Who gets {offer.name}?</strong>
+          </p>
+          <div className="button-row">
+            {targets.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className="button small primary"
+                onClick={() => {
+                  const item = {
+                    ...offer,
+                    id: `item-${crypto.randomUUID()}`,
+                    place: 'pack' as const,
+                  };
+                  void run(() => act(t, { type: 'give-item', item }));
+                  onOfferDone?.();
+                }}
+              >
+                Give to {t.name}
+              </button>
+            ))}
+            <button type="button" className="button small" onClick={onOfferDone}>
+              Nobody yet
+            </button>
+          </div>
+        </div>
+      )}
       {targets.length === 0 && <p className="muted">No characters yet.</p>}
       <ul className="party">
         {targets.map((t) => {

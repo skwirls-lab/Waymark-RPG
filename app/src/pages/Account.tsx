@@ -15,6 +15,13 @@ import { useMemberships } from '../data/useCampaign';
 import { useCharacterStore } from '../data/useCharacters';
 
 const SITE = 'https://waymark-rpg.web.app';
+
+/**
+ * Whether paid plans can be bought. While this is false the prices are shown
+ * with "Coming soon" and cannot be chosen. Set it to true once the payment
+ * keys are stored.
+ */
+export const PAID_PLANS_OPEN = false;
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 const day = (at: number | null) =>
   at ? new Date(at).toLocaleDateString([], { dateStyle: 'long' }) : 'the end of the period';
@@ -132,12 +139,15 @@ export function Account() {
                 </p>
               ) : (
                 <>
-                  <p>The paid plan removes both limits.</p>
+                  <p>
+                    The paid plan removes both limits.{' '}
+                    {!PAID_PLANS_OPEN && <span className="tag warn">Coming soon</span>}
+                  </p>
                   <div className="button-row">
                     <button
                       type="button"
                       className="button primary"
-                      disabled={busy}
+                      disabled={busy || !PAID_PLANS_OPEN}
                       onClick={() => go(() => startCheckout('monthly'))}
                     >
                       {dollars(PRICES.monthly)} a month
@@ -145,13 +155,17 @@ export function Account() {
                     <button
                       type="button"
                       className="button"
-                      disabled={busy}
+                      disabled={busy || !PAID_PLANS_OPEN}
                       onClick={() => go(() => startCheckout('yearly'))}
                     >
                       {dollars(PRICES.yearly)} a year
                     </button>
                   </div>
-                  <p className="hint">Cancel at any time. Nothing you made is ever deleted.</p>
+                  <p className="hint">
+                    {PAID_PLANS_OPEN
+                      ? 'Cancel at any time. Nothing you made is ever deleted.'
+                      : 'Paid plans are not open yet. These are the prices they will have. Everything in the free plan works now.'}
+                  </p>
                 </>
               )
             ) : (
@@ -218,6 +232,9 @@ export function Account() {
       )}
       <section aria-labelledby="data">
         <h2 id="data">Your data</h2>
+        <p className="hint">
+          Your account id: <code data-testid="account-id">{uid}</code>
+        </p>
         <p>
           Download everything the app holds about you: your characters, the campaigns you run, and
           your worlds.

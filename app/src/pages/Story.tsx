@@ -1,4 +1,11 @@
-import { addEnemies, data, startFight, type AiResult } from '@waymark/rules';
+import {
+  addEnemies,
+  data,
+  startFight,
+  type AiResult,
+  type CustomGear,
+  type Item,
+} from '@waymark/rules';
 import { useEffect, useState, type FormEvent } from 'react';
 import {
   CARD_KINDS,
@@ -17,6 +24,7 @@ import {
   useBeats,
   useBrief,
   useCardDetails,
+  useContent,
   useCardNotes,
   useCreatures,
   useCards,
@@ -39,6 +47,7 @@ interface StoryProps extends Props {
   /** The characters in the campaign, for starting a fight from a card. */
   party?: { id: string; name: string }[];
   onFight?: () => void;
+  onGive?: (loot: Loot) => void;
 }
 
 const when = (at: number) =>
@@ -58,7 +67,7 @@ function useSaver() {
 }
 
 /** The campaign's story: the brief, what has happened, and who and what is in it. */
-export function Story({ campaignId, uid, isWarden, party = [], onFight }: StoryProps) {
+export function Story({ campaignId, uid, isWarden, party = [], onFight, onGive }: StoryProps) {
   return (
     <>
       <BriefSection campaignId={campaignId} isWarden={isWarden} />
@@ -69,6 +78,7 @@ export function Story({ campaignId, uid, isWarden, party = [], onFight }: StoryP
         isWarden={isWarden}
         party={party}
         onFight={onFight}
+        onGive={onGive}
       />
       {isWarden && <PrivateNotes campaignId={campaignId} />}
     </>
@@ -443,14 +453,33 @@ const KIND_HELP: Record<CardKind, { shown: string; secret: string }> = {
   },
 };
 
+const describeGear = (g: CustomGear): string =>
+  [
+    g.kind === 'special' ? 'special item' : g.kind,
+    g.damage ? `d${g.damage}` : '',
+    g.armor ? `${g.armor} Armor` : '',
+    g.charges ? `${g.charges} charges` : '',
+    g.slots === 2 ? 'bulky' : '',
+    g.text ?? '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+/** Something a card offers to hand to a character. */
+export type Loot = Pick<Item, 'name' | 'kind' | 'slots' | 'damage' | 'armor'>;
+
 interface CardsProps extends Omit<Props, 'uid'> {
   uid: string;
   party: { id: string; name: string }[];
   /** Called when a fight has been started from a card, to show the fight tracker. */
   onFight?: () => void;
+  /** Called to hand an item card's loot to a character. */
+  onGive?: (loot: Loot) => void;
 }
 
-function Cards({ campaignId, uid, isWarden, party, onFight }: CardsProps) {
+function Cards({ campaignId, uid, isWarden, party, onFight, onGive }: CardsProps) {
+  const content = useContent(isWarden ? campaignId : null);
+  const gearOf = (id: string | null | undefined) => content.gear.find((g) => g.id === id);
   const cards = useCards(campaignId, isWarden);
   const notes = useCardNotes(campaignId, isWarden);
   const details = useCardDetails(campaignId, isWarden);
@@ -537,6 +566,7 @@ function Cards({ campaignId, uid, isWarden, party, onFight }: CardsProps) {
           const stats =
             isWarden && c.kind === 'creature' ? creature(details[c.id]?.creatureId) : undefined;
           const enemies = isWarden && c.kind === 'fight' ? (details[c.id]?.enemies ?? []) : [];
+          const gear = isWarden && c.kind === 'item' ? gearOf(details[c.id]?.gearId) : undefined;
           return (
             <li key={c.id} data-testid={`card-${c.name}`}>
               <strong>{c.name}</strong>
@@ -555,6 +585,11 @@ function Cards({ campaignId, uid, isWarden, party, onFight }: CardsProps) {
                   {stats.attack ? ` · ${stats.attack}` : ''}
                 </p>
               )}
+              {gear && (
+                <p>
+                  <em>{gear.name}:</em> {describeGear(gear)}
+                </p>
+              )}
               {enemies.length > 0 && (
                 <p>
                   <em>Enemies:</em>{' '}
@@ -570,6 +605,27 @@ function Cards({ campaignId, uid, isWarden, party, onFight }: CardsProps) {
               )}
               {isWarden && (
                 <div className="button-row">
+                  {c.kind === 'item' && onGive && party.length > 0 && (
+                    <button
+                      type="button"
+                      className="button small primary"
+                      onClick={() =>
+                        onGive(
+                          gear
+                            ? {
+                                name: gear.name,
+                                kind: gear.kind === 'special' ? 'tool' : gear.kind,
+                                slots: gear.slots,
+                                ...(gear.damage ? { damage: gear.damage } : {}),
+                                ...(gear.armor ? { armor: gear.armor } : {}),
+                              }
+                            : { name: c.name, kind: 'tool', slots: 1 },
+                        )
+                      }
+                    >
+                      Give <span className="sr-only">{c.name} </span>to a character
+                    </button>
+                  )}
                   {c.kind === 'fight' && enemies.length > 0 && (
                     <button
                       type="button"
@@ -611,6 +667,7 @@ function Cards({ campaignId, uid, isWarden, party, onFight }: CardsProps) {
             notes={editing.id ? (notes[editing.id] ?? '') : (suggested?.secret ?? '')}
             details={editing.id ? (details[editing.id] ?? {}) : {}}
             creatures={creatures.map((c) => ({ id: c.id, name: c.name }))}
+            gear={content.gear.map((g) => ({ id: g.id, name: g.name }))}
             sessions={brief.sessions.map((s) => ({ id: s.id, title: s.title }))}
             onSave={(card, privateNotes, cardDetails) => {
               saveCard(campaignId, card, privateNotes, cardDetails).catch(fail);
@@ -661,6 +718,7 @@ function CardForm({
   notes,
   details,
   creatures,
+  gear,
   sessions,
   suggested = false,
   onSave,
@@ -671,6 +729,7 @@ function CardForm({
   notes: string;
   details: CardDetails;
   creatures: { id: string; name: string }[];
+  gear: { id: string; name: string }[];
   sessions: { id: string; title: string }[];
   /** Whether the AI filled this in. */
   suggested?: boolean;
@@ -692,6 +751,7 @@ function CardForm({
   const [sessionId, setSessionId] = useState(card.sessionId ?? '');
   const [privateNotes, setPrivateNotes] = useState(notes);
   const [creatureId, setCreatureId] = useState(details.creatureId ?? '');
+  const [gearId, setGearId] = useState(details.gearId ?? '');
   const [enemies, setEnemies] = useState(
     details.enemies?.length ? details.enemies : [{ creatureId: creatures[0]!.id, count: 1 }],
   );
@@ -718,6 +778,7 @@ function CardForm({
           privateNotes,
           {
             creatureId: kind === 'creature' ? creatureId || null : null,
+            gearId: kind === 'item' ? gearId || null : null,
             enemies: kind === 'fight' ? enemies.filter((x) => x.count > 0) : [],
           },
         );
@@ -738,6 +799,23 @@ function CardForm({
         Name
         <input value={name} maxLength={80} required onChange={(e) => setName(e.target.value)} />
       </label>
+      {kind === 'item' && (
+        <label>
+          Which item it is
+          <select value={gearId} onChange={(e) => setGearId(e.target.value)}>
+            <option value="">An ordinary thing, described below</option>
+            {gear.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+          <span className="hint">
+            Choose gear made on the Workshop tab to give it its damage, Armor or charges. When the
+            characters find it, &ldquo;Give to a character&rdquo; on the card hands it over.
+          </span>
+        </label>
+      )}
       {kind === 'creature' && (
         <label>
           Its numbers

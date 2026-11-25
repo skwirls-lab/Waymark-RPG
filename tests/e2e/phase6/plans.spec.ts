@@ -42,8 +42,11 @@ test.describe('phase 6: plans', () => {
     await expect(page.getByTestId('usage-characters')).toHaveText('Your characters: 1 of 1');
     await expectNoSeriousAccessibilityIssues(page);
     await expectNoSidewaysScroll(page);
-    await page.getByRole('button', { name: '$4.99 a month' }).click();
-    await expect(page.getByText('Paid plans are not open yet.')).toBeVisible();
+    // Paid plans are shown with their prices, marked as coming soon, and cannot be chosen yet.
+    await expect(page.getByRole('button', { name: '$4.99 a month' })).toBeDisabled();
+    await expect(page.getByText('Coming soon')).toBeVisible();
+    await expect(page.getByText(/Paid plans are not open yet\./)).toBeVisible();
+    await expect(page.getByTestId('account-id')).toHaveText(uid);
     await expect(page.getByRole('button', { name: '$49.90 a year' })).toBeVisible();
 
     // The provider reports a subscription: the page changes without a reload.

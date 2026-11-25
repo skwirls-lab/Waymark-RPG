@@ -233,15 +233,15 @@ write(
 );
 
 // Hand-written pages
-// The legal name, contact address and governing law are John's to supply.
-// Until then the drafts say plainly that they are missing.
+// The legal name, contact address and governing law, as John supplied them.
 const vars = {
   '{{VERSION}}': version,
   '{{LOGO}}': logo,
   '{{FIRST}}': `/rules/${pages[0].slug}/`,
-  '{{LEGAL_NAME}}': '[legal name to be confirmed]',
-  '{{CONTACT}}': '[contact address to be confirmed]',
-  '{{JURISDICTION}}': '[place to be confirmed]',
+  '{{LEGAL_NAME}}': 'Skwirls Ventures LLC',
+  '{{CONTACT}}': '<a href="mailto:support@skwirls.com">support@skwirls.com</a>',
+  '{{JURISDICTION}}':
+    'the United States and of the state in which Skwirls Ventures LLC is registered',
   '{{APP_HOST}}': 'waymark-rpg-app.web.app',
   '{{SITE_HOST}}': 'waymark-rpg.web.app',
   '{{APP_URL}}': APP_URL,
