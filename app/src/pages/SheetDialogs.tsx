@@ -1,6 +1,7 @@
 import {
   RulesError,
   abilityLimit,
+  abilityOf,
   addFatigue,
   addItem,
   applyDamage,
@@ -273,7 +274,7 @@ export function AbilityDialog({
   onDone,
   onClose,
 }: Props & { abilityId: string }) {
-  const ability = data.affinities.flatMap((a) => a.abilities).find((a) => a.id === abilityId)!;
+  const ability = abilityOf(sheet, abilityId) ?? { name: abilityId, text: '' };
   const [danger, setDanger] = useState<boolean | undefined>(sheet.deprived ? true : undefined);
   const [d20, setD20] = useState<number>();
   const [misfire, setMisfire] = useState<number>();
@@ -681,9 +682,7 @@ export function CorruptionDialog({ sheet, onDone, onClose }: Props) {
                   setForget(forget.includes(id) ? forget.filter((f) => f !== id) : [...forget, id])
                 }
               />
-              <span>
-                {data.affinities.flatMap((a) => a.abilities).find((a) => a.id === id)?.name ?? id}
-              </span>
+              <span>{abilityOf(sheet, id)?.name ?? id}</span>
             </label>
           ))}
         </fieldset>

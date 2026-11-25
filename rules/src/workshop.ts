@@ -1,7 +1,7 @@
 import { applyOriginBonus, type Attributes } from './creation.ts';
 import { data, type Origin } from './data.ts';
 import { assertRoll } from './dice.ts';
-import { RulesError, type AttributeKey, type Die } from './types.ts';
+import { RulesError, type AttributeKey, type Character, type Die } from './types.ts';
 
 /**
  * The rulebook's "make your own" guidance, as checks. Each returns a list of
@@ -285,3 +285,33 @@ export function applyAnyOriginBonus(
 }
 
 export const ATTRIBUTE_KEYS: AttributeKey[] = ['str', 'dex', 'wil'];
+
+/** A character's Origin as the sheet shows it, whether from the rulebook or their world. */
+export function originOf(
+  character: Character,
+): { name: string; trait: string; drawback: string | null } | undefined {
+  return character.homebrew?.origin ?? data.origins.find((o) => o.id === character.originId);
+}
+
+/** An Ability's name and text, whether from the rulebook or the character's world. */
+export function abilityOf(
+  character: Pick<Character, 'homebrew'>,
+  abilityId: string,
+): { name: string; text: string } | undefined {
+  return (
+    character.homebrew?.abilities?.[abilityId] ??
+    data.affinities.flatMap((a) => a.abilities).find((a) => a.id === abilityId)
+  );
+}
+
+/** An Affinity's name, whether from the rulebook or the character's world. */
+export function affinityNameOf(
+  character: Pick<Character, 'homebrew'>,
+  affinityId: string | null,
+): string | undefined {
+  if (!affinityId) return undefined;
+  return (
+    character.homebrew?.affinities?.[affinityId] ??
+    data.affinities.find((a) => a.id === affinityId)?.name
+  );
+}

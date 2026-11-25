@@ -5,7 +5,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 ## Current position
 
 - **Phase:** 5 (Warden tools and the campaign record), in progress
-- **Task:** phase 5, task 1 (campaign brief and session briefs)
+- **Task:** phase 5 gate (all eight tasks built; waiting on CI)
 - **Last verified commit:** 6aea3e8 (CI run 45521691249: verify, all deploys, live guest sign-in and Lighthouse green)
 - **To run everything in a build container:** `npm run verify:container` (see decisions 1 and 22). CI runs plain `npm run verify`.
 
@@ -80,14 +80,14 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Phase 5 tasks
 
-- [ ] 1. Campaign brief and session briefs
-- [ ] 2. Timeline of story beats, with quick notes
-- [ ] 3. Cards with statuses, hidden from players until revealed
-- [ ] 4. Creatures: the rulebook's ten and the Warden's own
-- [ ] 5. Fight tracker
-- [ ] 6. Custom content: Origins, Affinities, Abilities, gear
-- [ ] 7. Worlds: custom content saved as a pack
-- [ ] 8. Wide layout for the Warden
+- [x] 1. Campaign brief and session briefs
+- [x] 2. Timeline of story beats, with quick notes
+- [x] 3. Cards with statuses; planned cards and private notes hidden from players
+- [x] 4. Creatures: the rulebook's ten, and the Warden's own
+- [x] 5. Fight tracker: sides, turn order, creature HP, morale, reaction roll, distance
+- [x] 6. Custom Origins, Affinities, Abilities and gear, checked against the rulebook's advice, in the campaign's builder
+- [x] 7. Worlds as packs
+- [x] 8. Wide layout for the Warden
 
 ## Gate evidence
 
@@ -197,6 +197,16 @@ The memory between build sessions. Read `docs/instructions.md` first.
 38. **2026-11-25. Presence** is a timestamp each member refreshes every 30 seconds while the campaign or their sheet is open; someone counts as here for 75 seconds after the last one.
 39. **2026-11-25. When Fatigue has nowhere to go under a direct Warden change,** the Warden is told to take an item first or ask the player to put something down. Which item to drop is the player's choice, so the app does not pick one.
 40. **2026-11-25. Hand-over moved into the Warden's "Act" dialog** for a Warden-run character.
+41. **2026-11-25. Where the campaign record is kept.** `campaigns/{id}/shared/brief` and `shared/content` (every member reads, the Warden writes); `private/notes`, `private/creatures`, `private/fight` (the Warden only); `beats`, `cards`, and `cardNotes`. A card's private note is a separate document from the card, because security rules hide whole documents, not fields.
+42. **2026-11-25. Beats are stamped by the server's clock,** and the rules refuse any other time, so two devices always agree on the order. A beat's time cannot be changed afterwards. Beats can be marked "Only I can see this"; that is how a Warden's quick private note is kept on the timeline.
+43. **2026-11-25. Only the Warden adds beats and cards** for now. Players read them. Letting players add their own notes is a suggestion for later.
+44. **2026-11-25. Custom content travels with the character.** A character made with a world's Origin or Ability keeps that name and text on its own sheet (`homebrew`), so the sheet still reads correctly if the character leaves the campaign or the Warden deletes the content.
+45. **2026-11-25. The rulebook's "make your own" guidance is advice, not a block.** The workshop shows warnings (for example, "an Ability that harms one target should do d6 or d8") and still lets the Warden save.
+46. **2026-11-25. The fight tracker holds enemies' numbers only.** Characters' HP stays on their sheets and is changed from the party list as before; the tracker shows it. For morale, the steadiest enemy still standing rolls for all of them. An enemy that fails its Strength save is out of the fight.
+47. **2026-11-25. A new character needs two Abilities,** so a brand-new Affinity cannot be picked as "awake" until it has two. The workshop says so.
+48. **2026-11-25. Worlds are saved per account** under `users/{uid}/worlds`. Bringing one into a campaign adds what is not already there. No limit on the number of worlds yet; phase 6 sets plan limits.
+49. **2026-11-25. Laptop width is tested for phase 5 only** (a third Playwright project, 1366 pixels wide). Earlier phases have no wide layout to test.
+50. **2026-11-25. Deleting a campaign now removes everything under it,** including requests, the activity feed and presence, which the earlier version left behind.
 
 ## Changed tests
 

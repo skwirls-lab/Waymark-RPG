@@ -1,11 +1,14 @@
 import {
+  allOrigins,
   applyOriginBonus,
   createCharacter,
   data,
+  kitItems,
   startingKitItems,
   swapAttributes,
   type AttributeKey,
   type Character,
+  type ExtraContent,
 } from '@waymark/rules';
 
 export const STEPS = [
@@ -63,9 +66,12 @@ export function rolledAttributes(d: Draft): Record<AttributeKey, number> | null 
 }
 
 /** The scores as they will be on the sheet. */
-export function finalAttributes(d: Draft): Record<AttributeKey, number> | null {
+export function finalAttributes(
+  d: Draft,
+  extra: ExtraContent = {},
+): Record<AttributeKey, number> | null {
   const rolled = rolledAttributes(d);
-  const origin = data.origins.find((o) => o.id === d.originId);
+  const origin = allOrigins(extra).find((o) => o.id === d.originId);
   return rolled && origin ? applyOriginBonus(rolled, origin) : rolled;
 }
 
@@ -106,20 +112,30 @@ export function kitRows(d: Draft) {
 }
 
 /** Turns a finished draft into a character sheet, using the rules library. */
-export function buildCharacter(d: Draft): Character {
+export function buildCharacter(d: Draft, extra: ExtraContent = {}): Character {
   const attributes = rolledAttributes(d);
   if (!attributes || d.hp === undefined || d.coins === undefined)
     throw new Error('The character is not finished.');
   const rows = kitRows(d);
-  return createCharacter({
-    name: d.name.trim(),
-    background: d.background.trim(),
-    attributes,
-    hp: d.hp,
-    coins: d.coins,
-    originId: d.originId ?? null,
-    primaryAffinity: d.gift === 'none' ? null : d.affinity,
-    abilities: d.gift === 'awake' ? d.abilities : [],
-    items: d.originId ? undefined : rows ? startingKitItems(rows) : [],
-  });
+  const customOrigin = extra.origins?.find((o) => o.id === d.originId);
+  return createCharacter(
+    {
+      name: d.name.trim(),
+      background: d.background.trim(),
+      attributes,
+      hp: d.hp,
+      coins: d.coins,
+      originId: d.originId ?? null,
+      primaryAffinity: d.gift === 'none' ? null : d.affinity,
+      abilities: d.gift === 'awake' ? d.abilities : [],
+      items: customOrigin
+        ? kitItems(customOrigin)
+        : d.originId
+          ? undefined
+          : rows
+            ? startingKitItems(rows)
+            : [],
+    },
+    extra,
+  );
 }

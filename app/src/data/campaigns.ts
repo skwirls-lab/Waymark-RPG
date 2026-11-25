@@ -50,7 +50,7 @@ type Fs = typeof import('firebase/firestore');
 type Constraint = (fs: Fs) => import('firebase/firestore').QueryConstraint[];
 
 /** Watches a collection, online or off, and reports each change. Refusals report an empty list. */
-function watchCollection<T>(
+export function watchCollection<T>(
   path: string,
   map: (id: string, data: Record<string, unknown>) => T,
   onChange: (items: T[]) => void,
@@ -63,8 +63,28 @@ function watchCollection<T>(
     if (cancelled) return;
     stop = fs.onSnapshot(
       fs.query(fs.collection(db, path), ...constraints(fs)),
-      (snapshot) => onChange(snapshot.docs.map((d) => map(d.id, d.data()))),
+      (snapshot) =>
+        onChange(snapshot.docs.map((d) => map(d.id, d.data({ serverTimestamps: 'estimate' })))),
       () => onChange([]),
+    );
+  })();
+  return () => {
+    cancelled = true;
+    stop();
+  };
+}
+
+/** Watches one document. Reports `null` if it does not exist or may not be read. */
+export function watchDoc<T>(path: string, onChange: (value: T | null) => void): Unsubscribe {
+  let stop: Unsubscribe = () => {};
+  let cancelled = false;
+  void (async () => {
+    const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
+    if (cancelled) return;
+    stop = fs.onSnapshot(
+      fs.doc(db, path),
+      (snapshot) => onChange(snapshot.exists() ? (snapshot.data() as T) : null),
+      () => onChange(null),
     );
   })();
   return () => {

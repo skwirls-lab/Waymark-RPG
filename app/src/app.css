@@ -239,6 +239,7 @@ h2 {
   cursor: pointer;
 }
 input[type='text'],
+input:not([type]),
 input[type='number'],
 select,
 textarea {
@@ -747,4 +748,164 @@ input.number {
 h3 {
   font-size: 1.05rem;
   margin: 1.25rem 0 0.25rem;
+}
+
+/* ---- The campaign record and the Warden's tools ---- */
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 1rem 0 0.5rem;
+  border-bottom: 2px solid var(--line);
+  overflow-x: auto;
+}
+.tab {
+  font: 700 1rem var(--body);
+  padding: 0.7rem 0.9rem;
+  min-height: 44px;
+  background: none;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tab.current {
+  color: var(--forest);
+  border-bottom-color: var(--forest);
+}
+.record {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0.75rem;
+  display: grid;
+  gap: 0.5rem;
+}
+.record > li {
+  padding: 0.7rem 0.85rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.record > li p {
+  margin: 0.3rem 0 0;
+}
+.record > li .tag {
+  margin-left: 0.4rem;
+}
+.record > li .button-row {
+  margin-top: 0.5rem;
+}
+.record > li.milestone {
+  border-left: 4px solid var(--forest);
+}
+.record > li.down {
+  background: var(--paper);
+}
+.timeline .small {
+  font-size: 0.85rem;
+}
+.tag.quiet {
+  background: color-mix(in srgb, var(--muted) 16%, transparent);
+  color: var(--ink);
+}
+.tag.warn {
+  background: var(--card);
+  border: 1px solid var(--blaze-text);
+  color: var(--blaze-text);
+}
+.note.warn {
+  border-left-color: var(--blaze-text);
+}
+.note.warn ul {
+  margin: 0.3rem 0;
+  padding-left: 1.2rem;
+}
+.prewrap {
+  white-space: pre-wrap;
+}
+.checks,
+.fight-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-top: 0.5rem;
+}
+.check {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  font-weight: 400 !important;
+  margin-top: 0 !important;
+  cursor: pointer;
+}
+.check input {
+  width: 1.3rem;
+  height: 1.3rem;
+  flex: none;
+  accent-color: var(--forest);
+}
+.inline-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.inline-field input {
+  width: 4.5rem;
+}
+.turn {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.75rem 1rem;
+  background: var(--card);
+  border: 2px solid var(--forest);
+  border-radius: 12px;
+  font-size: 1.15rem;
+}
+.turn .eyebrow {
+  margin: 0;
+}
+.panel.alert {
+  border: 2px solid var(--blaze-text);
+}
+.kit-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  align-items: end;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.kit-row label {
+  margin-top: 0;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+.grid-3 input,
+.kit-row input,
+.kit-row select {
+  width: 100%;
+  min-width: 0;
+}
+details > summary {
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.7rem 0;
+  min-height: 44px;
+}
+
+/* The Warden at a laptop: the party stays in view beside the other tools. */
+.screen.wide {
+  max-width: 76rem;
+}
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: start;
 }

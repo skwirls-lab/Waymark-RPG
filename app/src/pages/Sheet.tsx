@@ -1,12 +1,14 @@
 import {
   RulesError,
   abilityLimit,
+  abilityOf,
+  affinityNameOf,
   applyWardenAction,
+  originOf,
   checkSave,
   addFatigue,
   armorValue,
   catchCorruption,
-  data,
   removeItem,
   setDeprived,
   slotsUsed,
@@ -55,9 +57,6 @@ const PLACES: { value: ItemPlace; label: string }[] = [
   { value: 'body', label: 'Worn' },
   { value: 'pack', label: 'In pack' },
 ];
-const abilityById = Object.fromEntries(
-  data.affinities.flatMap((a) => a.abilities.map((b) => [b.id, b])),
-);
 
 interface ViewProps {
   doc: CharacterDoc;
@@ -128,8 +127,9 @@ export function SheetView({
   };
   const close = () => setDialog(null);
 
-  const origin = data.origins.find((o) => o.id === sheet.originId);
-  const affinity = data.affinities.find((a) => a.id === sheet.primaryAffinity);
+  const origin = originOf(sheet);
+  const affinityName = affinityNameOf(sheet, sheet.primaryAffinity);
+  const affinity = affinityName ? { name: affinityName } : undefined;
   const used = slotsUsed(sheet);
   const full = used >= sheet.slotCapacity;
   const state = status(sheet);
@@ -459,8 +459,8 @@ export function SheetView({
           {sheet.abilities.map((id) => (
             <li key={id}>
               <div>
-                <strong>{abilityById[id]?.name ?? id}</strong>
-                <p>{abilityById[id]?.text}</p>
+                <strong>{abilityOf(sheet, id)?.name ?? id}</strong>
+                <p>{abilityOf(sheet, id)?.text}</p>
               </div>
               <button
                 type="button"

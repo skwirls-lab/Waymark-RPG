@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   RulesError,
   abilityIndexWith,
+  abilityOf,
+  affinityNameOf,
+  originOf,
   allAffinities,
   allOrigins,
   applyAnyOriginBonus,
@@ -381,6 +384,34 @@ describe("A world's own content alongside the rulebook's", () => {
     expect(healer.homebrew).toEqual({
       abilities: { stitch: { name: 'Stitch', text: 'Close a wound so it stops bleeding.' } },
     });
+  });
+
+  it('the sheet reads names and text from the character, so they survive leaving the world', () => {
+    const orla = createCharacter(
+      {
+        ...base,
+        originId: 'riverfolk',
+        primaryAffinity: 'tides',
+        abilities: ['tide-call'],
+        items: [],
+      },
+      extra,
+    );
+    expect(originOf(orla)?.name).toBe('Riverfolk');
+    expect(abilityOf(orla, 'tide-call')?.name).toBe('Tide Call');
+    expect(affinityNameOf(orla, 'tides')).toBe('Tides');
+    const plain = createCharacter({
+      ...base,
+      originId: 'climber',
+      primaryAffinity: 'energy',
+      abilities: ['bolt'],
+    });
+    expect(originOf(plain)?.name).toBe(data.origins.find((o) => o.id === 'climber')!.name);
+    expect(abilityOf(plain, 'bolt')?.name).toBe('Bolt');
+    expect(affinityNameOf(plain, 'energy')).toBe('Energy');
+    expect(affinityNameOf(plain, null)).toBeUndefined();
+    expect(abilityOf(plain, 'nothing')).toBeUndefined();
+    expect(originOf(createCharacter(base))).toBeUndefined();
   });
 
   it('a character made only from the rulebook carries nothing extra', () => {

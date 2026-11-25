@@ -4,6 +4,7 @@ import {
   describeAction,
   type AttributeKey,
   type Character,
+  type CustomGear,
   type Die,
   type Item,
   type WardenAction,
@@ -64,6 +65,8 @@ interface Props {
   playerCharacters: CharacterDoc[];
   requests: CampaignRequest[];
   canAddCharacter: boolean;
+  /** Gear made for this world, offered when giving an item. */
+  gear?: CustomGear[];
 }
 
 type ActionKind =
@@ -89,6 +92,7 @@ export function WardenParty({
   playerCharacters,
   requests,
   canAddCharacter,
+  gear = [],
 }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
   const [acting, setActing] = useState<Target | null>(null);
@@ -329,6 +333,7 @@ export function WardenParty({
       {acting && (
         <ActDialog
           target={acting}
+          gear={gear}
           onClose={() => setActing(null)}
           onAct={(action) => {
             const target = acting;
@@ -380,6 +385,7 @@ export function WardenParty({
 
 function ActDialog({
   target,
+  gear,
   onAct,
   onSave,
   onUndo,
@@ -387,6 +393,8 @@ function ActDialog({
   onClose,
 }: {
   target: Target;
+  /** Gear the Warden has made for this world. */
+  gear: CustomGear[];
   onAct: (action: WardenAction) => void;
   onSave: (attribute: AttributeKey, reason: string) => void;
   onUndo: () => void;
@@ -550,6 +558,30 @@ function ActDialog({
         )}
         {kind === 'give' && (
           <>
+            {gear.length > 0 && (
+              <label>
+                From your world
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const made = gear.find((g) => g.id === e.target.value);
+                    if (!made) return;
+                    setItemName(made.name);
+                    setItemKind(made.kind === 'special' ? 'tool' : made.kind);
+                    setItemSlots(made.slots);
+                    if (made.damage) setItemDamage(made.damage);
+                    if (made.armor) setItemArmor(made.armor);
+                  }}
+                >
+                  <option value="">Choose, or describe an item below…</option>
+                  {gear.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label>
               Item name
               <input

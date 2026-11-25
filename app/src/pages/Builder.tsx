@@ -1,9 +1,16 @@
-import { data, type AttributeKey } from '@waymark/rules';
+import {
+  allAffinities,
+  allOrigins,
+  data,
+  type AttributeKey,
+  type ExtraContent,
+} from '@waymark/rules';
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { WARDEN_CHARACTER_IDS, saveWardenCharacter } from '../data/campaigns';
 import { characterId } from '../data/characters';
+import { useContent } from '../data/record';
 import { useCampaign } from '../data/useCampaign';
 import { useCharacterStore } from '../data/useCharacters';
 import { RollInput } from '../ui/RollInput';
@@ -40,10 +47,12 @@ interface ViewProps {
   onChange: (draft: Draft) => void;
   onFinish: () => void;
   onCancel: () => void;
+  /** A world's own Origins, Affinities and Abilities, offered beside the rulebook's. */
+  extra?: ExtraContent;
 }
 
 /** The six steps of making a character. Holds no data of its own, so it can be tested alone. */
-export function BuilderView({ draft, onChange, onFinish, onCancel }: ViewProps) {
+export function BuilderView({ draft, onChange, onFinish, onCancel, extra = {} }: ViewProps) {
   const set = (patch: Partial<Draft>) => onChange({ ...draft, ...patch });
   const step = draft.step;
   const last = step === STEPS.length - 1;
@@ -83,9 +92,9 @@ export function BuilderView({ draft, onChange, onFinish, onCancel }: ViewProps) 
         </section>
       )}
       {step === 2 && <IdentityStep draft={draft} set={set} />}
-      {step === 3 && <OriginStep draft={draft} set={set} />}
-      {step === 4 && <AffinityStep draft={draft} set={set} />}
-      {step === 5 && <GearStep draft={draft} set={set} />}
+      {step === 3 && <OriginStep draft={draft} set={set} extra={extra} />}
+      {step === 4 && <AffinityStep draft={draft} set={set} extra={extra} />}
+      {step === 5 && <GearStep draft={draft} set={set} extra={extra} />}
 
       <div className="step-nav">
         {step === 0 ? (
@@ -111,7 +120,7 @@ export function BuilderView({ draft, onChange, onFinish, onCancel }: ViewProps) 
   );
 }
 
-type StepProps = { draft: Draft; set: (patch: Partial<Draft>) => void };
+type StepProps = { draft: Draft; set: (patch: Partial<Draft>) => void; extra?: ExtraContent };
 
 function AttributesStep({ draft, set }: StepProps) {
   const rolled = rolledAttributes(draft);
@@ -236,7 +245,7 @@ function IdentityStep({ draft, set }: StepProps) {
   );
 }
 
-function OriginStep({ draft, set }: StepProps) {
+function OriginStep({ draft, set, extra }: StepProps) {
   return (
     <section>
       <p>
@@ -257,7 +266,7 @@ function OriginStep({ draft, set }: StepProps) {
             <span>Roll for your starting gear in the last step.</span>
           </span>
         </label>
-        {data.origins.map((o) => (
+        {allOrigins(extra).map((o) => (
           <label key={o.id} className="card-choice">
             <input
               type="radio"
@@ -285,8 +294,9 @@ function OriginStep({ draft, set }: StepProps) {
   );
 }
 
-function AffinityStep({ draft, set }: StepProps) {
-  const affinity = data.affinities.find((a) => a.id === draft.affinity);
+function AffinityStep({ draft, set, extra }: StepProps) {
+  const affinities = allAffinities(extra);
+  const affinity = affinities.find((a) => a.id === draft.affinity);
   const toggle = (id: string) => {
     const chosen = draft.abilities.includes(id)
       ? draft.abilities.filter((a) => a !== id)
@@ -338,15 +348,16 @@ function AffinityStep({ draft, set }: StepProps) {
             onChange={(e) => set({ affinity: e.target.value || null, abilities: [] })}
           >
             <option value="">Choose one…</option>
-            {data.affinities.map((a) => (
+            {affinities.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.name}: {a.about.toLowerCase()}
+                {a.name}
+                {a.about ? `: ${a.about.toLowerCase()}` : ''}
               </option>
             ))}
           </select>
         </label>
       )}
-      {affinity && (
+      {affinity?.suits && (
         <p className="hint">A character with it might be: {affinity.suits.toLowerCase()}.</p>
       )}
 
@@ -372,10 +383,10 @@ function AffinityStep({ draft, set }: StepProps) {
   );
 }
 
-function GearStep({ draft, set }: StepProps) {
-  const origin = data.origins.find((o) => o.id === draft.originId);
+function GearStep({ draft, set, extra }: StepProps) {
+  const origin = allOrigins(extra).find((o) => o.id === draft.originId);
   const rows = kitRows(draft);
-  const final = finalAttributes(draft);
+  const final = finalAttributes(draft, extra);
   return (
     <section>
       <p>Every character starts with three days of rations, a light source, and some coins.</p>
@@ -436,6 +447,10 @@ export function Builder() {
   const store = useCharacterStore();
   const navigate = useNavigate();
   const uid = user!.uid;
+  // Made for a campaign: its world's Origins and Abilities are offered too,
+  // and the finished character goes straight into it.
+  const campaignId = useSearchParams()[0].get('campaign');
+  const extra = useContent(campaignId);
   const [draft, setDraft] = useState<Draft>(() => {
     const saved = localStorage.getItem(draftKey(uid));
     return saved ? { ...emptyDraft(), ...(JSON.parse(saved) as Draft) } : emptyDraft();
@@ -446,7 +461,7 @@ export function Builder() {
   }, [draft, uid]);
 
   const finish = () => {
-    const sheet = buildCharacter(draft);
+    const sheet = buildCharacter(draft, extra);
     const now = Date.now();
     const id = characterId(uid, 1);
     store.save({
@@ -458,6 +473,7 @@ export function Builder() {
       age: draft.age ?? null,
       notes: '',
       sheet,
+      ...(campaignId ? { campaignId } : {}),
       createdAt: now,
       updatedAt: now,
     });
@@ -470,7 +486,8 @@ export function Builder() {
       draft={draft}
       onChange={setDraft}
       onFinish={finish}
-      onCancel={() => navigate('/')}
+      onCancel={() => navigate(campaignId ? `/k/${campaignId}` : '/')}
+      extra={extra}
     />
   );
 }
@@ -481,6 +498,7 @@ export function CampaignBuilder() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { wardenCharacters } = useCampaign(cid!, user!.uid);
+  const extra = useContent(cid);
   const key = `waymark.draft.${user!.uid}.${cid}`;
   const [draft, setDraft] = useState<Draft>(() => {
     const saved = localStorage.getItem(key);
@@ -500,7 +518,7 @@ export function CampaignBuilder() {
       setProblem('A Warden can run six characters in a campaign.');
       return;
     }
-    const sheet = buildCharacter(draft);
+    const sheet = buildCharacter(draft, extra);
     const now = Date.now();
     saveWardenCharacter(cid!, {
       id,
@@ -527,6 +545,7 @@ export function CampaignBuilder() {
         onChange={setDraft}
         onFinish={finish}
         onCancel={() => navigate(`/k/${cid}`)}
+        extra={extra}
       />
     </>
   );

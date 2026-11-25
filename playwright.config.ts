@@ -21,6 +21,8 @@ export default defineConfig({
       use: { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true },
     },
     { name: 'tablet', use: { viewport: { width: 820, height: 1180 }, hasTouch: true } },
+    // The Warden's tools have a wide layout, so they are also tested at laptop width.
+    { name: 'laptop', testMatch: /phase5/, use: { viewport: { width: 1366, height: 768 } } },
   ],
   webServer: {
     command: 'npm run build:emulator -w app && npm run preview:emulator -w app',

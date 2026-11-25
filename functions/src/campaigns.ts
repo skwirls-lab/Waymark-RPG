@@ -231,10 +231,11 @@ export async function deleteCampaign(
   const members = await campaign.ref.collection('members').get();
   for (const member of members.docs) await detachMember(db, campaign.id, member.id);
 
+  // Everything kept under the campaign: characters, summaries, requests, the
+  // feed, the brief, the timeline, cards and the Warden's papers.
+  for (const sub of await campaign.ref.listCollections()) await db.recursiveDelete(sub);
+
   const batch = db.batch();
-  for (const sub of ['characters', 'summaries']) {
-    for (const doc of (await campaign.ref.collection(sub).get()).docs) batch.delete(doc.ref);
-  }
   for (const handover of (
     await db.collection('handovers').where('campaignId', '==', campaign.id).get()
   ).docs) {
