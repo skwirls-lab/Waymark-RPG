@@ -211,6 +211,9 @@ service cloud.firestore {
         allow create: if isMember(campaignId)
           && request.resource.data.keys().hasOnly(['at', 'byUid', 'byName', 'text'])
           && request.resource.data.byUid == request.auth.uid
+          && request.resource.data.at is number
+          && request.resource.data.byName is string
+          && request.resource.data.byName.size() <= 80
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 500;
@@ -221,7 +224,10 @@ service cloud.firestore {
       match /presence/{uid} {
         allow read: if isMember(campaignId);
         allow write: if isUser(uid) && isMember(campaignId)
-          && request.resource.data.keys().hasOnly(['at', 'displayName']);
+          && request.resource.data.keys().hasOnly(['at', 'displayName'])
+          && request.resource.data.at is number
+          && request.resource.data.displayName is string
+          && request.resource.data.displayName.size() <= 80;
         allow delete: if isUser(uid);
       }
 

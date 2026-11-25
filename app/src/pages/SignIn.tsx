@@ -28,6 +28,11 @@ export function SignIn() {
       <p className="fineprint">
         New to the game? <a href="https://waymark-rpg.web.app/">Read the rules</a>
       </p>
+      <p className="fineprint">
+        Accounts are for people aged 13 and over. Younger players can join as guests.{' '}
+        <a href="https://waymark-rpg.web.app/privacy/">Privacy</a> ·{' '}
+        <a href="https://waymark-rpg.web.app/terms/">Terms</a>
+      </p>
     </main>
   );
 }

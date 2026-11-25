@@ -333,6 +333,70 @@ describe('AI help: the monthly allowance', () => {
     expect(monthOf(new Date('2026-11-30T23:59:59Z'))).toBe('2026-11');
   });
 
+  it('a guest has 5 requests, and is told an account gives more', async () => {
+    const guest = { guest: true };
+    const rules = (model: ModelCall) =>
+      aiHelp(
+        db,
+        'guest1',
+        { action: 'rules', question: 'Who goes first in a fight?' },
+        model,
+        NOW,
+        guest,
+      );
+    const reply = {
+      answer: 'Players who pass a Dexterity save.',
+      sectionId: 'adventure-and-danger/fighting',
+    };
+    await db.doc('usage/guest1').set({ month: '2026-11', ai: 4 });
+    expect(await rules(scripted(reply).call)).toMatchObject({ used: 5, allowance: 5 });
+    await expect(rules(scripted(reply).call)).rejects.toThrow(
+      'A guest has 5 AI requests a month, and you have used them. Create an account for more.',
+    );
+  });
+
+  it('the whole app stops at its daily ceiling, whoever asks, and starts again the next day', async () => {
+    const limits = { dailyCap: 3 };
+    for (const uid of ['dana', 'dana', 'dana']) {
+      await aiHelp(
+        db,
+        uid,
+        { action: 'creature', campaignId },
+        scripted(creature).call,
+        NOW,
+        limits,
+      );
+    }
+    const model = scripted({ answer: 'Yes.', sectionId: null });
+    await expect(
+      aiHelp(
+        db,
+        'sam',
+        { action: 'rules', question: 'Who goes first in a fight?' },
+        model.call,
+        NOW,
+        limits,
+      ),
+    ).rejects.toThrow('AI help has been very busy today and is resting. Try again tomorrow.');
+    expect(model.seen).toHaveLength(0);
+    expect(await used('sam')).toBe(0);
+    const tomorrow = new Date('2026-11-26T00:00:01Z');
+    await aiHelp(
+      db,
+      'sam',
+      { action: 'rules', question: 'Who goes first in a fight?' },
+      model.call,
+      tomorrow,
+      limits,
+    );
+    expect((await db.doc('usage/_everyone').get()).data()).toEqual({ day: '2026-11-26', ai: 1 });
+  });
+
+  it('a reply that cannot be used is given back to the daily count as well', async () => {
+    await expect(ask(scripted('nonsense').call)).rejects.toThrow('did not return something usable');
+    expect((await db.doc('usage/_everyone').get()).get('ai')).toBe(0);
+  });
+
   it('requests arriving together cannot pass the allowance', async () => {
     await db.doc('usage/dana').set({ month: '2026-11', ai: 28 });
     const results = await Promise.allSettled(

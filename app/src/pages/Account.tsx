@@ -1,4 +1,4 @@
-import { PRICES, UNLIMITED } from '@waymark/rules';
+import { GUEST_AI_REQUESTS, PRICES, UNLIMITED } from '@waymark/rules';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
@@ -121,7 +121,8 @@ export function Account() {
               </li>
               <li>Campaigns you join as a player: no limit</li>
               <li data-testid="usage-ai">
-                AI help this month: {aiUsed} of {limits.aiRequests} requests
+                AI help this month: {aiUsed} of{' '}
+                {user?.isAnonymous ? GUEST_AI_REQUESTS : limits.aiRequests} requests
               </li>
             </ul>
             {plan === 'free' ? (

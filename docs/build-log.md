@@ -22,7 +22,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 | 6 Plans, payments and policies | Built; waiting on John | |
 | 7 AI help | Gate criteria met 2026-11-25; switched off until the key is in Secret Manager | |
 | 8 AI Warden | Not started | |
-| 9 Launch readiness | Not started | |
+| 9 Launch readiness | Started early: security review done | |
 
 ## Phase 0 tasks
 
@@ -276,12 +276,15 @@ The memory between build sessions. Read `docs/instructions.md` first.
 73. **2026-11-25. A separate cloud environment, `waymark-rpg`,** now holds this repository's sessions, with a setup script that installs dependencies and the OpenRouter key for evaluations. The key is injected by the session's network proxy and never appears in the repository or in any command.
 74. **2026-11-25. Filing and recaps are told who the party is,** after the evaluation showed one model filing the players' own characters as people met. The evaluation now counts that mistake.
 75. **2026-11-25. Secrets are trimmed when read,** so a stray newline from pasting a key cannot break a request.
+76. **2026-11-25. Security review done early** (`docs/security-review.md`), while phases 6 to 8 wait on John. Two findings rated high, both fixed with tests: wrong join and hand-over codes are now counted and refused after ten in an hour; and a guest has 5 AI requests a month, with a ceiling of 5,000 a day for the whole app.
+77. **2026-11-25. Phase 9 work that does not depend on phase 8 is being done now,** out of order, because phases 6, 7 and 8 each wait on John. The phase 9 gate itself still comes last.
 
 ## Changed tests
 
 - **App shell unit tests (2026-11-25).** Old: the stand-in for the campaign data module had no `watchDoc`. New: it has one that reports no plan record. Reason: the home screen now reads the account's plan.
 - **Live check after deploy (2026-11-25).** Old: guest signs in and signs out. New: guest signs in, starts a campaign and deletes their account. Reason: decision 62.
 - **`buildWren` test helper (2026-11-25).** New optional name, so a test can build a second character. Existing calls are unchanged.
+- **Phase 7 guest allowance in the end-to-end test (2026-11-25).** Old: a guest's Account page showed "1 of 30 requests". New: "1 of 5". Reason: decision 76.
 - **Phase 3 hand-over end-to-end step (2026-11-25).** Old: pressed a "Hand over" button on the party row. New: opens "Act on Pip" and presses "Hand this character to a player". Reason: decision 40.
 - **Randomized rules tests (2026-11-25).** Old: generated characters could carry more than their capacity. New: the generator keeps only what fits, and a test asserts every generated character is one the rules could produce. Reason: an impossible starting character was being reported as a rules failure.
 - **Sheet component tests (2026-11-25).** Old: the test harness received whole changed sheets. New: it receives change functions and applies them. Reason: decision 33.

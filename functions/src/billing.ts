@@ -295,6 +295,8 @@ export async function deleteAccount(
     await character.ref.delete();
   }
   await db.recursiveDelete(db.doc(`users/${uid}`));
-  await db.doc(`entitlements/${uid}`).delete();
+  for (const path of [`entitlements/${uid}`, `usage/${uid}`, `throttle/${uid}`]) {
+    await db.doc(path).delete();
+  }
   await deps.deleteSignIn(uid);
 }

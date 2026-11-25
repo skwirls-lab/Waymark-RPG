@@ -47,6 +47,42 @@ async function allowance(
   return { limit: limitsOf(entitlement.data())[what], kept: Array.isArray(kept) ? kept : [] };
 }
 
+/** How many wrong codes one person may enter in an hour before being made to wait. */
+export const WRONG_CODE_LIMIT = 10;
+const WRONG_CODE_WINDOW_MS = 60 * 60 * 1000;
+
+/**
+ * Codes are short so that people can read them aloud. That makes them
+ * guessable by a program, so wrong guesses are counted and, past a limit,
+ * refused for an hour.
+ */
+async function refuseIfGuessing(db: Firestore, uid: string, now: number): Promise<void> {
+  const record = await db.doc(`throttle/${uid}`).get();
+  if (
+    record.exists &&
+    now - Number(record.get('since')) < WRONG_CODE_WINDOW_MS &&
+    Number(record.get('misses')) >= WRONG_CODE_LIMIT
+  ) {
+    throw new HttpsError(
+      'resource-exhausted',
+      'Too many wrong codes. Check the code, wait an hour, and try again.',
+    );
+  }
+}
+
+async function countWrongCode(db: Firestore, uid: string, now: number): Promise<void> {
+  const ref = db.doc(`throttle/${uid}`);
+  await db.runTransaction(async (tx) => {
+    const record = await tx.get(ref);
+    const since = Number(record.get('since') ?? 0);
+    const fresh = !record.exists || now - since >= WRONG_CODE_WINDOW_MS;
+    tx.set(
+      ref,
+      fresh ? { since: now, misses: 1 } : { since, misses: Number(record.get('misses')) + 1 },
+    );
+  });
+}
+
 /** Reserves a code that nothing else is using, in the given collection. */
 async function reserveCode(
   db: Firestore,
@@ -146,12 +182,16 @@ export async function joinCampaign(
   db: Firestore,
   uid: string,
   input: { code?: unknown; displayName?: unknown },
+  now: number = Date.now(),
 ): Promise<{ campaignId: string }> {
   const code = normalizeCode(input.code);
   const displayName = cleanName(input.displayName, 'Your name', 40);
+  await refuseIfGuessing(db, uid, now);
   const found = code.length === CODE_LENGTH ? await db.doc(`joinCodes/${code}`).get() : null;
-  if (!found?.exists)
+  if (!found?.exists) {
+    await countWrongCode(db, uid, now);
     throw new HttpsError('not-found', 'No campaign has that code. Check it and try again.');
+  }
 
   const campaignId = found.get('campaignId') as string;
   const campaign = await db.doc(`campaigns/${campaignId}`).get();
@@ -283,11 +323,17 @@ export async function redeemHandover(
   db: Firestore,
   uid: string,
   input: { code?: unknown; displayName?: unknown },
+  now: number = Date.now(),
 ): Promise<{ characterId: string; campaignId: string }> {
   const code = normalizeCode(input.code);
   const displayName = cleanName(input.displayName, 'Your name', 40);
+  await refuseIfGuessing(db, uid, now);
   const { limit: slots, kept } = await allowance(db, uid, 'characters');
   const handoverRef = db.doc(`handovers/${code || 'none'}`);
+  if (!(await handoverRef.get()).exists) {
+    await countWrongCode(db, uid, now);
+    throw new HttpsError('not-found', 'That code is not valid, or has already been used.');
+  }
 
   return db.runTransaction(async (tx) => {
     const handover = await tx.get(handoverRef);

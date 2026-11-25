@@ -183,6 +183,6 @@ test.describe('phase 7: AI help', () => {
     await form.getByRole('button', { name: 'Ask' }).click();
     await expect(answer).toContainText('I could not find anything in the rulebook about that.');
     await page.getByRole('link', { name: 'Account' }).click();
-    await expect(page.getByTestId('usage-ai')).toHaveText('AI help this month: 1 of 30 requests');
+    await expect(page.getByTestId('usage-ai')).toHaveText('AI help this month: 1 of 5 requests');
   });
 });

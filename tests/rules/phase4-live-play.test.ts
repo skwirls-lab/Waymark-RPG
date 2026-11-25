@@ -266,4 +266,24 @@ describe('phase 4: presence', () => {
     );
     await assertFails(as('stranger').collection(`${K}/presence`).get());
   });
+
+  it('a name in the feed or in presence cannot be longer than a name', async () => {
+    const long = 'x'.repeat(81);
+    const line = { at: 5, byUid: 'direct', byName: 'Sam', text: 'Sam rolled a d6: 4.' };
+    await assertSucceeds(as('direct').collection(`${K}/log`).add(line));
+    await assertFails(
+      as('direct')
+        .collection(`${K}/log`)
+        .add({ ...line, byName: long }),
+    );
+    await assertFails(
+      as('direct')
+        .collection(`${K}/log`)
+        .add({ ...line, at: 'now' }),
+    );
+    await assertFails(as('direct').doc(`${K}/presence/direct`).set({ at: 5, displayName: long }));
+    await assertFails(
+      as('direct').doc(`${K}/presence/direct`).set({ at: 'now', displayName: 'Sam' }),
+    );
+  });
 });

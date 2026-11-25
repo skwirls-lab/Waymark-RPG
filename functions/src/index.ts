@@ -7,7 +7,7 @@ import { HttpsError, onCall, onRequest, type CallableRequest } from 'firebase-fu
 import * as ai from './ai';
 import * as billing from './billing';
 import * as campaigns from './campaigns';
-import { AI_LIVE, AI_MODEL, PAYMENTS_LIVE } from './config';
+import { AI_DAILY_CAP, AI_LIVE, AI_MODEL, PAYMENTS_LIVE } from './config';
 
 initializeApp();
 const db = getFirestore();
@@ -63,10 +63,13 @@ const secrets = PAYMENTS_LIVE
 const paying = secrets ? { ...options, secrets: [secrets.key] } : options;
 const stripe = () => (secrets ? billing.stripeCaller(secrets.key.value().trim()) : null);
 
+const isGuest = (request: CallableRequest): boolean =>
+  request.auth?.token.firebase?.sign_in_provider === 'anonymous';
+
 /** Paying needs an account that can be signed in to again: not a guest. */
 function accountOf(request: CallableRequest): string {
   const uid = uidOf(request);
-  if (request.auth?.token.firebase?.sign_in_provider === 'anonymous') {
+  if (isGuest(request)) {
     throw new HttpsError(
       'failed-precondition',
       'Create an account first. A guest cannot hold a paid plan.',
@@ -121,5 +124,9 @@ const model = (): ai.ModelCall | null =>
 
 export const aiHelp = onCall(
   aiKey ? { ...options, secrets: [aiKey], timeoutSeconds: 60 } : options,
-  (request) => ai.aiHelp(db, uidOf(request), request.data ?? {}, model()),
+  (request) =>
+    ai.aiHelp(db, uidOf(request), request.data ?? {}, model(), new Date(), {
+      guest: isGuest(request),
+      dailyCap: AI_DAILY_CAP,
+    }),
 );

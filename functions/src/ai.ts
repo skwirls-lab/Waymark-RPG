@@ -1,6 +1,7 @@
 import {
   AI_ACTIONS,
   CAMPAIGN_ACTIONS,
+  GUEST_AI_REQUESTS,
   allAffinities,
   checkAiResult,
   data,
@@ -74,34 +75,65 @@ export async function reserve(
   db: Firestore,
   uid: string,
   now: Date,
+  limits: Limits = {},
 ): Promise<{ used: number; allowance: number }> {
   const month = monthOf(now);
+  const day = now.toISOString().slice(0, 10);
   const usage = db.doc(`usage/${uid}`);
+  const everyone = db.doc(EVERYONE);
   return db.runTransaction(async (tx) => {
-    const [entitlement, record] = await Promise.all([
+    const [entitlement, record, total] = await Promise.all([
       tx.get(db.doc(`entitlements/${uid}`)),
       tx.get(usage),
+      tx.get(everyone),
     ]);
-    const allowance = limitsOf(entitlement.data()).aiRequests;
+    const allowance = limits.guest ? GUEST_AI_REQUESTS : limitsOf(entitlement.data()).aiRequests;
     const used = record.get('month') === month ? Number(record.get('ai') ?? 0) : 0;
     if (used >= allowance) {
       throw new HttpsError(
         'resource-exhausted',
-        `You have used all ${allowance} AI requests for this month. They renew on the 1st.`,
+        limits.guest
+          ? `A guest has ${allowance} AI requests a month, and you have used them. Create an account for more.`
+          : `You have used all ${allowance} AI requests for this month. They renew on the 1st.`,
+      );
+    }
+    // A ceiling on the whole app's requests in a day, whoever makes them.
+    const today = total.get('day') === day ? Number(total.get('ai') ?? 0) : 0;
+    if (limits.dailyCap !== undefined && today >= limits.dailyCap) {
+      throw new HttpsError(
+        'resource-exhausted',
+        'AI help has been very busy today and is resting. Try again tomorrow.',
       );
     }
     tx.set(usage, { month, ai: used + 1, updatedAt: now.getTime() });
+    tx.set(everyone, { day, ai: today + 1 });
     return { used: used + 1, allowance };
   });
 }
 
+/** Whose allowance applies, and the ceiling for everyone together. */
+export interface Limits {
+  /** A guest, with no account: a small allowance. */
+  guest?: boolean;
+  /** The most requests the whole app may make in a day. */
+  dailyCap?: number;
+}
+
+/** The count of every account's requests today. Not a user id: those never start with an underscore. */
+const EVERYONE = 'usage/_everyone';
+
 /** Gives a request back when the model produced nothing usable. */
-async function refund(db: Firestore, uid: string, month: string): Promise<void> {
+async function refund(db: Firestore, uid: string, now: Date): Promise<void> {
   const usage = db.doc(`usage/${uid}`);
+  const everyone = db.doc(EVERYONE);
   await db.runTransaction(async (tx) => {
-    const record = await tx.get(usage);
-    if (record.get('month') !== month) return;
-    tx.update(usage, { ai: Math.max(0, Number(record.get('ai') ?? 0) - 1) });
+    const [record, total] = await Promise.all([tx.get(usage), tx.get(everyone)]);
+    if (record.get('month') === monthOf(now)) {
+      tx.update(usage, { ai: Math.max(0, Number(record.get('ai') ?? 0) - 1) });
+    }
+    if (total.get('day') === now.toISOString().slice(0, 10)) {
+      tx.update(everyone, { ai: Math.max(0, Number(total.get('ai') ?? 0) - 1) });
+    }
   });
 }
 
@@ -312,6 +344,7 @@ export async function aiHelp(
   input: { action?: unknown; campaignId?: unknown; hint?: unknown; question?: unknown },
   model: ModelCall | null,
   now: Date = new Date(),
+  limits: Limits = {},
 ): Promise<AiAnswer> {
   const action = AI_ACTIONS.find((a) => a === input.action);
   if (!action)
@@ -338,7 +371,9 @@ export async function aiHelp(
           sectionId: null,
         },
         used: usage.get('month') === monthOf(now) ? Number(usage.get('ai') ?? 0) : 0,
-        allowance: limitsOf((await db.doc(`entitlements/${uid}`).get()).data()).aiRequests,
+        allowance: limits.guest
+          ? GUEST_AI_REQUESTS
+          : limitsOf((await db.doc(`entitlements/${uid}`).get()).data()).aiRequests,
       };
     }
     prepared = {
@@ -350,16 +385,16 @@ export async function aiHelp(
     };
   }
 
-  const { used, allowance } = await reserve(db, uid, now);
+  const { used, allowance } = await reserve(db, uid, now, limits);
   let result;
   try {
     result = await askChecked(model, action, prepared.payload, prepared.context);
   } catch (problem) {
-    await refund(db, uid, monthOf(now));
+    await refund(db, uid, now);
     throw problem;
   }
   if (result.value === null) {
-    await refund(db, uid, monthOf(now));
+    await refund(db, uid, now);
     console.warn('An AI reply was thrown away', action, result.problems.slice(0, 3));
     // 'aborted', so that the app shows this message and not a generic one about the connection.
     throw new HttpsError('aborted', UNUSABLE);

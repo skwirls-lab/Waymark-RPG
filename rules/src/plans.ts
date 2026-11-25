@@ -29,6 +29,9 @@ export const PLAN_LIMITS: Readonly<Record<Plan, PlanLimits>> = {
 /** Prices in US cents. The yearly price is ten months for twelve. */
 export const PRICES: Readonly<Record<BillingPeriod, number>> = { monthly: 499, yearly: 4990 };
 
+/** A guest has no account to hold to an allowance, so gets a small one: enough to try AI help. */
+export const GUEST_AI_REQUESTS = 5;
+
 /** Warden-run characters in one campaign, on every plan. */
 export const WARDEN_CHARACTERS_PER_CAMPAIGN = 6;
 

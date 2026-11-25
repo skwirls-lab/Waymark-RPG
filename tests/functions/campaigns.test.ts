@@ -513,3 +513,59 @@ describe('summaries', () => {
     });
   });
 });
+
+describe('guessing codes', () => {
+  it('ten wrong join codes in an hour, and the eleventh try is refused even if right', async () => {
+    const { joinCode } = await start();
+    const at = 1_000_000;
+    for (let i = 0; i < 10; i++) {
+      await expect(
+        joinCampaign(db, 'mallory', { code: 'ZZZZZ2', displayName: 'M' }, at + i),
+      ).rejects.toThrow('No campaign has that code');
+    }
+    await expect(
+      joinCampaign(db, 'mallory', { code: joinCode, displayName: 'M' }, at + 20),
+    ).rejects.toThrow('Too many wrong codes. Check the code, wait an hour, and try again.');
+    expect(await exists('campaigns/dana_1/members/mallory')).toBe(false);
+  });
+
+  it('after an hour the count starts again', async () => {
+    const { joinCode } = await start();
+    await db.doc('throttle/mallory').set({ since: 1_000_000, misses: 10 });
+    const later = 1_000_000 + 60 * 60 * 1000;
+    await expect(
+      joinCampaign(db, 'mallory', { code: 'ZZZZZ2', displayName: 'M' }, later),
+    ).rejects.toThrow('No campaign has that code');
+    expect((await db.doc('throttle/mallory').get()).data()).toEqual({ since: later, misses: 1 });
+    expect(
+      (await joinCampaign(db, 'mallory', { code: joinCode, displayName: 'M' }, later + 1))
+        .campaignId,
+    ).toBe('dana_1');
+  });
+
+  it("one person's wrong guesses do not lock anyone else out", async () => {
+    const { joinCode } = await start();
+    await db.doc('throttle/mallory').set({ since: Date.now(), misses: 10 });
+    expect((await joinCampaign(db, 'sam', { code: joinCode, displayName: 'Sam' })).campaignId).toBe(
+      'dana_1',
+    );
+  });
+
+  it('wrong hand-over codes are counted the same way, and share the count', async () => {
+    await db.doc('throttle/mallory').set({ since: 1_000_000, misses: 9 });
+    await expect(
+      redeemHandover(db, 'mallory', { code: 'ZZZZZ2', displayName: 'M' }, 1_000_001),
+    ).rejects.toThrow('That code is not valid');
+    await expect(
+      redeemHandover(db, 'mallory', { code: 'ZZZZZ2', displayName: 'M' }, 1_000_002),
+    ).rejects.toThrow('Too many wrong codes');
+  });
+
+  it('a typo or two costs an honest player nothing', async () => {
+    const { joinCode } = await start();
+    await expect(joinCampaign(db, 'sam', { code: 'ZZZZZ2', displayName: 'Sam' })).rejects.toThrow();
+    expect((await joinCampaign(db, 'sam', { code: joinCode, displayName: 'Sam' })).campaignId).toBe(
+      'dana_1',
+    );
+  });
+});
