@@ -4,9 +4,9 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Current position
 
-- **Phase:** 3 (Campaigns and joining), in progress
-- **Task:** phase 3 built, verified in CI, and all nine Cloud Functions deployed (run 45489688381). The gate now waits on the live sign-in check, which fails because sign-in methods are not enabled in the project (see Questions). When that check and Lighthouse pass: record the gate and start phase 4 at once.
-- **Last verified commit:** 3227ec5 (CI run 45471350857: verify, deploy and Lighthouse all green)
+- **Phase:** 4 (Live play), in progress
+- **Task:** phase 4, task 1 (Warden actions as pure functions in the rules library)
+- **Last verified commit:** 8e9bf9d (CI run 45491052219: verify, all deploys, live guest sign-in and Lighthouse green)
 - **To run everything in a build container:** `npm run verify:container` (see decisions 1 and 22). CI runs plain `npm run verify`.
 
 ## Phase status
@@ -16,8 +16,8 @@ The memory between build sessions. Read `docs/instructions.md` first.
 | 0 Foundations | Complete | 2026-11-24 |
 | 1 Rules as data and code | Complete | 2026-11-24 |
 | 2 Character sheets | Complete | 2026-11-24 |
-| 3 Campaigns and joining | In progress | |
-| 4 Live play | Not started | |
+| 3 Campaigns and joining | Complete | 2026-11-25 |
+| 4 Live play | In progress | |
 | 5 Warden tools and campaign record | Not started | |
 | 6 Plans, payments and policies | Not started | |
 | 7 AI help | Not started | |
@@ -67,6 +67,17 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - [x] 9. Permission choice per member
 - [x] 10. Leaving, removing members, deleting a campaign
 
+## Phase 4 tasks
+
+- [ ] 1. Warden actions as pure functions in the rules library
+- [ ] 2. Sheet changes that rebase on the latest saved sheet, so simultaneous changes are both kept
+- [ ] 3. Party view with Warden actions, and several targets for a Blast
+- [ ] 4. Direct or ask first, enforced by security rules; requests
+- [ ] 5. Save prompts
+- [ ] 6. Shared dice and activity feed
+- [ ] 7. Undo of the most recent change
+- [ ] 8. Presence
+
 ## Gate evidence
 
 ### Phase 0 (gate passed 2026-11-24)
@@ -99,7 +110,10 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - Security rules: owner-only characters, well-formedness, the one-character limit (including for guests, and slot numbers of zero or below), and entitlements that only the server can write.
 - Defects the tests found and that were fixed: orange small text had too little contrast (now a darker `--blaze-text`, applied to the site as well); quick taps in a row could lose a change because the screen waited for the database (saves now update the screen at once); the Google sign-in window was opened after an `await` (fixed in phase 0).
 
-### Phase 3
+### Phase 3 (gate passed 2026-11-25)
+
+- CI run 45491052219 on commit 8e9bf9d: `verify` passed; site, app, rules and all nine Cloud Functions deployed; the live check signed in as a guest on the deployed app and signed out; Lighthouse three runs gave performance 71, 100, 99 (median 99) and accessibility 100.
+- Real Google sign-in on the deployed app has not been verified by any test; John was asked to try it by hand.
 
 - Local `verify`: 244 rules, 44 app, 47 security-rules, 32 Cloud Functions and 42 end-to-end tests, all passing.
 - Security-rules matrix (`tests/rules/phase3-campaigns.test.ts`): Warden, player, guest and stranger against the campaign record, member list, players' characters, summaries, Warden-run characters, memberships, join codes and hand-over codes, each with allowed and refused cases.
@@ -161,9 +175,9 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Questions for John
 
-1. **Switch on the two sign-in methods (asked 2026-11-24, blocking the phase 3 gate).** The live check added in decision 32 fails with `auth/admin-restricted-operation`: Anonymous sign-in is not enabled in the Firebase project. John also reports Google sign-in failing. In the Firebase console, under Authentication, "Sign-in method": enable **Anonymous** and **Google**. Under "Settings", "Authorized domains": make sure `waymark-rpg-app.web.app` is listed. Then re-run the failed Deploy job of the latest "Verify and deploy" run; its live sign-in step must pass.
+1. **Please try "Continue with Google" on the deployed app (asked 2026-11-24, not blocking).** Guest sign-in is now checked automatically after each deploy. A real Google sign-in cannot be automated, so it has only ever been tested against the emulator.
 
-*(Resolved 2026-11-24: Cloud Functions permissions. All nine functions deployed in CI run 45489688381.)*
+*(Resolved 2026-11-25: sign-in methods enabled; the live guest check passes. Resolved 2026-11-24: Cloud Functions permissions.)*
 
 ## Suggestions
 
