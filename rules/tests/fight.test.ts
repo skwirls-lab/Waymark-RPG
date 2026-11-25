@@ -10,7 +10,7 @@ import {
   setEarly,
   startFight,
   syncParty,
-} from './fight';
+} from '../src/index.ts';
 
 const bandit = { name: 'Bandit', hp: 4, armor: 1, str: 10, wil: 8, attack: 'sword (d8)' };
 let n = 0;

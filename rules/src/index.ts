@@ -17,3 +17,4 @@ export * from './plans.ts';
 export * from './sections.ts';
 export * from './rulebookSections.ts';
 export * from './ai.ts';
+export * from './fight.ts';

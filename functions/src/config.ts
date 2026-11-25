@@ -9,3 +9,6 @@ export const AI_DAILY_CAP = 5000;
 
 /** The model AI help uses, as OpenRouter names it. Chosen by the evaluation in the build log. */
 export const AI_MODEL = 'anthropic/claude-haiku-5.5';
+
+/** The model that runs AI-led campaigns. Narration and judgment matter more here than for the helper buttons. */
+export const WARDEN_MODEL = 'anthropic/claude-haiku-5.5';

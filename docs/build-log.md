@@ -109,6 +109,18 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - [x] 7. Evaluation against the real model (`npm run eval:ai`, 36 fixed requests). See gate evidence.
 - [x] 8. Wired to switch on by itself when `OPENROUTER_API_KEY` is stored in Secret Manager (decision 80). Not yet exercised live.
 
+## Phase 8 tasks
+
+- [x] 1. Turn loop: brief, cards, beats, party and conversation in; narration, tool requests and suggestions out
+- [x] 2. Tools are the rules library; narration may not state a number the rules did not produce
+- [x] 3. The Warden's principles in the fixed instructions; "no harm without a warning" also enforced in code
+- [x] 4. Player input: suggested actions or typing
+- [x] 5. Spoken narration with pause, replay, voice, speed and off; one small interface for a hosted voice later
+- [x] 6. Memory: scene summary, beats, revealed and proposed cards
+- [x] 7. Available only on the AI Warden plan
+- [ ] 8. Rubric on 20 scripted scenes against the real model, and the measured cost of a three-hour session
+- [ ] 9. John plays a session and signs off
+
 ## Gate evidence
 
 ### Phase 0 (gate passed 2026-11-24)
@@ -283,6 +295,10 @@ The memory between build sessions. Read `docs/instructions.md` first.
 80. **2026-11-25. John chose Stripe, and said not to wait on him for its keys or for the OpenRouter key.** So the code switches (decisions 53 and 65) are gone. The functions now read each key from Secret Manager when needed (`functions/src/secrets.ts`): a feature turns itself on within a minute of its key being stored, with no deploy, and a missing key cannot fail a deploy. Until then the app says "not open yet" or "not switched on yet". The Stripe webhook is always deployed and refuses every message until its signing secret exists. Neither can be tested against the real service from here; both are tested against stand-ins.
 81. **2026-11-25. Campaigns had never worked on the live app.** The first Cloud Functions were deployed without permission for browsers to call them, and until decision 62 no check after deploy called one. The new live check caught it on its first run. Every browser-called function now states `invoker: 'public'`, so each deploy applies it. John granted the deploy account `roles/run.admin` the same day.
 82. **2026-11-25. John approved** the AI Warden design with its default answers, the prices ($4.99 a month, $49.90 a year), and the downgrade behavior. He ran the deploy permission and OpenRouter key commands. Stripe keys will follow later; legal name, contact and governing law for the policies are still to come.
+83. **2026-11-25. The AI Warden's engine is plain code with no database and no network** (`functions/src/warden/engine.ts`). It takes a session and a turn and returns the new session and a list of events. A separate file loads the session from the campaign and stores the events. A test fails if the engine ever imports anything but the rules library and its own instructions, which is what proves the model cannot change the game except through the tools.
+84. **2026-11-25. The model speaks a small JSON format** (narration, tool requests, suggestions) instead of a provider's own tool-calling feature, so any model on OpenRouter can run it and every reply is checked the same way.
+85. **2026-11-25. Differences from the approved design, for a first version.** (a) Scars are rolled by the app, not the player: a Scar can need four different dice, and stopping the story for each was too much. Saves, Strength saves and a player's own damage are rolled by the player. (b) "Ask me first" is not applied in an AI-run campaign: the AI's changes go straight to the sheet, each shown as a result line and undoable. The pause-and-accept flow for every change would stall a game with no human Warden to wait on. (c) The time meter counts turns: 1,000 a month, which is about twenty hours. John should say if any of these should go back to the design.
+86. **2026-11-25. Any campaign can be handed to the AI Warden and taken back** by its owner, who needs the AI Warden plan. Until Stripe is connected, that plan can only be given by setting the account's record by hand.
 
 ## Changed tests
 

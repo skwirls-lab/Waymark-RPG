@@ -954,3 +954,49 @@ fieldset.plain:disabled .tab {
     align-items: end;
   }
 }
+
+/* ---- The AI Warden ---- */
+.speech {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+  margin: 0.5rem 0 1rem;
+}
+.speech select {
+  width: auto;
+}
+.story {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: grid;
+  gap: 0.6rem;
+}
+.story li {
+  padding: 0.7rem 0.9rem;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+.story p {
+  margin: 0.15rem 0 0;
+  white-space: pre-wrap;
+}
+.story-who {
+  font: 700 0.8rem var(--body);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.story-narration {
+  border-left: 4px solid var(--forest) !important;
+  font-size: 1.05rem;
+}
+.story-player {
+  margin-left: 1.5rem;
+}
+.story-result {
+  background: var(--paper) !important;
+  font-size: 0.95rem;
+}

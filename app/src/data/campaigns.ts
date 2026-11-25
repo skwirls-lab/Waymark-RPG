@@ -12,6 +12,8 @@ export interface Campaign {
   name: string;
   wardenUid: string;
   joinCode: string;
+  /** Whether an AI runs this campaign. Its owner is still its Warden on record. */
+  aiWarden?: boolean;
 }
 export interface Member {
   uid: string;

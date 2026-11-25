@@ -220,6 +220,27 @@ describe('the timeline', () => {
   });
 });
 
+describe("an AI-run campaign's story", () => {
+  it('members read it; nobody writes it from a browser', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await ctx
+        .firestore()
+        .doc(`${K}/turns/t1`)
+        .set({ at: 1, order: 0, kind: 'narration', who: 'The Warden', text: 'Hello.' });
+    });
+    await assertSucceeds(as('player').collection(`${K}/turns`).get());
+    await assertFails(as('stranger').collection(`${K}/turns`).get());
+    await assertFails(
+      as('warden')
+        .doc(`${K}/turns/t2`)
+        .set({ at: 2, order: 0, kind: 'narration', who: 'The Warden', text: 'You win.' }),
+    );
+    await assertFails(as('player').doc(`${K}/turns/t1`).delete());
+    await assertFails(as('player').doc(`${K}/private/scene`).get());
+    await assertFails(as('warden').doc(`${K}/private/scene`).set({ pending: null }));
+  });
+});
+
 describe('worlds', () => {
   it('belong to the account that saved them', async () => {
     await assertSucceeds(as('warden').collection('users/warden/worlds').get());

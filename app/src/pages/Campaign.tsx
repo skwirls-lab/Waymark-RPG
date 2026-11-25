@@ -19,18 +19,21 @@ import {
   usePresence,
   useRequests,
 } from '../data/useCampaign';
+import { setAiWarden } from '../data/play';
 import { useContent } from '../data/record';
 import { useCharacterStore } from '../data/useCharacters';
 import { ActivityFeed, WardenParty } from './Party';
+import { Play } from './Play';
 import { Story } from './Story';
 
 // Only the Warden needs these, so only the Warden downloads them.
 const Fight = lazy(() => import('./Fight').then((m) => ({ default: m.Fight })));
 const Workshop = lazy(() => import('./Workshop').then((m) => ({ default: m.Workshop })));
 
-type Tab = 'party' | 'story' | 'fight' | 'workshop';
-const TABS: { id: Tab; label: string; wardenOnly?: boolean }[] = [
+type Tab = 'party' | 'play' | 'story' | 'fight' | 'workshop';
+const TABS: { id: Tab; label: string; wardenOnly?: boolean; aiOnly?: boolean }[] = [
   { id: 'party', label: 'Party' },
+  { id: 'play', label: 'Play', aiOnly: true },
   { id: 'story', label: 'Story' },
   { id: 'fight', label: 'Fight', wardenOnly: true },
   { id: 'workshop', label: 'Workshop', wardenOnly: true },
@@ -148,7 +151,12 @@ export function Campaign() {
     isWarden && account.entitlement !== undefined && !account.campaignInUse(campaign.id);
   // On a wide screen the Warden keeps the party in view beside the other tools.
   const split = isWarden && wide;
-  const tabs = TABS.filter((t) => (isWarden || !t.wardenOnly) && !(split && t.id === 'party'));
+  const tabs = TABS.filter(
+    (t) =>
+      (isWarden || !t.wardenOnly) &&
+      (campaign.aiWarden || !t.aiOnly) &&
+      !(split && t.id === 'party'),
+  );
   const asked = params.get('tab') as Tab | null;
   const tab = tabs.some((t) => t.id === asked) ? asked! : tabs[0]!.id;
 
@@ -211,6 +219,41 @@ export function Campaign() {
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {isWarden && (
+        <section aria-labelledby="ai-warden">
+          <h2 id="ai-warden">AI Warden</h2>
+          {campaign.aiWarden ? (
+            <>
+              <p>
+                An AI is running this campaign. Open the Play tab to take part. You can read and
+                correct everything it records, and take the campaign back at any time.
+              </p>
+              <button
+                type="button"
+                className="button small"
+                onClick={() => run(() => setAiWarden(campaign.id, false))}
+              >
+                Run it myself again
+              </button>
+            </>
+          ) : (
+            <>
+              <p>
+                Let an AI run this campaign. It tells the story and reads it aloud; the app&rsquo;s
+                rules decide every roll. Needs the AI Warden plan.
+              </p>
+              <button
+                type="button"
+                className="button small"
+                onClick={() => run(() => setAiWarden(campaign.id, true))}
+              >
+                Let the AI run this campaign
+              </button>
+            </>
+          )}
         </section>
       )}
 
@@ -364,6 +407,7 @@ export function Campaign() {
           <div id="tab-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
             <fieldset className="plain" disabled={readOnly}>
               {tab === 'party' && partyPanel}
+              {tab === 'play' && <Play campaignId={campaign.id} uid={uid} isOwner={isWarden} />}
               {tab === 'story' && <Story campaignId={campaign.id} uid={uid} isWarden={isWarden} />}
               <Suspense fallback={<p className="lede">Loading…</p>}>
                 {tab === 'fight' && <Fight campaignId={campaign.id} summaries={summaries} />}

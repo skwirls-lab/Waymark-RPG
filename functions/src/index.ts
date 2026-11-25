@@ -6,8 +6,9 @@ import { HttpsError, onCall, onRequest, type CallableRequest } from 'firebase-fu
 import * as ai from './ai';
 import * as billing from './billing';
 import * as campaigns from './campaigns';
-import { AI_DAILY_CAP, AI_MODEL } from './config';
+import { AI_DAILY_CAP, AI_MODEL, WARDEN_MODEL } from './config';
 import { readSecret } from './secrets';
+import * as play from './warden/play';
 
 initializeApp();
 const db = getFirestore();
@@ -136,4 +137,22 @@ export const aiHelp = onCall({ ...options, timeoutSeconds: 60 }, async (request)
     guest: isGuest(request),
     dailyCap: AI_DAILY_CAP,
   }),
+);
+
+// ---- The AI Warden ----------------------------------------------------------------
+
+/** The real model once its key is stored; a fixed stand-in in the local emulator; otherwise none. */
+async function wardenModel(): Promise<play.WardenModelCall | null> {
+  if (inEmulator) return play.fixtureWarden;
+  const key = await readSecret('OPENROUTER_API_KEY');
+  if (!key) return null;
+  const call = ai.openRouterCaller(key, WARDEN_MODEL);
+  return (messages) => call(messages);
+}
+
+export const wardenTurn = onCall({ ...options, timeoutSeconds: 120 }, async (request) =>
+  play.wardenTurn(db, uidOf(request), request.data ?? {}, await wardenModel()),
+);
+export const setAiWarden = onCall(options, (request) =>
+  play.setAiWarden(db, uidOf(request), request.data ?? {}),
 );

@@ -1,5 +1,5 @@
 import type {
-  Band,
+  Fight,
   CustomAbility,
   CustomAffinity,
   CustomCreature,
@@ -66,6 +66,8 @@ export interface Card {
 }
 
 /** A world's own Origins, Affinities, Abilities and gear. */
+export type { Combatant, Fight } from '@waymark/rules';
+
 export interface Content {
   origins: CustomOrigin[];
   affinities: CustomAffinity[];
@@ -81,33 +83,6 @@ export interface World {
   content: Content;
   creatures: CustomCreature[];
   updatedAt: number;
-}
-
-/** One side's member in a fight. Characters' HP lives on their sheets, not here. */
-export interface Combatant {
-  id: string;
-  name: string;
-  side: 'party' | 'enemy';
-  band: Band;
-  /** A character who made their Dexterity save acts before the enemies in the first round. */
-  early: boolean;
-  hp: number;
-  hpFull: number;
-  armor: number;
-  str: number;
-  strFull: number;
-  wil: number;
-  attack: string;
-  /** Strength lost and still standing: a Strength save decides whether it stays up. */
-  saveDue: boolean;
-  down: boolean;
-}
-export interface Fight {
-  round: number;
-  turn: 'early' | 'enemies' | 'late' | 'players';
-  combatants: Combatant[];
-  /** Why the enemies must check their nerve now, or `null`. */
-  morale: string | null;
 }
 
 const newId = () => crypto.randomUUID().slice(0, 12);

@@ -23,7 +23,7 @@ import { PREAMBLE, TEMPLATES } from './aiTemplates';
  */
 
 export interface Message {
-  role: 'system' | 'user';
+  role: 'system' | 'user' | 'assistant';
   content: string;
 }
 /** Sends messages to a model and returns its reply as text. */
