@@ -39,7 +39,13 @@ const aCharacter: fc.Arbitrary<Character> = fc
   .map(({ items, fatigue, tainted, hpFull, hpLost, str }) => {
     // Every carried item has its own id.
     const unique = items.map((item, index) => ({ ...item, id: `${index}-${item.id}` }));
-    const c = { ...wren(), items: unique, fatigue: 0, taintedFatigue: 0 };
+    // Nobody can be carrying more than their slots allow: keep what fits.
+    const base = wren();
+    let load = 0;
+    const carried = unique.filter((item) =>
+      load + item.slots <= base.slotCapacity ? ((load += item.slots), true) : false,
+    );
+    const c = { ...base, items: carried, fatigue: 0, taintedFatigue: 0 };
     const room = Math.max(0, c.slotCapacity - slotsUsed(c));
     c.fatigue = Math.min(fatigue, room);
     c.taintedFatigue = Math.min(tainted, room - c.fatigue);
@@ -150,6 +156,12 @@ describe('Things that are always true', () => {
           return !checkSave(score, d20) || checkSave(score + 1, d20);
         },
       ),
+    );
+  });
+
+  it('every generated character is one the rules could produce', () => {
+    fc.assert(
+      fc.property(aCharacter, (c) => slotsUsed(c) <= c.slotCapacity && c.hp.current <= c.hp.full),
     );
   });
 
