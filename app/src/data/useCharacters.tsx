@@ -1,11 +1,24 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useAuth } from '../auth';
-import { deleteCharacter, saveCharacter, watchCharacters, type CharacterDoc } from './characters';
+import type { Character } from '@waymark/rules';
+import {
+  changeSheetAt,
+  deleteCharacter,
+  saveCharacter,
+  undoSheetAt,
+  watchCharacters,
+  type CharacterDoc,
+} from './characters';
 
 export interface CharacterStore {
   /** `undefined` until the first answer arrives. */
   characters: CharacterDoc[] | undefined;
+  /** Saves a whole character: a new one, or fields other than the sheet. */
   save: (doc: CharacterDoc) => void;
+  /** Changes a sheet. The function is re-run on the latest saved sheet; see `changeSheetAt`. */
+  change: (id: string, apply: (sheet: Character) => Character, text: string) => void;
+  /** Puts back the sheet from before the most recent change. */
+  undo: (id: string) => void;
   remove: (id: string) => void;
   /** Set when a save was refused, for example by the one-character limit. */
   problem: string | null;
@@ -82,6 +95,56 @@ export function CharacterStoreProvider({ children }: { children: ReactNode }) {
       show();
       saveCharacter(stamped).catch(() => {
         local.current.delete(stamped.id);
+        show();
+        refused();
+      });
+    },
+    change: (id, apply, text) => {
+      setProblem(null);
+      const current = (characters ?? []).find((c) => c.id === id);
+      if (!current) return;
+      clock.current = Math.max(Date.now(), clock.current + 1);
+      const at = clock.current;
+      let sheet: Character;
+      try {
+        sheet = apply(current.sheet);
+      } catch {
+        setProblem('That change is not possible right now.');
+        return;
+      }
+      const stamped = {
+        ...current,
+        sheet,
+        name: sheet.name,
+        undo: { sheet: current.sheet, text, at },
+        updatedAt: at,
+      };
+      local.current.set(id, stamped);
+      show();
+      const fallback: Record<string, unknown> = { ...stamped };
+      delete fallback.id;
+      changeSheetAt(['characters', id], apply, { text, at }, fallback).catch(() => {
+        local.current.delete(id);
+        show();
+        refused();
+      });
+    },
+    undo: (id) => {
+      setProblem(null);
+      const current = (characters ?? []).find((c) => c.id === id);
+      if (!current?.undo) return;
+      clock.current = Math.max(Date.now(), clock.current + 1);
+      const at = clock.current;
+      local.current.set(id, {
+        ...current,
+        sheet: current.undo.sheet,
+        name: current.undo.sheet.name,
+        undo: null,
+        updatedAt: at,
+      });
+      show();
+      undoSheetAt(['characters', id], at).catch(() => {
+        local.current.delete(id);
         show();
         refused();
       });

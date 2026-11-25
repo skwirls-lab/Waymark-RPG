@@ -1,6 +1,8 @@
 import {
   RulesError,
+  abilityLimit,
   addFatigue,
+  addItem,
   applyDamage,
   applyScar,
   armorValue,
@@ -33,7 +35,12 @@ export const ATTRIBUTE_NAMES: Record<AttributeKey, string> = {
 
 /** What a dialog hands back: the changed sheet, a line saying what happened, and any follow-up. */
 export interface Outcome {
-  sheet: Character;
+  /**
+   * The change, as a function of the sheet. It is run on the sheet shown
+   * here and again on the latest saved sheet, so a change someone else made
+   * at the same moment is kept. Any dice were rolled before it was built.
+   */
+  apply: (sheet: Character) => Character;
   message: string;
   next?: DialogState;
 }
@@ -77,7 +84,7 @@ export function DamageDialog({ sheet, onDone, onClose }: Props) {
     if (r.dead) message += ' Strength is 0. This character has died.';
     else if (r.strengthSaveRequired) next = { kind: 'strength-save' };
     else if (r.scarRequired) next = { kind: 'scar' };
-    onDone({ sheet: r.character, message, next });
+    onDone({ apply: (s) => applyDamage(s, value).character, message, next });
   };
   return (
     <Dialog title="Take damage" onClose={onClose}>
@@ -105,13 +112,14 @@ export function StrengthSaveDialog({ sheet, onDone, onClose }: Props) {
   const [d20, setD20] = useState<number>();
   const target = sheet.attributes.str.current;
   const apply = () => {
-    const r = resolveStrengthSave(sheet, d20!);
+    const roll = d20!;
+    const r = resolveStrengthSave(sheet, roll);
     const message = r.dead
       ? 'The save failed, and they were Doomed. This character has died.'
       : r.success
         ? `Rolled ${d20} against Strength ${target}: wounded, but still up.${r.doomedRewardDue ? ' No longer Doomed.' : ''}`
         : `Rolled ${d20} against Strength ${target}: critical damage. They collapse, and need help within the hour.`;
-    onDone({ sheet: r.character, message });
+    onDone({ apply: (s) => resolveStrengthSave(s, d20!).character, message });
   };
   return (
     <Dialog title="Strength save" onClose={onClose}>
@@ -146,7 +154,7 @@ export function ScarDialog({ sheet, onDone, onClose }: Props) {
     (!needs.d20 || d20 !== undefined);
   const apply = () =>
     onDone({
-      sheet: applyScar(sheet, scar!, { d6, total, d20 }),
+      apply: (s) => applyScar(s, scar!, { d6, total, d20 }),
       message: `Scar: ${entry!.name}.`,
     });
   return (
@@ -214,7 +222,7 @@ export function ScarRecoveryDialog({ sheet, index, onDone, onClose }: Props & { 
         disabled={total === undefined}
         onClick={() =>
           onDone({
-            sheet: recoverFromScar(sheet, index, total!),
+            apply: (s) => recoverFromScar(s, index, total!),
             message: `Recovered from ${scar.name}.`,
           })
         }
@@ -286,14 +294,15 @@ export function AbilityDialog({
 
   const apply = () => {
     try {
-      const r = applyAbility(sheet, {
+      const input = {
         abilityId,
         inDanger: danger!,
         saveRolls: danger ? [d20!] : undefined,
         misfireRoll: misfire,
         backlashDamage: backlash,
         dropItemIds: drops,
-      });
+      };
+      const r = applyAbility(sheet, input);
       const entry = r.misfire ? data.misfires.find((m) => m.id === r.misfire)! : null;
       const message = entry
         ? `${ability.name} misfired: ${entry.name}. ${entry.text}`
@@ -301,7 +310,7 @@ export function AbilityDialog({
       const cost = r.fatigue.includes('strength')
         ? ' Every slot is Fatigue, so it cost 1 Strength.'
         : ` Fatigue ${r.character.fatigue + r.character.taintedFatigue}.`;
-      onDone({ sheet: r.character, message: message + cost });
+      onDone({ apply: (s) => applyAbility(s, input).character, message: message + cost });
     } catch (problem) {
       setError(explain(problem));
     }
@@ -389,7 +398,7 @@ export function FatigueDropDialog({ sheet, onDone, onClose }: Props) {
         disabled={drops.length !== 1}
         onClick={() =>
           onDone({
-            sheet: addFatigue(sheet, { dropItemId: drops[0] }).character,
+            apply: (s) => addFatigue(s, { dropItemId: drops[0] }).character,
             message: 'Gained 1 Fatigue and dropped an item to make room.',
           })
         }
@@ -401,38 +410,31 @@ export function FatigueDropDialog({ sheet, onDone, onClose }: Props) {
 }
 
 export function RestDialog({ sheet, onDone, onClose }: Props) {
-  const rest = (after: Character, what: string) => {
+  const rest = (how: (sheet: Character) => Character, what: string) => {
+    const after = how(sheet);
     const hp = after.hp.current > sheet.hp.current ? ` HP back to ${after.hp.current}.` : '';
     const why =
       after.hp.current < after.hp.full
         ? ' HP did not fully return: check for deprivation, a full pack, or critical damage.'
         : '';
-    onDone({ sheet: after, message: `${what}.${hp}${why}` });
+    onDone({ apply: how, message: `${what}.${hp}${why}` });
   };
   return (
     <Dialog title="Rest" onClose={onClose}>
       <div className="stack-full">
-        <button
-          type="button"
-          className="button wide"
-          onClick={() => rest(shortRest(sheet), 'Short rest')}
-        >
+        <button type="button" className="button wide" onClick={() => rest(shortRest, 'Short rest')}>
           Short rest
           <small>A few minutes and a drink. All HP returns.</small>
         </button>
         <button
           type="button"
           className="button wide"
-          onClick={() => rest(nightRest(sheet, { safe: true }), "Night's rest")}
+          onClick={() => rest((s) => nightRest(s, { safe: true }), "Night's rest")}
         >
           Night's rest, somewhere safe
           <small>Removes all Fatigue.</small>
         </button>
-        <button
-          type="button"
-          className="button wide"
-          onClick={() => rest(weekRest(sheet), "Week's rest")}
-        >
+        <button type="button" className="button wide" onClick={() => rest(weekRest, "Week's rest")}>
           Week's rest, with care
           <small>Restores lost attribute points.</small>
         </button>
@@ -522,7 +524,7 @@ export function AddItemDialog({ sheet, onDone, onClose }: Props) {
   const fits = slots <= freeSlots(sheet);
   const add = () => {
     const item: Item = {
-      id: `item-${Date.now()}`,
+      id: `item-${crypto.randomUUID()}`,
       name: name.trim(),
       kind,
       slots,
@@ -535,7 +537,7 @@ export function AddItemDialog({ sheet, onDone, onClose }: Props) {
     const full = freeSlots(after) <= 0;
     if (full) after.hp.current = 0;
     onDone({
-      sheet: after,
+      apply: (s) => addItem(s, item),
       message: `Added ${item.name}.${full ? ' Every slot is now full, so HP drops to 0.' : ''}`,
     });
   };
@@ -618,9 +620,16 @@ export function CorruptionDialog({ sheet, onDone, onClose }: Props) {
   const failing = d20 !== undefined && !checkSave(sheet.attributes.wil.current, d20);
   const third = failing && sheet.corruption.failedSaves === 2;
   const needsLoss = third && sheet.abilities.length === 0;
+  // Losing a Tier may leave more Abilities than the lower Tier allows.
+  const [forget, setForget] = useState<string[]>([]);
+  const excess =
+    third && sheet.abilities.length > 0 && sheet.tier > 1
+      ? Math.max(0, sheet.abilities.length - abilityLimit(sheet.tier - 1))
+      : 0;
   const apply = () => {
     try {
-      const r = corruptionDailySave(sheet, { d20: d20!, willpowerLoss: loss });
+      const input = { d20: d20!, willpowerLoss: loss, forget: excess > 0 ? forget : undefined };
+      const r = corruptionDailySave(sheet, input);
       const message = r.saved
         ? 'The corruption is held back today.'
         : r.character.lost
@@ -630,7 +639,7 @@ export function CorruptionDialog({ sheet, onDone, onClose }: Props) {
             : r.burned === 'willpower'
               ? `Three failures. Willpower is burned away: now ${r.character.attributes.wil.full}.`
               : `The corruption spreads: ${r.character.corruption.failedSaves} of 3 failed saves.`;
-      onDone({ sheet: r.character, message });
+      onDone({ apply: (s) => corruptionDailySave(s, input).character, message });
     } catch (problem) {
       setError(explain(problem));
     }
@@ -656,6 +665,30 @@ export function CorruptionDialog({ sheet, onDone, onClose }: Props) {
           onChange={setLoss}
         />
       )}
+      {excess > 0 && (
+        <fieldset className="choices">
+          <legend>
+            A Tier will be lost. Choose {excess === 1 ? 'an Ability' : `${excess} Abilities`} to
+            lose with it.
+          </legend>
+          {sheet.abilities.map((id) => (
+            <label key={id} className="choice">
+              <input
+                type="checkbox"
+                checked={forget.includes(id)}
+                disabled={!forget.includes(id) && forget.length >= excess}
+                onChange={() =>
+                  setForget(forget.includes(id) ? forget.filter((f) => f !== id) : [...forget, id])
+                }
+              />
+              <span>
+                {data.affinities.flatMap((a) => a.abilities).find((a) => a.id === id)?.name ?? id}
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      )}
+
       {error && (
         <p className="error" role="alert">
           {error}
@@ -664,7 +697,9 @@ export function CorruptionDialog({ sheet, onDone, onClose }: Props) {
       <button
         type="button"
         className="button primary wide"
-        disabled={d20 === undefined || (needsLoss && loss === undefined)}
+        disabled={
+          d20 === undefined || (needsLoss && loss === undefined) || forget.length !== excess
+        }
         onClick={apply}
       >
         Resolve

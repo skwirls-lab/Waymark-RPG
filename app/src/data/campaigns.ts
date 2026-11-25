@@ -36,6 +36,7 @@ export interface WardenCharacter {
   description: string;
   notes: string;
   sheet: Character;
+  undo?: { sheet: Character; text: string; at: number } | null;
   createdAt: number;
   updatedAt: number;
 }

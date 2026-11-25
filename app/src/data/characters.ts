@@ -14,6 +14,8 @@ export interface CharacterDoc {
   sheet: Character;
   /** The campaign this character is playing in, if any. */
   campaignId?: string | null;
+  /** The sheet as it was before the most recent change, so that change can be undone. */
+  undo?: { sheet: Character; text: string; at: number } | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -61,4 +63,77 @@ export async function saveCharacter(doc: CharacterDoc): Promise<void> {
 export async function deleteCharacter(id: string): Promise<void> {
   const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
   await fs.deleteDoc(fs.doc(db, 'characters', id));
+}
+
+export type SheetChange = (sheet: Character) => Character;
+
+/**
+ * Applies a change to a stored sheet, wherever it is kept. Online, the change
+ * is run on the sheet as the server has it now, inside a transaction, so two
+ * people changing the same character at the same moment both keep their
+ * change. Offline, the already-computed result is queued instead.
+ *
+ * `path` is the document's path; `fallback` is the document as this device
+ * computed it, used when offline.
+ */
+export function changeSheetAt(
+  path: string[],
+  apply: SheetChange,
+  meta: { text: string; at: number },
+  fallback: Record<string, unknown>,
+): Promise<void> {
+  // Changes to one character are sent one after another, in the order made.
+  const key = path.join('/');
+  const previous = queues.get(key) ?? Promise.resolve();
+  const next = previous.catch(() => {}).then(() => sendChange(key, apply, meta, fallback));
+  queues.set(key, next);
+  return next;
+}
+
+const queues = new Map<string, Promise<void>>();
+
+async function sendChange(
+  key: string,
+  apply: SheetChange,
+  meta: { text: string; at: number },
+  fallback: Record<string, unknown>,
+): Promise<void> {
+  const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
+  const ref = fs.doc(db, key);
+  // Queued by Firestore and sent when the connection returns. Not awaited:
+  // it only settles once the server has it, which offline may be much later.
+  const queueOffline = () => void fs.setDoc(ref, fallback).catch(() => {});
+
+  if (!navigator.onLine) return queueOffline();
+  try {
+    await fs.runTransaction(db, async (tx) => {
+      const current = await tx.get(ref);
+      if (!current.exists()) throw new Error('That character no longer exists.');
+      const before = current.get('sheet') as Character;
+      const after = apply(before);
+      tx.update(ref, {
+        sheet: after,
+        name: after.name,
+        undo: { sheet: before, text: meta.text, at: meta.at },
+        updatedAt: meta.at,
+      });
+    });
+  } catch (problem) {
+    const code = (problem as { code?: string }).code;
+    // The connection dropped without the browser noticing: queue it instead.
+    if (code === 'unavailable' || code === 'deadline-exceeded') return queueOffline();
+    throw problem;
+  }
+}
+
+/** Puts back the sheet from before the most recent change, if it is still the most recent. */
+export async function undoSheetAt(path: string[], at: number): Promise<void> {
+  const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
+  const ref = fs.doc(db, path.join('/'));
+  await fs.runTransaction(db, async (tx) => {
+    const current = await tx.get(ref);
+    const undo = current.get('undo') as CharacterDoc['undo'];
+    if (!current.exists() || !undo) return;
+    tx.update(ref, { sheet: undo.sheet, name: undo.sheet.name, undo: null, updatedAt: at });
+  });
 }

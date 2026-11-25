@@ -18,7 +18,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { deleteWardenCharacter, saveWardenCharacter } from '../data/campaigns';
-import type { CharacterDoc } from '../data/characters';
+import { changeSheetAt, undoSheetAt, type CharacterDoc } from '../data/characters';
 import { useCampaign } from '../data/useCampaign';
 import { useCharacterStore } from '../data/useCharacters';
 import {
@@ -56,7 +56,15 @@ const abilityById = Object.fromEntries(
 
 interface ViewProps {
   doc: CharacterDoc;
+  /** Saves fields other than the sheet itself, such as notes. */
   onSave: (doc: CharacterDoc) => void;
+  /**
+   * Applies a change to the sheet. The function is run again on the latest
+   * saved sheet, so a change made elsewhere at the same moment is kept.
+   */
+  onChange: (apply: (sheet: Character) => Character, text: string) => void;
+  /** Puts back the sheet as it was before the most recent change. */
+  onUndo?: () => void;
   onDelete: () => void;
   /** Where the back link goes. Defaults to the home screen. */
   back?: { to: string; label: string };
@@ -66,6 +74,8 @@ interface ViewProps {
 export function SheetView({
   doc,
   onSave,
+  onChange,
+  onUndo,
   onDelete,
   back = { to: '/', label: 'All characters' },
 }: ViewProps) {
@@ -74,12 +84,12 @@ export function SheetView({
   const [message, setMessage] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const update = (next: Character, said?: string) => {
-    onSave({ ...doc, sheet: next });
+  const change = (apply: (current: Character) => Character, said?: string) => {
+    onChange(apply, said ?? '');
     if (said !== undefined) setMessage(said);
   };
   const done = (outcome: Outcome) => {
-    update(outcome.sheet, outcome.message);
+    change(outcome.apply, outcome.message);
     setDialog(outcome.next ?? null);
   };
   const close = () => setDialog(null);
@@ -94,8 +104,8 @@ export function SheetView({
   const gainFatigue = () => {
     try {
       const r = addFatigue(sheet);
-      update(
-        r.character,
+      change(
+        (s) => addFatigue(s).character,
         r.outcome === 'strength'
           ? 'Every slot is Fatigue: lost 1 Strength instead.'
           : 'Gained 1 Fatigue.',
@@ -107,21 +117,28 @@ export function SheetView({
     }
   };
   const loseFatigue = () => {
-    const next = structuredClone(sheet);
-    if (next.fatigue > 0) next.fatigue -= 1;
-    else next.taintedFatigue -= 1;
-    update(next, 'Removed 1 Fatigue.');
+    change((s) => {
+      const next = structuredClone(s);
+      if (next.fatigue > 0) next.fatigue -= 1;
+      else if (next.taintedFatigue > 0) next.taintedFatigue -= 1;
+      return next;
+    }, 'Removed 1 Fatigue.');
   };
   const move = (itemId: string, place: ItemPlace) => {
-    const next = structuredClone(sheet);
-    next.items.find((i) => i.id === itemId)!.place = place;
-    update(next);
+    change((s) => {
+      const next = structuredClone(s);
+      const item = next.items.find((i) => i.id === itemId);
+      if (item) item.place = place;
+      return next;
+    });
   };
   const adjust = (key: AttributeKey | 'hp', by: number) => {
-    const next = structuredClone(sheet);
-    const score = key === 'hp' ? next.hp : next.attributes[key];
-    score.current = Math.max(0, Math.min(score.full, score.current + by));
-    update(next);
+    change((s) => {
+      const next = structuredClone(s);
+      const score = key === 'hp' ? next.hp : next.attributes[key];
+      score.current = Math.max(0, Math.min(score.full, score.current + by));
+      return next;
+    });
   };
 
   return (
@@ -154,9 +171,7 @@ export function SheetView({
             <button
               type="button"
               className="button small"
-              onClick={() =>
-                update(stabilize(sheet), 'Stabilized. They need rest before acting again.')
-              }
+              onClick={() => change(stabilize, 'Stabilized. They need rest before acting again.')}
             >
               Someone tends them
             </button>
@@ -198,6 +213,11 @@ export function SheetView({
       <p className="message" role="status" aria-live="polite">
         {message}
       </p>
+      {doc.undo && onUndo && (
+        <button type="button" className="button small undo" onClick={onUndo}>
+          Undo: {doc.undo.text || 'the last change'}
+        </button>
+      )}
 
       <section className="actions" aria-label="Actions">
         <button
@@ -256,14 +276,15 @@ export function SheetView({
           <input
             type="checkbox"
             checked={sheet.deprived}
-            onChange={(e) =>
-              update(
-                setDeprived(sheet, e.target.checked),
-                e.target.checked
+            onChange={(e) => {
+              const deprived = e.target.checked;
+              change(
+                (s) => setDeprived(s, deprived),
+                deprived
                   ? 'Deprived: no HP or attribute recovery until the need is met.'
                   : 'No longer deprived.',
-              )
-            }
+              );
+            }}
           />
           <span>Deprived (lacking food, water, sleep, or warmth)</span>
         </label>
@@ -298,7 +319,7 @@ export function SheetView({
               <button
                 type="button"
                 className="icon-button"
-                onClick={() => update(removeItem(sheet, item.id), `Dropped ${item.name}.`)}
+                onClick={() => change((s) => removeItem(s, item.id), `Dropped ${item.name}.`)}
                 aria-label={`Drop ${item.name}`}
               >
                 ×
@@ -326,9 +347,10 @@ export function SheetView({
             inputMode="numeric"
             min={0}
             value={sheet.coins}
-            onChange={(e) =>
-              update({ ...sheet, coins: Math.max(0, Math.floor(Number(e.target.value) || 0)) })
-            }
+            onChange={(e) => {
+              const coins = Math.max(0, Math.floor(Number(e.target.value) || 0));
+              change((s) => ({ ...s, coins }));
+            }}
           />
         </label>
       </section>
@@ -419,10 +441,7 @@ export function SheetView({
             type="button"
             className="button small"
             onClick={() =>
-              update(
-                catchCorruption(sheet),
-                'Caught lasting corruption. Save at the start of each day.',
-              )
+              change(catchCorruption, 'Caught lasting corruption. Save at the start of each day.')
             }
           >
             Mark as corrupted
@@ -560,6 +579,8 @@ export function Sheet() {
     <SheetView
       doc={doc}
       onSave={store.save}
+      onChange={(apply, text) => store.change(doc.id, apply, text)}
+      onUndo={() => store.undo(doc.id)}
       onDelete={() => {
         store.remove(doc.id);
         navigate('/');
@@ -622,6 +643,38 @@ export function WardenSheet() {
           createdAt: saved.createdAt,
           updatedAt: Date.now(),
         });
+      }}
+      onChange={(apply, text) => {
+        const at = Date.now();
+        const sheet = apply(asDoc.sheet);
+        const next = {
+          ...asDoc,
+          sheet,
+          name: sheet.name,
+          undo: { sheet: asDoc.sheet, text, at },
+          updatedAt: at,
+        };
+        setLocal(next);
+        void changeSheetAt(
+          ['campaigns', cid!, 'characters', saved.id],
+          apply,
+          { text, at },
+          {
+            name: sheet.name,
+            description: next.description,
+            notes: next.notes,
+            sheet,
+            undo: next.undo,
+            createdAt: saved.createdAt,
+            updatedAt: at,
+          },
+        );
+      }}
+      onUndo={() => {
+        if (!asDoc.undo) return;
+        const at = Date.now();
+        setLocal({ ...asDoc, sheet: asDoc.undo.sheet, undo: null, updatedAt: at });
+        void undoSheetAt(['campaigns', cid!, 'characters', saved.id], at);
       }}
       onDelete={() => {
         void deleteWardenCharacter(cid!, saved.id);

@@ -41,7 +41,15 @@ function Harness({ sheet = wren() }: { sheet?: Character }) {
   latest = doc.sheet;
   return (
     <MemoryRouter>
-      <SheetView doc={doc} onSave={setDoc} onDelete={removed} />
+      <SheetView
+        doc={doc}
+        onSave={setDoc}
+        onChange={(apply, text) =>
+          setDoc((d) => ({ ...d, sheet: apply(d.sheet), undo: { sheet: d.sheet, text, at: 1 } }))
+        }
+        onUndo={() => setDoc((d) => (d.undo ? { ...d, sheet: d.undo.sheet, undo: null } : d))}
+        onDelete={removed}
+      />
     </MemoryRouter>
   );
 }
@@ -321,6 +329,30 @@ describe('the sheet: saves, dice, scars and housekeeping', () => {
     expect(screen.getByRole('button', { name: 'Raise Hit Protection by 1' })).toBeDisabled();
     click('Lower Hit Protection by 1');
     expect(stat('hp')).toBe('3');
+  });
+
+  it('the most recent change can be undone', () => {
+    render(<Harness />);
+    click('Take damage');
+    type('Damage rolled against you', '3');
+    inDialog('Apply damage');
+    expect(stat('hp')).toBe('2');
+    click(/^Undo:/);
+    expect(stat('hp')).toBe('4');
+    expect(screen.queryByRole('button', { name: /^Undo:/ })).not.toBeInTheDocument();
+  });
+
+  it('corruption that burns a Tier asks which Ability to lose when there are too many', () => {
+    const adept = { ...wren(), tier: 2, abilities: ['mend', 'cleanse', 'repair'] };
+    adept.corruption = { afflicted: true, failedSaves: 2 };
+    render(<Harness sheet={adept} />);
+    click('Daily save');
+    type(/^Willpower save/, '19');
+    expect(within(dialog()).getByRole('button', { name: 'Resolve' })).toBeDisabled();
+    fireEvent.click(within(dialog()).getByRole('checkbox', { name: 'Cleanse' }));
+    inDialog('Resolve');
+    expect(latest.tier).toBe(1);
+    expect(latest.abilities).toEqual(['mend', 'repair']);
   });
 
   it('deleting asks first', () => {
