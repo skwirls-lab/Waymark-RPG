@@ -22,7 +22,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 | 6 Plans, payments and policies | Built; waiting on John | |
 | 7 AI help | Gate criteria met 2026-11-25; switched off until the key is in Secret Manager | |
 | 8 AI Warden | Not started | |
-| 9 Launch readiness | Started early: security review done | |
+| 9 Launch readiness | Started early: security review and rulebook read-through done | |
 
 ## Phase 0 tasks
 
@@ -278,6 +278,8 @@ The memory between build sessions. Read `docs/instructions.md` first.
 75. **2026-11-25. Secrets are trimmed when read,** so a stray newline from pasting a key cannot break a request.
 76. **2026-11-25. Security review done early** (`docs/security-review.md`), while phases 6 to 8 wait on John. Two findings rated high, both fixed with tests: wrong join and hand-over codes are now counted and refused after ten in an hour; and a guest has 5 AI requests a month, with a ceiling of 5,000 a day for the whole app.
 77. **2026-11-25. Phase 9 work that does not depend on phase 8 is being done now,** out of order, because phases 6, 7 and 8 each wait on John. The phase 9 gate itself still comes last.
+78. **2026-11-25. Read-through of the app against the rulebook** (`docs/rules-readthrough.md`), done by an independent pass. Six mismatches fixed. Seven remain open and are listed there, the largest being rules the library has but no screen reaches (havens, learning Abilities, a second Affinity, imbuing). Eight places where the rulebook is silent are listed for its next draft.
+79. **2026-11-25. AI-made creatures are held tighter than the rulebook requires** (a Blast does d6 at most), on purpose. Recorded as a deliberate difference.
 
 ## Changed tests
 
@@ -285,6 +287,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - **Live check after deploy (2026-11-25).** Old: guest signs in and signs out. New: guest signs in, starts a campaign and deletes their account. Reason: decision 62.
 - **`buildWren` test helper (2026-11-25).** New optional name, so a test can build a second character. Existing calls are unchanged.
 - **Phase 7 guest allowance in the end-to-end test (2026-11-25).** Old: a guest's Account page showed "1 of 30 requests". New: "1 of 5". Reason: decision 76.
+- **Warden heal (2026-11-25).** New behavior: healing a deprived character is refused, as the rulebook says. No existing test healed a deprived character.
 - **Phase 3 hand-over end-to-end step (2026-11-25).** Old: pressed a "Hand over" button on the party row. New: opens "Act on Pip" and presses "Hand this character to a player". Reason: decision 40.
 - **Randomized rules tests (2026-11-25).** Old: generated characters could carry more than their capacity. New: the generator keeps only what fits, and a test asserts every generated character is one the rules could produce. Reason: an impossible starting character was being reported as a rules failure.
 - **Sheet component tests (2026-11-25).** Old: the test harness received whole changed sheets. New: it receives change functions and applies them. Reason: decision 33.

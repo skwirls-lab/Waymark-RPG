@@ -22,7 +22,7 @@ export const TEMPLATES: Record<AiAction, string> = {
   creature: `TASK: invent one creature or opponent for the Warden to use.
 Keys:
 - "name": string, 40 characters at most.
-- "hp": whole number 1 to 20. 3 is fragile, 6 is tough, 10 or more is a serious threat.
+- "hp": whole number 1 to 20. 3 is ordinary, 6 is tough, 10 or more is a serious threat.
 - "armor": whole number 0 to 3.
 - "str", "dex", "wil": whole numbers 1 to 18. 10 is average.
 - "attack": the name of its attack only, such as "bite" or "shock baton". 40 characters at most. No dice.

@@ -86,6 +86,12 @@ export function applyWardenAction(
       return { character: r.character, text, followUps };
     }
     case 'heal': {
+      if (character.deprived) {
+        throw new RulesError(
+          'deprived',
+          'A deprived character cannot get back HP or attribute points until the need is met.',
+        );
+      }
       let c = clone(character);
       const parts: string[] = [];
       if (action.attribute && action.amount) {

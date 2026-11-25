@@ -411,6 +411,7 @@ function ActDialog({
   const [itemSlots, setItemSlots] = useState<0 | 1 | 2>(1);
   const [itemDamage, setItemDamage] = useState<Die>(6);
   const [itemArmor, setItemArmor] = useState(1);
+  const [itemStacks, setItemStacks] = useState(false);
   const [deprived, setDeprived] = useState(!target.sheet?.deprived);
 
   const n = Number(amount);
@@ -450,7 +451,9 @@ function ActDialog({
             slots: itemSlots,
             place: 'pack',
             ...(itemKind === 'weapon' ? { damage: itemDamage } : {}),
-            ...(itemKind === 'armor' ? { armor: itemArmor } : {}),
+            ...(itemKind === 'armor'
+              ? { armor: itemArmor, ...(itemStacks ? { stacks: true } : {}) }
+              : {}),
           },
         });
       case 'take':
@@ -639,6 +642,16 @@ function ActDialog({
                     </option>
                   ))}
                 </select>
+              </label>
+            )}
+            {itemKind === 'armor' && (
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={itemStacks}
+                  onChange={(e) => setItemStacks(e.target.checked)}
+                />
+                A shield or helmet (adds to other armor)
               </label>
             )}
           </>

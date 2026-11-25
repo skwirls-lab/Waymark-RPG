@@ -428,7 +428,8 @@ function AbilityForm({
       {isNew && (
         <>
           <p className="hint">
-            A new character starts with two Abilities, so give a new Affinity at least two.
+            The rulebook suggests about four Abilities for a new Affinity. A new character needs at
+            least two to start with.
           </p>
           <label>
             Affinity name
@@ -603,7 +604,7 @@ function CreatureForm({
         <Num label="Willpower" value={wil} min={1} max={18} onChange={setWil} />
       </div>
       <p className="hint">
-        3 HP is fragile, 6 is tough, 10 or more is a serious threat. 10 is an average attribute.
+        3 HP is ordinary, 6 is tough, 10 or more is a serious threat. 10 is an average attribute.
       </p>
       <label>
         Attack

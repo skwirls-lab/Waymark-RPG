@@ -87,7 +87,8 @@ export function checkAbility(ability: Pick<CustomAbility, 'name' | 'text'>): str
   if (!ability.name.trim()) warnings.push('Give the Ability a name.');
   if (ability.text.trim().length < 10)
     warnings.push('Say what the Ability does, in a sentence or two.');
-  const dice = [...ability.text.matchAll(/\bd(\d+)\b/g)].map((m) => Number(m[1]));
+  // "d10", "1d10" and "2d8" are all dice.
+  const dice = [...ability.text.matchAll(/(?<![a-z])\d*d(\d+)\b/gi)].map((m) => Number(m[1]));
   if (dice.some((die) => die >= 10)) {
     warnings.push(
       'An Ability that harms one target should do d6 or d8. Every Ability costs the same, so they should be about equally useful.',

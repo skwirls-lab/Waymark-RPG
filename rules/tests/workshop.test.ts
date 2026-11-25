@@ -137,6 +137,18 @@ describe("Making your own Abilities: the rulebook's checks", () => {
     ).toMatch(/area should do d6/);
   });
 
+  it('reads dice however they are written', () => {
+    expect(checkAbility({ name: 'Smite', text: 'Deal 1d10 damage to one target.' })[0]).toMatch(
+      /d6 or d8/,
+    );
+    expect(checkAbility({ name: 'Smite', text: 'Deal 2d12 damage to one target.' })[0]).toMatch(
+      /d6 or d8/,
+    );
+    expect(checkAbility({ name: 'Mend', text: 'Restore 1d6 HP to someone you touch.' })).toEqual(
+      [],
+    );
+  });
+
   it('asks for a limit', () => {
     expect(
       checkAbility({ name: 'Doom', text: 'The target always falls asleep for an hour.' })[0],

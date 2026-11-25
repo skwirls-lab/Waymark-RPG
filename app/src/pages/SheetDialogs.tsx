@@ -5,6 +5,7 @@ import {
   addFatigue,
   addItem,
   applyDamage,
+  applyDoomedReward,
   applyScar,
   armorValue,
   checkSave,
@@ -111,16 +112,28 @@ export function DamageDialog({ sheet, onDone, onClose }: Props) {
 
 export function StrengthSaveDialog({ sheet, onDone, onClose }: Props) {
   const [d20, setD20] = useState<number>();
+  const [reward, setReward] = useState<number>();
   const target = sheet.attributes.str.current;
+  const valid = d20 !== undefined && d20 >= 1 && d20 <= 20;
+  // A Doomed character who passes rolls 3d6, and takes it as their HP if it is higher.
+  const rewardDue = valid && resolveStrengthSave(sheet, d20).doomedRewardDue;
   const apply = () => {
     const roll = d20!;
     const r = resolveStrengthSave(sheet, roll);
     const message = r.dead
       ? 'The save failed, and they were Doomed. This character has died.'
       : r.success
-        ? `Rolled ${d20} against Strength ${target}: wounded, but still up.${r.doomedRewardDue ? ' No longer Doomed.' : ''}`
+        ? `Rolled ${d20} against Strength ${target}: wounded, but still up.${r.doomedRewardDue ? ` No longer Doomed. Rolled ${reward} for HP: the higher of that and their full HP is kept.` : ''}`
         : `Rolled ${d20} against Strength ${target}: critical damage. They collapse, and need help within the hour.`;
-    onDone({ apply: (s) => resolveStrengthSave(s, d20!).character, message });
+    onDone({
+      apply: (s) => {
+        const saved = resolveStrengthSave(s, roll);
+        return saved.doomedRewardDue && reward !== undefined
+          ? applyDoomedReward(saved.character, reward)
+          : saved.character;
+      },
+      message,
+    });
   };
   return (
     <Dialog title="Strength save" onClose={onClose}>
@@ -129,10 +142,19 @@ export function StrengthSaveDialog({ sheet, onDone, onClose }: Props) {
         <strong>critical damage</strong>.
       </p>
       <RollInput label="Your roll" spec={{ count: 1, sides: 20 }} value={d20} onChange={setD20} />
+      {rewardDue && (
+        <RollInput
+          label="You passed, and are no longer Doomed. Roll for HP"
+          spec={{ count: 3, sides: 6 }}
+          value={reward}
+          onChange={setReward}
+          hint="If this beats your full HP, it becomes your full HP."
+        />
+      )}
       <button
         type="button"
         className="button primary wide"
-        disabled={d20 === undefined}
+        disabled={!valid || (rewardDue && (reward === undefined || reward < 3 || reward > 18))}
         onClick={apply}
       >
         Resolve
@@ -522,6 +544,7 @@ export function AddItemDialog({ sheet, onDone, onClose }: Props) {
   const [slots, setSlots] = useState<0 | 1 | 2>(1);
   const [damage, setDamage] = useState<Die>(6);
   const [armor, setArmor] = useState(1);
+  const [stacks, setStacks] = useState(false);
   const fits = slots <= freeSlots(sheet);
   const add = () => {
     const item: Item = {
@@ -531,7 +554,7 @@ export function AddItemDialog({ sheet, onDone, onClose }: Props) {
       slots,
       place: 'pack',
       ...(kind === 'weapon' ? { damage } : {}),
-      ...(kind === 'armor' ? { armor } : {}),
+      ...(kind === 'armor' ? { armor, ...(stacks ? { stacks: true } : {}) } : {}),
     };
     const after = structuredClone(sheet);
     after.items.push(item);
@@ -594,6 +617,12 @@ export function AddItemDialog({ sheet, onDone, onClose }: Props) {
                 </option>
               ))}
             </select>
+          </label>
+        )}
+        {kind === 'armor' && (
+          <label className="check">
+            <input type="checkbox" checked={stacks} onChange={(e) => setStacks(e.target.checked)} />
+            A shield or helmet (adds to other armor)
           </label>
         )}
       </div>

@@ -6,6 +6,7 @@ import {
   slotsUsed,
   status,
   type WardenAction,
+  setDeprived,
 } from '../src/index.ts';
 import { exhausted, item, wren } from './helpers.ts';
 
@@ -199,5 +200,19 @@ describe('Warden actions: describing a request before it is applied', () => {
       [{ type: 'tier' }, 'Rise one Tier'],
     ];
     for (const [action, text] of cases) expect(describeAction(action)).toBe(text);
+  });
+
+  it('a deprived character cannot be healed until the need is met', () => {
+    const hurt = applyWardenAction(setDeprived(wren(), true), {
+      type: 'damage',
+      amount: 2,
+    }).character;
+    expect(() => applyWardenAction(hurt, { type: 'heal', hp: true })).toThrow(
+      /deprived character cannot get back HP/,
+    );
+    const fed = setDeprived(hurt, false);
+    expect(applyWardenAction(fed, { type: 'heal', hp: true }).character.hp.current).toBe(
+      fed.hp.full,
+    );
   });
 });
