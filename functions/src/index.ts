@@ -61,7 +61,7 @@ const secrets = PAYMENTS_LIVE
   ? { key: defineSecret('STRIPE_SECRET_KEY'), webhook: defineSecret('STRIPE_WEBHOOK_SECRET') }
   : null;
 const paying = secrets ? { ...options, secrets: [secrets.key] } : options;
-const stripe = () => (secrets ? billing.stripeCaller(secrets.key.value()) : null);
+const stripe = () => (secrets ? billing.stripeCaller(secrets.key.value().trim()) : null);
 
 /** Paying needs an account that can be signed in to again: not a guest. */
 function accountOf(request: CallableRequest): string {
@@ -96,7 +96,7 @@ export const stripeWebhook = secrets
       const signed = billing.verifyStripeSignature(
         body,
         request.header('stripe-signature'),
-        secrets.webhook.value(),
+        secrets.webhook.value().trim(),
         Date.now() / 1000,
       );
       if (!signed) {
@@ -114,7 +114,7 @@ const aiKey = AI_LIVE ? defineSecret('OPENROUTER_API_KEY') : null;
 /** The real model when connected; fixed replies in the local emulator; otherwise none. */
 const model = (): ai.ModelCall | null =>
   aiKey
-    ? ai.openRouterCaller(aiKey.value(), AI_MODEL)
+    ? ai.openRouterCaller(aiKey.value().trim(), AI_MODEL)
     : process.env.FUNCTIONS_EMULATOR === 'true'
       ? ai.fixtureModel
       : null;

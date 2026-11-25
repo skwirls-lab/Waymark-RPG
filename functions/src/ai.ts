@@ -197,10 +197,13 @@ async function prepareCampaign(
     }
     default: {
       // recap and filing: the story so far.
-      const [beats, feed] = await Promise.all([
+      const [beats, feed, summaries] = await Promise.all([
         campaign.ref.collection('beats').orderBy('at', 'desc').limit(40).get(),
         campaign.ref.collection('log').orderBy('at', 'desc').limit(30).get(),
+        campaign.ref.collection('summaries').get(),
       ]);
+      // The players' own characters, so the model does not file them as people met.
+      const party = summaries.docs.map((s) => clip(s.get('name'), 80));
       const told = oldestFirst(beats.docs).map((b) => clip(b.get('text'), 500));
       if (told.length === 0) {
         throw new HttpsError(
@@ -212,13 +215,14 @@ async function prepareCampaign(
         ? {
             payload: {
               setting,
+              party,
               beats: told,
               feed: oldestFirst(feed.docs).map((f) => clip(f.get('text'), 200)),
             },
             context: {},
           }
         : {
-            payload: { setting, beats: told, cards: cardList },
+            payload: { setting, party, beats: told, cards: cardList },
             context: { cardIds: cardList.map((c) => c.id) },
           };
     }

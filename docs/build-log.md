@@ -6,7 +6,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 - **Phase:** 7 (AI help), built; 6 built; 8 designed
 - **Task:** phases 6, 7 and 8 each wait on John (see Questions). Phase 7 is built except its evaluation against a real model
-- **Last verified commit:** 6663839 (CI run 45526620877: verify, all deploys, live guest sign-in and Lighthouse green)
+- **Last fully green CI run:** 6663839 (run 45526620877). Later runs pass Verify; Deploy fails on one permission (question 5)
 - **To run everything in a build container:** `npm run verify:container` (see decisions 1 and 22). CI runs plain `npm run verify`.
 
 ## Phase status
@@ -20,7 +20,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 | 4 Live play | Complete | 2026-11-25 |
 | 5 Warden tools and campaign record | Complete | 2026-11-25 |
 | 6 Plans, payments and policies | Built; waiting on John | |
-| 7 AI help | Built; waiting on a key for the evaluation | |
+| 7 AI help | Gate criteria met 2026-11-25; switched off until the key is in Secret Manager | |
 | 8 AI Warden | Not started | |
 | 9 Launch readiness | Not started | |
 
@@ -106,7 +106,8 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - [x] 4. Nothing saved without review: results fill the ordinary forms or arrive as accept-or-skip proposals
 - [x] 5. Metering per user per month against the plan's allowance
 - [x] 6. Safety: user text travels as data; the function returns proposals and writes only the count
-- [ ] 7. Evaluation against the real model (`npm run eval:ai`, 36 fixed requests). Needs an OpenRouter key.
+- [x] 7. Evaluation against the real model (`npm run eval:ai`, 36 fixed requests). See gate evidence.
+- [ ] 8. Switched on in production. Needs `OPENROUTER_API_KEY` in Secret Manager (John), then `AI_LIVE = true`.
 
 ## Gate evidence
 
@@ -168,6 +169,23 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - 299 rules-library tests, 64 app tests, 83 security-rules tests, 34 functions tests, 72 end-to-end tests locally (74 in CI).
 - The four phase 5 end-to-end tests pass at phone (390), tablet (820) and laptop (1366) widths: brief, timeline and revealed card; timeline order from two devices; a fight to a morale check; custom Origin, Ability, creature, gear and world, and a player's character built with them.
 - Security rules: a player cannot read a planned card, any card's private note, a private beat, or the Warden's notes, creatures or fight (18 tests).
+
+### Phase 7 (gate criteria met 2026-11-25; not yet switched on)
+
+- Tests with the model replaced by fixtures: 24 functions tests covering valid, invalid and hostile replies, who may ask, and the monthly allowance, including its reset and requests arriving together. 42 rules-library tests for the result shapes and ranges. 2 end-to-end tests at phone and tablet widths.
+- **Evaluation against real models,** 36 fixed requests each (7 creatures, 3 people, 3 places, 4 items, 3 Origins, 5 Abilities, 2 recaps, 2 filings, 7 rules questions), including requests that ask for out-of-range content ("d20 damage", "500 HP", "always kills") and one that tries to override the instructions:
+
+| Model | Usable | Usable first try | Cost per request | Median time |
+|---|---|---|---|---|
+| anthropic/claude-haiku-5.5 | 36 of 36 (100%) | 36 | $0.00037 | 2.6 s |
+| openai/gpt-6-luna | 36 of 36 (100%) | 36 | $0.00016 | 2.7 s |
+| deepseek/deepseek-v4.1-flash-1017 | 36 of 36 (100%) | 36 | $0.00028 | 2.2 s |
+| tencent/hy4-flash | 31 of 36 (86%) | 25 | $0.00021 | 7.8 s |
+
+- "Usable" means the reply passed every check, so all generated creatures, Abilities, gear and Origins are within the rulebook's ranges by construction. The out-of-range requests came back in range (the "worst beast in the region" had 14 HP and d12; the "d20 sword" came back as a bulky d10).
+- **Chosen: anthropic/claude-haiku-5.5.** Its filing and recaps showed better judgment in reading (threads for open questions, a creature card for "something under the water"), at a cost that is still negligible: a free account's 30 requests cost about 1 cent a month, a paid account's 1,000 about 37 cents. gpt-6-luna is a sound cheaper fallback.
+- Total spent on evaluation: about 10 cents of the $2 allowed.
+- With AI switched off: the deployed app has `AI_LIVE = false` and every earlier phase's tests pass in CI (run 45531788034, Verify job green).
 
 ## Decisions made without asking
 
@@ -255,6 +273,9 @@ The memory between build sessions. Read `docs/instructions.md` first.
 70. **2026-11-25. Beats may be up to 2,000 characters** (was 500), so a recap fits on the timeline.
 71. **2026-11-25. The model is not chosen yet.** `AI_MODEL` holds a placeholder. The evaluation compares candidates on usable replies and measured cost, and the build log will record the choice.
 72. **2026-11-25. AI Warden design written** (`docs/ai-warden-design.md`) for John's approval, as phase 8 requires before any building.
+73. **2026-11-25. A separate cloud environment, `waymark-rpg`,** now holds this repository's sessions, with a setup script that installs dependencies and the OpenRouter key for evaluations. The key is injected by the session's network proxy and never appears in the repository or in any command.
+74. **2026-11-25. Filing and recaps are told who the party is,** after the evaluation showed one model filing the players' own characters as people met. The evaluation now counts that mistake.
+75. **2026-11-25. Secrets are trimmed when read,** so a stray newline from pasting a key cannot break a request.
 
 ## Changed tests
 
@@ -272,7 +293,8 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 2. **Phase 6 needs four things from you (asked 2026-11-25).** (a) Which payment provider: I recommend Stripe and have built for it. (b) A Stripe account in test mode, with its secret key and webhook signing secret stored in Secret Manager as `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`; I will give the Cloud Shell commands once you confirm Stripe. (c) The legal name, a contact email address and the governing law (state or country) for the policy and terms. (d) Sign-off on: $4.99 a month and $49.90 a year; the downgrade behavior (decision 57); and the draft policy and terms at /privacy/ and /terms/ on the rules site.
 4. **Phase 8 needs your approval of `docs/ai-warden-design.md` (asked 2026-11-25),** and answers to the five questions at its end.
-3. **Phase 7 needs an OpenRouter key (asked 2026-11-25).** Stored in Secret Manager as `OPENROUTER_API_KEY`, and a model to use (I will propose one with measured cost).
+3. **Phase 7: store the OpenRouter key in Secret Manager (asked 2026-11-25)** as `OPENROUTER_API_KEY`, so the deployed app can use it. The key you gave this session is only for the evaluation here.
+5. **Deploys are failing on one permission (asked 2026-11-25).** The deploy account can create functions but cannot make new ones callable. It needs `roles/run.admin`. Until then Export, Delete account and AI help do not work on the live app.
 
 1. **Please try "Continue with Google" on the deployed app (asked 2026-11-24, not blocking).** Guest sign-in is now checked automatically after each deploy. A real Google sign-in cannot be automated, so it has only ever been tested against the emulator.
 

@@ -79,13 +79,15 @@ Do not reuse a name from "existingNames".`,
 Keys:
 - "title": a short title for the session.
 - "summary": one or two short paragraphs telling what happened, in order, in the past tense. Use only what is in the data. Do not invent events.
-- "openThreads": up to 6 one-line questions or loose ends the story has left open.`,
+- "openThreads": up to 6 one-line questions or loose ends the story has left open.
+The names in "party" are the players' characters.`,
 
   filing: `TASK: propose record-keeping for the Warden, from "beats" (what happened, oldest first) and "cards" (the people, places and things already on file).
 Keys:
 - "newCards": up to 8 new cards for people, places, creatures, factions, items or open threads that appear in the beats and have no card yet. Each has "kind" ("person", "place", "creature", "faction", "item" or "thread"), "name" and "text" (one or two sentences, from the beats only).
 - "changedCards": up to 8 existing cards whose status the beats have changed. Each has "id" (copied exactly from "cards"), "status" ("met", "changed" or "gone") and "why" (one line).
-Propose only what the beats support. If nothing needs filing, return empty lists.`,
+Propose only what the beats support. If nothing needs filing, return empty lists.
+Never make a card for a name in "party": those are the players' own characters.`,
 
   rules: `TASK: answer a question about Waymark's rules, using only the rulebook sections in "sections".
 Keys:

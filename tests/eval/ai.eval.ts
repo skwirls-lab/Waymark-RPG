@@ -37,6 +37,7 @@ const beats = [
   'On the far side they met Tam, a guide, who offered to lead them to the stilt village for a price.',
   'That night something large moved under the water beside the camp. The frogs went silent first.',
 ];
+const PARTY = ['Wren', 'Ash'];
 const cards = [
   {
     id: 'c1',
@@ -118,19 +119,23 @@ export const CASES: Case[] = [
     action: 'recap',
     payload: {
       setting: SETTINGS.fantasy,
+      party: PARTY,
       beats,
       feed: ['Wren rolled a Dexterity save: 7, passed.', 'Ash took 3 damage. HP 1 of 4.'],
     },
   },
-  { action: 'recap', payload: { setting: SETTINGS.fantasy, beats: beats.slice(0, 2), feed: [] } },
+  {
+    action: 'recap',
+    payload: { setting: SETTINGS.fantasy, party: PARTY, beats: beats.slice(0, 2), feed: [] },
+  },
   {
     action: 'filing',
-    payload: { setting: SETTINGS.fantasy, beats, cards },
+    payload: { setting: SETTINGS.fantasy, party: PARTY, beats, cards },
     context: { cardIds: cards.map((c) => c.id) },
   },
   {
     action: 'filing',
-    payload: { setting: SETTINGS.fantasy, beats: beats.slice(0, 1), cards },
+    payload: { setting: SETTINGS.fantasy, party: PARTY, beats: beats.slice(0, 1), cards },
     context: { cardIds: cards.map((c) => c.id) },
   },
   rules('Who goes first in a fight?'),
@@ -142,6 +147,17 @@ export const CASES: Case[] = [
   rules('What is the armor class of a goblin?'),
 ];
 
+interface Row {
+  index: number;
+  action: AiAction;
+  usable: boolean;
+  attempts: number;
+  cost: number;
+  ms: number;
+  problems: string[];
+  value: Record<string, unknown> | null;
+}
+
 const key = process.env.OPENROUTER_API_KEY;
 const models = (process.env.AI_MODELS ?? '')
   .split(',')
@@ -152,34 +168,47 @@ it.skipIf(!key || models.length === 0)('the evaluation set against the real mode
   const report: Record<string, unknown>[] = [];
   for (const model of models) {
     const call = openRouterCaller(key!, model);
-    const rows = [];
-    for (const [index, c] of CASES.entries()) {
-      const started = Date.now();
-      try {
-        const result = await askChecked(call, c.action, c.payload, c.context ?? {});
-        rows.push({
-          index,
-          action: c.action,
-          usable: result.value !== null,
-          attempts: result.attempts,
-          cost: result.cost,
-          ms: Date.now() - started,
-          problems: result.problems,
-          value: result.value,
-        });
-      } catch (problem) {
-        rows.push({
-          index,
-          action: c.action,
-          usable: false,
-          attempts: 0,
-          cost: 0,
-          ms: Date.now() - started,
-          problems: [String(problem)],
-          value: null,
-        });
-      }
-    }
+    // Six at a time: quick enough to finish, gentle enough not to be rate-limited.
+    const rows: Row[] = [];
+    const queue = [...CASES.entries()];
+    await Promise.all(
+      Array.from({ length: 6 }, async () => {
+        for (let next = queue.shift(); next; next = queue.shift()) {
+          const [index, c] = next;
+          const started = Date.now();
+          try {
+            const result = await askChecked(call, c.action, c.payload, c.context ?? {});
+            rows.push({
+              index,
+              action: c.action,
+              usable: result.value !== null,
+              attempts: result.attempts,
+              cost: result.cost,
+              ms: Date.now() - started,
+              problems: result.problems,
+              value: result.value,
+            });
+          } catch (problem) {
+            rows.push({
+              index,
+              action: c.action,
+              usable: false,
+              attempts: 0,
+              cost: 0,
+              ms: Date.now() - started,
+              problems: [String(problem)],
+              value: null,
+            });
+          }
+        }
+      }),
+    );
+    rows.sort((a, b) => a.index - b.index);
+    // Beyond being well-formed: filing must not make cards for the players' own characters.
+    const filedParty = rows
+      .filter((r) => r.action === 'filing' && r.value)
+      .flatMap((r) => (r.value!.newCards as { name: string }[]).map((c) => c.name))
+      .filter((name) => PARTY.includes(name));
     const usable = rows.filter((r) => r.usable).length;
     const cost = rows.reduce((sum, r) => sum + r.cost, 0);
     const summary = {
@@ -190,14 +219,16 @@ it.skipIf(!key || models.length === 0)('the evaluation set against the real mode
       firstTry: rows.filter((r) => r.usable && r.attempts === 1).length,
       totalCost: cost,
       costPerRequest: cost / rows.length,
+      filedPartyAsCards: filedParty.length,
       medianMs: [...rows].sort((a, b) => a.ms - b.ms)[Math.floor(rows.length / 2)]!.ms,
     };
     console.log(JSON.stringify(summary));
     for (const row of rows.filter((r) => !r.usable))
       console.log('  not usable:', row.index, row.action, row.problems.slice(0, 2).join('; '));
     report.push({ summary, rows });
+    // Written after each model, so a slow model does not lose the others' results.
+    writeFileSync(resolve(import.meta.dirname, 'last-run.json'), JSON.stringify(report, null, 2));
   }
-  writeFileSync(resolve(import.meta.dirname, 'last-run.json'), JSON.stringify(report, null, 2));
   expect(CASES.length).toBeGreaterThanOrEqual(30);
 });
 

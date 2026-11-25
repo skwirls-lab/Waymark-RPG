@@ -14,4 +14,4 @@ export const PAYMENTS_LIVE = false;
 export const AI_LIVE = false;
 
 /** The model AI help uses, as OpenRouter names it. Chosen by the evaluation in the build log. */
-export const AI_MODEL = 'openai/gpt-oss-20b';
+export const AI_MODEL = 'anthropic/claude-haiku-5.5';
