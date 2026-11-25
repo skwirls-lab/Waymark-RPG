@@ -56,6 +56,8 @@ test('phase 8: an AI-run campaign, from switching it on to a save and its outcom
   await expect(page.getByRole('heading', { name: 'Wren', level: 1 })).toBeVisible();
 
   await page.goto(campaignUrl);
+  // Wren is in the campaign once the server has the new character.
+  await expect(page.getByTestId('summary-Wren')).toBeVisible();
   await page.getByRole('tab', { name: 'Play' }).click();
   await expect(page.getByText('The story has not started.')).toBeVisible();
   await expectNoSeriousAccessibilityIssues(page);
