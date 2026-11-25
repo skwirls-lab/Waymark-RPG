@@ -135,10 +135,6 @@ const warns: Check = (t) =>
   )
     ? null
     : 'no danger was signalled';
-const has =
-  (kind: string): Check =>
-  (t) =>
-    t.events.some((e) => e.kind === kind) ? null : `no ${kind} event`;
 const spoke: Check = (t) =>
   text(t).length > 20 && !/Warden pauses to gather/.test(text(t)) ? null : 'no real narration';
 const all =
