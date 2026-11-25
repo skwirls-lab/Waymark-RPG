@@ -78,6 +78,14 @@ describe('limits by plan', () => {
     await assertFails(as('payer').doc('characters/payer_51').set(character('payer', 51)));
   });
 
+  it('nobody can write their own count of AI requests, and nobody else can read it', async () => {
+    await seed((db) => db.doc('usage/lapsed').set({ month: '2026-11', ai: 30 }));
+    await assertSucceeds(as('lapsed').doc('usage/lapsed').get());
+    await assertFails(as('lapsed').doc('usage/lapsed').set({ month: '2026-11', ai: 0 }));
+    await assertFails(as('lapsed').doc('usage/lapsed').delete());
+    await assertFails(as('new').doc('usage/lapsed').get());
+  });
+
   it('nobody can write their own plan', async () => {
     await assertFails(as('new').doc('entitlements/new').set({ plan: 'paid' }));
     await assertFails(as('lapsed').doc('entitlements/lapsed').update({ plan: 'paid' }));

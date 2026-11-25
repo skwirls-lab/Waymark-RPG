@@ -14,3 +14,6 @@ export * from './rulebook.ts';
 export * from './actions.ts';
 export * from './workshop.ts';
 export * from './plans.ts';
+export * from './sections.ts';
+export * from './rulebookSections.ts';
+export * from './ai.ts';

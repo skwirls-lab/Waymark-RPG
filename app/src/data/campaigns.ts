@@ -1,5 +1,5 @@
 import type { AttributeKey, Character, WardenAction } from '@waymark/rules';
-import type { CharacterDoc } from './characters';
+import { trackSave, type CharacterDoc } from './characters';
 import { getDb, getServices, useEmulators } from '../firebase';
 
 export interface Membership {
@@ -148,16 +148,19 @@ export function watchCampaign(
   };
 }
 
-export async function saveWardenCharacter(
-  campaignId: string,
-  character: WardenCharacter,
-): Promise<void> {
-  const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
+export function saveWardenCharacter(campaignId: string, character: WardenCharacter): Promise<void> {
   const { id, ...data } = character;
-  await fs.setDoc(fs.doc(db, 'campaigns', campaignId, 'characters', id), {
-    ...data,
-    updatedAt: Date.now(),
-  });
+  // Tracked so that a change made straight after waits for this to land.
+  return trackSave(
+    `campaigns/${campaignId}/characters/${id}`,
+    (async () => {
+      const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
+      await fs.setDoc(fs.doc(db, 'campaigns', campaignId, 'characters', id), {
+        ...data,
+        updatedAt: Date.now(),
+      });
+    })(),
+  );
 }
 
 export async function deleteWardenCharacter(campaignId: string, id: string): Promise<void> {
@@ -187,7 +190,8 @@ export async function call<T>(name: string, data: Record<string, unknown>): Prom
       error.code && error.code !== 'functions/internal' && error.code !== 'functions/unavailable';
     throw new Error(
       known && error.message
-        ? error.message
+        ? // The library adds the HTTP status to some messages, as in "… [429]".
+          error.message.replace(/\s*\[\d{3}\]$/, '')
         : 'That did not work. Check your connection and try again.',
     );
   }

@@ -5,6 +5,8 @@ import {
   checkGear,
   checkOrigin,
   data,
+  type AiAction,
+  type AiResult,
   type AttributeKey,
   type CustomAbility,
   type CustomCreature,
@@ -12,6 +14,7 @@ import {
   type CustomOrigin,
 } from '@waymark/rules';
 import { useState, type ReactNode } from 'react';
+import { AiNote, AiSuggest } from '../ui/AiSuggest';
 import {
   contentId,
   deleteWorld,
@@ -100,9 +103,10 @@ function DiePicker({
 }
 
 /** A heading, the things already made, and a form that opens to make another. */
-function Maker<T extends { id: string; name: string }>({
+function Maker<T extends { id: string; name: string }, A extends AiAction>({
   title,
   addLabel,
+  ai,
   items,
   describe,
   onDelete,
@@ -110,12 +114,19 @@ function Maker<T extends { id: string; name: string }>({
 }: {
   title: string;
   addLabel: string;
+  /** The AI button that can fill the form in. */
+  ai: { action: A; label: string; campaignId: string };
   items: T[];
   describe: (item: T) => ReactNode;
   onDelete: (item: T) => void;
-  children: (close: () => void) => ReactNode;
+  children: (close: () => void, initial: AiResult<A> | undefined) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [proposal, setProposal] = useState<{ value: AiResult<A>; n: number }>();
+  const close = () => {
+    setOpen(false);
+    setProposal(undefined);
+  };
   const id = `made-${title.replace(/\W+/g, '-').toLowerCase()}`;
   return (
     <section aria-labelledby={id}>
@@ -139,12 +150,25 @@ function Maker<T extends { id: string; name: string }>({
         </ul>
       )}
       {open ? (
-        children(() => setOpen(false))
+        // A new proposal replaces the form with a fresh one.
+        <div key={proposal?.n ?? 0}>
+          {proposal && <AiNote />}
+          {children(close, proposal?.value)}
+        </div>
       ) : (
         <button type="button" className="button small" onClick={() => setOpen(true)}>
           {addLabel}
         </button>
       )}
+      <AiSuggest
+        action={ai.action}
+        campaignId={ai.campaignId}
+        label={ai.label}
+        onProposal={(value) => {
+          setProposal({ value, n: (proposal?.n ?? 0) + 1 });
+          setOpen(true);
+        }}
+      />
     </section>
   );
 }
@@ -193,19 +217,31 @@ function kitFrom(rows: KitRow[]): Pick<CustomOrigin, 'kit' | 'kitText'> {
 }
 
 function OriginForm({
+  initial,
   onSave,
   onCancel,
 }: {
+  initial?: AiResult<'origin'>;
   onSave: (o: CustomOrigin) => void;
   onCancel: () => void;
 }) {
-  const [name, setName] = useState('');
-  const [examples, setExamples] = useState('');
-  const [attribute, setAttribute] = useState<AttributeKey>('str');
-  const [trait, setTrait] = useState('');
-  const [drawback, setDrawback] = useState('');
+  const [name, setName] = useState(initial?.name ?? '');
+  const [examples, setExamples] = useState(initial?.examples ?? '');
+  const [attribute, setAttribute] = useState<AttributeKey>(initial?.attribute ?? 'str');
+  const [trait, setTrait] = useState(initial?.trait ?? '');
+  const [drawback, setDrawback] = useState(initial?.drawback ?? '');
   const [slots, setSlots] = useState(10);
-  const [rows, setRows] = useState<KitRow[]>([emptyKitRow(), emptyKitRow(), emptyKitRow()]);
+  const [rows, setRows] = useState<KitRow[]>(
+    initial
+      ? initial.kit.map((k) => ({
+          name: k.name,
+          kind: k.kind,
+          damage: (k.damage ?? 6) as Die,
+          armor: 1,
+          bulky: k.bulky,
+        }))
+      : [emptyKitRow(), emptyKitRow(), emptyKitRow()],
+  );
   const setRow = (i: number, patch: Partial<KitRow>) =>
     setRows(rows.map((r, n) => (n === i ? { ...r, ...patch } : r)));
   const origin: CustomOrigin = {
@@ -343,19 +379,23 @@ function OriginForm({
 
 function AbilityForm({
   content,
+  initial,
   onSave,
   onCancel,
 }: {
   content: Content;
+  initial?: AiResult<'ability'>;
   onSave: (ability: CustomAbility, newAffinity: { name: string; about: string } | null) => void;
   onCancel: () => void;
 }) {
   const affinities = allAffinities(content);
-  const [affinity, setAffinity] = useState(affinities[0]!.id);
+  const [affinity, setAffinity] = useState(
+    affinities.find((a) => a.id === initial?.affinity)?.id ?? affinities[0]!.id,
+  );
   const [affinityName, setAffinityName] = useState('');
   const [about, setAbout] = useState('');
-  const [name, setName] = useState('');
-  const [text, setText] = useState('');
+  const [name, setName] = useState(initial?.name ?? '');
+  const [text, setText] = useState(initial?.text ?? '');
   const isNew = affinity === 'new';
   return (
     <form
@@ -430,15 +470,23 @@ function AbilityForm({
   );
 }
 
-function GearForm({ onSave, onCancel }: { onSave: (g: CustomGear) => void; onCancel: () => void }) {
-  const [name, setName] = useState('');
-  const [kind, setKind] = useState<CustomGear['kind']>('weapon');
-  const [bulky, setBulky] = useState(false);
-  const [damage, setDamage] = useState<Die>(6);
-  const [ranged, setRanged] = useState(false);
-  const [armor, setArmor] = useState(1);
-  const [charges, setCharges] = useState(1);
-  const [text, setText] = useState('');
+function GearForm({
+  initial,
+  onSave,
+  onCancel,
+}: {
+  initial?: AiResult<'item'>;
+  onSave: (g: CustomGear) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(initial?.name ?? '');
+  const [kind, setKind] = useState<CustomGear['kind']>(initial?.kind ?? 'weapon');
+  const [bulky, setBulky] = useState(initial?.bulky ?? false);
+  const [damage, setDamage] = useState<Die>(initial?.damage ?? 6);
+  const [ranged, setRanged] = useState(initial?.ranged ?? false);
+  const [armor, setArmor] = useState(initial?.armor ?? 1);
+  const [charges, setCharges] = useState(initial?.charges ?? 1);
+  const [text, setText] = useState(initial?.text ?? '');
   const gear: CustomGear = {
     id: contentId(),
     name: name.trim(),
@@ -499,22 +547,24 @@ function GearForm({ onSave, onCancel }: { onSave: (g: CustomGear) => void; onCan
 }
 
 function CreatureForm({
+  initial,
   onSave,
   onCancel,
 }: {
+  initial?: AiResult<'creature'>;
   onSave: (c: CustomCreature) => void;
   onCancel: () => void;
 }) {
-  const [name, setName] = useState('');
-  const [hp, setHp] = useState(4);
-  const [armor, setArmor] = useState(0);
-  const [str, setStr] = useState(10);
-  const [dex, setDex] = useState(10);
-  const [wil, setWil] = useState(10);
-  const [attackName, setAttackName] = useState('');
-  const [damage, setDamage] = useState<Die>(6);
-  const [blast, setBlast] = useState(false);
-  const [notes, setNotes] = useState('');
+  const [name, setName] = useState(initial?.name ?? '');
+  const [hp, setHp] = useState(initial?.hp ?? 4);
+  const [armor, setArmor] = useState(initial?.armor ?? 0);
+  const [str, setStr] = useState(initial?.str ?? 10);
+  const [dex, setDex] = useState(initial?.dex ?? 10);
+  const [wil, setWil] = useState(initial?.wil ?? 10);
+  const [attackName, setAttackName] = useState(initial?.attack ?? '');
+  const [damage, setDamage] = useState<Die>(initial?.damage ?? 6);
+  const [blast, setBlast] = useState(initial?.blast ?? false);
+  const [notes, setNotes] = useState(initial?.notes.join('\n') ?? '');
   const creature: CustomCreature = {
     id: contentId(),
     name: name.trim(),
@@ -617,6 +667,7 @@ export function Workshop({ campaignId, uid }: { campaignId: string; uid: string 
       <Maker
         title="Creatures"
         addLabel="New creature"
+        ai={{ action: 'creature', label: 'Suggest a creature', campaignId }}
         items={creatures}
         describe={(c) =>
           `HP ${c.hp} · Armor ${c.armor} · STR ${c.str} · DEX ${c.dex} · WIL ${c.wil} · ${c.attack}`
@@ -631,8 +682,9 @@ export function Workshop({ campaignId, uid }: { campaignId: string; uid: string 
           )
         }
       >
-        {(close) => (
+        {(close, initial) => (
           <CreatureForm
+            initial={initial}
             onCancel={close}
             onSave={(c) => {
               run(
@@ -667,6 +719,7 @@ export function Workshop({ campaignId, uid }: { campaignId: string; uid: string 
       <Maker
         title="Origins"
         addLabel="New Origin"
+        ai={{ action: 'origin', label: 'Suggest an Origin', campaignId }}
         items={content.origins}
         describe={(o) => `+1 ${o.bonus.attribute.toUpperCase()} · ${o.trait} Kit: ${o.kitText}`}
         onDelete={(o) =>
@@ -676,8 +729,9 @@ export function Workshop({ campaignId, uid }: { campaignId: string; uid: string 
           )
         }
       >
-        {(close) => (
+        {(close, initial) => (
           <OriginForm
+            initial={initial}
             onCancel={close}
             onSave={(o) => {
               put({ ...content, origins: [...content.origins, o] }, `${o.name} saved.`);
@@ -690,6 +744,7 @@ export function Workshop({ campaignId, uid }: { campaignId: string; uid: string 
       <Maker
         title="Abilities and Affinities"
         addLabel="New Ability"
+        ai={{ action: 'ability', label: 'Suggest an Ability', campaignId }}
         items={content.abilities}
         describe={(a) => `${affinityName(a.affinity)} · ${a.text}`}
         onDelete={(a) => {
@@ -701,9 +756,10 @@ export function Workshop({ campaignId, uid }: { campaignId: string; uid: string 
           put({ ...content, abilities, affinities }, `${a.name} deleted.`);
         }}
       >
-        {(close) => (
+        {(close, initial) => (
           <AbilityForm
             content={content}
+            initial={initial}
             onCancel={close}
             onSave={(ability, newAffinity) => {
               const affinity = newAffinity ? { id: contentId(), ...newAffinity } : null;
@@ -727,6 +783,7 @@ export function Workshop({ campaignId, uid }: { campaignId: string; uid: string 
       <Maker
         title="Gear"
         addLabel="New item"
+        ai={{ action: 'item', label: 'Suggest an item', campaignId }}
         items={content.gear}
         describe={(g) =>
           [
@@ -744,8 +801,9 @@ export function Workshop({ campaignId, uid }: { campaignId: string; uid: string 
           put({ ...content, gear: content.gear.filter((x) => x.id !== g.id) }, `${g.name} deleted.`)
         }
       >
-        {(close) => (
+        {(close, initial) => (
           <GearForm
+            initial={initial}
             onCancel={close}
             onSave={(g) => {
               put(

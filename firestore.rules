@@ -64,6 +64,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // How many AI requests an account has made this month. Counted by the server.
+    match /usage/{uid} {
+      allow read: if isUser(uid);
+      allow write: if false;
+    }
+
     function isMember(campaignId) {
       return signedIn()
         && exists(/databases/$(database)/documents/campaigns/$(campaignId)/members/$(request.auth.uid));
@@ -241,7 +247,7 @@ service cloud.firestore {
         function beatOk() {
           let d = request.resource.data;
           return d.keys().hasOnly(['at', 'text', 'milestone', 'private', 'cardId', 'byUid'])
-            && d.text is string && d.text.size() > 0 && d.text.size() <= 500
+            && d.text is string && d.text.size() > 0 && d.text.size() <= 2000
             && d.milestone is bool
             && d.private is bool
             && (d.cardId == null || d.cardId is string)

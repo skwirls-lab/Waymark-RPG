@@ -9,3 +9,4 @@ test-results/
 coverage/
 .env.local
 functions/lib/
+tests/eval/last-run.json

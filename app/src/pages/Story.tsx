@@ -1,3 +1,4 @@
+import type { AiResult } from '@waymark/rules';
 import { useEffect, useState, type FormEvent } from 'react';
 import {
   CARD_KINDS,
@@ -22,6 +23,7 @@ import {
   type CardStatus,
   type SessionBrief,
 } from '../data/record';
+import { AiNote, AiSuggest } from '../ui/AiSuggest';
 
 interface Props {
   campaignId: string;
@@ -330,6 +332,9 @@ function Timeline({ campaignId, uid, isWarden }: Props) {
           {problem}
         </p>
       )}
+      {isWarden && beats.length > 0 && (
+        <AiStory campaignId={campaignId} uid={uid} cards={cards} onProblem={fail} />
+      )}
       {beats.length === 0 && <p className="muted">Nothing has happened yet.</p>}
       {/* Newest first: during play, the last thing that happened matters most. */}
       <ol className="record timeline" aria-label="Story beats, newest first">
@@ -372,8 +377,18 @@ function Cards({ campaignId, isWarden }: Omit<Props, 'uid'>) {
   const cards = useCards(campaignId, isWarden);
   const notes = useCardNotes(campaignId, isWarden);
   const [editing, setEditing] = useState<Partial<Card> | null>(null);
+  // A card the AI suggested: its private note, and a number so each suggestion gets a fresh form.
+  const [suggested, setSuggested] = useState<{ secret: string; n: number }>();
   const [problem, setProblem] = useState<string>();
   const fail = () => setProblem('That could not be saved. Check your connection and try again.');
+  const suggest = (kind: 'person' | 'place') => (proposal: AiResult<'person'>) => {
+    setSuggested({ secret: proposal.secret, n: (suggested?.n ?? 0) + 1 });
+    setEditing({ kind, name: proposal.name, text: proposal.text, status: 'planned' });
+  };
+  const closeForm = () => {
+    setEditing(null);
+    setSuggested(undefined);
+  };
 
   return (
     <section aria-labelledby="cards">
@@ -433,28 +448,46 @@ function Cards({ campaignId, isWarden }: Omit<Props, 'uid'>) {
       {isWarden &&
         (editing ? (
           <CardForm
-            key={editing.id ?? 'new'}
+            key={editing.id ?? `new-${suggested?.n ?? 0}`}
             card={editing}
-            notes={editing.id ? (notes[editing.id] ?? '') : ''}
+            suggested={!editing.id && suggested !== undefined}
+            notes={editing.id ? (notes[editing.id] ?? '') : (suggested?.secret ?? '')}
             onSave={(card, privateNotes) => {
               saveCard(campaignId, card, privateNotes).catch(fail);
-              setEditing(null);
+              closeForm();
             }}
             onDelete={
               editing.id
                 ? () => {
                     deleteCard(campaignId, editing.id!).catch(fail);
-                    setEditing(null);
+                    closeForm();
                   }
                 : undefined
             }
-            onCancel={() => setEditing(null)}
+            onCancel={() => closeForm()}
           />
         ) : (
           <button type="button" className="button small" onClick={() => setEditing({})}>
             New card
           </button>
         ))}
+      {isWarden && (
+        <div className="ai-row">
+          <AiSuggest
+            action="person"
+            campaignId={campaignId}
+            label="Suggest a person"
+            onProposal={suggest('person')}
+          />
+          <AiSuggest
+            action="place"
+            campaignId={campaignId}
+            label="Suggest a place"
+            hint={false}
+            onProposal={suggest('place')}
+          />
+        </div>
+      )}
     </section>
   );
 }
@@ -462,12 +495,15 @@ function Cards({ campaignId, isWarden }: Omit<Props, 'uid'>) {
 function CardForm({
   card,
   notes,
+  suggested = false,
   onSave,
   onDelete,
   onCancel,
 }: {
   card: Partial<Card>;
   notes: string;
+  /** Whether the AI filled this in. */
+  suggested?: boolean;
   onSave: (
     card: Pick<Card, 'kind' | 'name' | 'text' | 'status'> & { id?: string; createdAt?: number },
     notes: string,
@@ -493,6 +529,7 @@ function CardForm({
         );
       }}
     >
+      {suggested && <AiNote />}
       <label>
         Kind
         <select value={kind} onChange={(e) => setKind(e.target.value as CardKind)}>
@@ -582,5 +619,199 @@ function PrivateNotes({ campaignId }: { campaignId: string }) {
         {message}
       </p>
     </section>
+  );
+}
+
+/** The AI's two jobs on the timeline: a recap to share, and record-keeping to approve. */
+function AiStory({
+  campaignId,
+  uid,
+  cards,
+  onProblem,
+}: {
+  campaignId: string;
+  uid: string;
+  cards: Card[];
+  onProblem: () => void;
+}) {
+  const [recap, setRecap] = useState<AiResult<'recap'>>();
+  const [text, setText] = useState('');
+  const [filing, setFiling] = useState<AiResult<'filing'>>();
+  // What has been accepted or skipped, so each proposal is dealt with once.
+  const [dealt, setDealt] = useState<string[]>([]);
+  const deal = (key: string) => setDealt((d) => [...d, key]);
+  const cardName = (id: string) => cards.find((c) => c.id === id)?.name ?? 'A card';
+
+  return (
+    <div className="panel">
+      <h3>AI help</h3>
+      <div className="ai-row">
+        <AiSuggest
+          action="recap"
+          campaignId={campaignId}
+          label="Recap the session"
+          hint={false}
+          onProposal={(proposal) => {
+            setRecap(proposal);
+            setText(`${proposal.title}. ${proposal.summary}`);
+            setDealt([]);
+          }}
+        />
+        <AiSuggest
+          action="filing"
+          campaignId={campaignId}
+          label="Suggest filing"
+          hint={false}
+          onProposal={(proposal) => {
+            setFiling(proposal);
+            setDealt([]);
+          }}
+        />
+      </div>
+
+      {recap && (
+        <div role="group" aria-label="Suggested recap">
+          <AiNote />
+          <label className="form-row">
+            Recap
+            <textarea
+              rows={6}
+              maxLength={2000}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
+          </label>
+          <div className="button-row">
+            <button
+              type="button"
+              className="button small primary"
+              disabled={!text.trim()}
+              onClick={() => {
+                addBeat(campaignId, uid, {
+                  text: text.trim(),
+                  milestone: true,
+                  private: false,
+                  cardId: null,
+                }).catch(onProblem);
+                setRecap(undefined);
+              }}
+            >
+              Add the recap to the timeline
+            </button>
+            <button type="button" className="button small" onClick={() => setRecap(undefined)}>
+              Discard
+            </button>
+          </div>
+          {recap.openThreads.length > 0 && (
+            <ul className="record" aria-label="Suggested open threads">
+              {recap.openThreads
+                .filter((thread) => !dealt.includes(`thread:${thread}`))
+                .map((thread) => (
+                  <li key={thread}>
+                    {thread}
+                    <div className="button-row">
+                      <button
+                        type="button"
+                        className="button small"
+                        onClick={() => {
+                          saveCard(
+                            campaignId,
+                            {
+                              kind: 'thread',
+                              name: thread.slice(0, 80),
+                              text: '',
+                              status: 'planned',
+                            },
+                            '',
+                          ).catch(onProblem);
+                          deal(`thread:${thread}`);
+                        }}
+                      >
+                        Keep as an open thread
+                      </button>
+                    </div>
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {filing && (
+        <div role="group" aria-label="Suggested filing">
+          <AiNote />
+          {filing.newCards.length + filing.changedCards.length === 0 && (
+            <p className="muted">Nothing needs filing.</p>
+          )}
+          <ul className="record">
+            {filing.newCards
+              .filter((c) => !dealt.includes(`new:${c.name}`))
+              .map((c) => (
+                <li key={c.name}>
+                  <strong>{c.name}</strong>
+                  <span className="tag quiet">New {CARD_KIND_LABEL[c.kind].toLowerCase()}</span>
+                  <p>{c.text}</p>
+                  <div className="button-row">
+                    <button
+                      type="button"
+                      className="button small primary"
+                      aria-label={`Add a card for ${c.name}`}
+                      onClick={() => {
+                        saveCard(campaignId, { ...c, status: 'planned' }, '').catch(onProblem);
+                        deal(`new:${c.name}`);
+                      }}
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      className="button small"
+                      aria-label={`Skip ${c.name}`}
+                      onClick={() => deal(`new:${c.name}`)}
+                    >
+                      Skip
+                    </button>
+                  </div>
+                </li>
+              ))}
+            {filing.changedCards
+              .filter((c) => !dealt.includes(`changed:${c.id}`))
+              .map((c) => (
+                <li key={c.id}>
+                  <strong>{cardName(c.id)}</strong>
+                  <span className="tag quiet">
+                    Mark as {CARD_STATUS_LABEL[c.status].toLowerCase()}
+                  </span>
+                  <p>{c.why}</p>
+                  <div className="button-row">
+                    <button
+                      type="button"
+                      className="button small primary"
+                      aria-label={`Accept the change to ${cardName(c.id)}`}
+                      onClick={() => {
+                        setCardStatus(campaignId, c.id, c.status).catch(onProblem);
+                        deal(`changed:${c.id}`);
+                      }}
+                    >
+                      Accept
+                    </button>
+                    <button
+                      type="button"
+                      className="button small"
+                      aria-label={`Skip the change to ${cardName(c.id)}`}
+                      onClick={() => deal(`changed:${c.id}`)}
+                    >
+                      Skip
+                    </button>
+                  </div>
+                </li>
+              ))}
+          </ul>
+          <p className="hint">
+            New cards are added as planned, so players do not see them until you reveal them.
+          </p>
+        </div>
+      )}
+    </div>
   );
 }

@@ -56,10 +56,37 @@ export function watchCharacters(
  * which may be much later if offline; the local copy updates at once, so
  * screens should not wait on it.
  */
-export async function saveCharacter(doc: CharacterDoc): Promise<void> {
-  const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
+export function saveCharacter(doc: CharacterDoc): Promise<void> {
   const { id, ...data } = doc;
-  await fs.setDoc(fs.doc(db, 'characters', id), data);
+  // Tracked from this moment, before anything is awaited.
+  return trackSave(
+    `characters/${id}`,
+    (async () => {
+      const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
+      await fs.setDoc(fs.doc(db, 'characters', id), data);
+    })(),
+  );
+}
+
+/** Whole-document saves that the server has not confirmed yet, by document path. */
+const pendingSaves = new Map<string, Promise<void>>();
+
+/**
+ * Remembers a save until the server confirms it. A change made straight
+ * after (a tap on a sheet created a moment ago) waits for it, because the
+ * server cannot change, or even show, a document it has not received yet.
+ */
+export function trackSave(key: string, sent: Promise<void>): Promise<void> {
+  const settled: Promise<void> = sent
+    .then(
+      () => {},
+      () => {},
+    )
+    .finally(() => {
+      if (pendingSaves.get(key) === settled) pendingSaves.delete(key);
+    });
+  pendingSaves.set(key, settled);
+  return sent;
 }
 
 export async function deleteCharacter(id: string): Promise<void> {
@@ -127,6 +154,8 @@ async function sendChange(
   };
 
   if (mustQueue(key)) return queueOffline();
+  // A save of this document still on its way must land first.
+  await pendingSaves.get(key);
   try {
     await fs.runTransaction(db, async (tx) => {
       const current = await tx.get(ref);

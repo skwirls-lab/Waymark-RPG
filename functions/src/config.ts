@@ -5,3 +5,13 @@
  * exist in Secret Manager first, or the deploy fails.
  */
 export const PAYMENTS_LIVE = false;
+
+/**
+ * Whether AI help is connected. While this is false the buttons say that AI
+ * help is not switched on yet. Turning it on requires `OPENROUTER_API_KEY`
+ * to exist in Secret Manager first, or the deploy fails.
+ */
+export const AI_LIVE = false;
+
+/** The model AI help uses, as OpenRouter names it. Chosen by the evaluation in the build log. */
+export const AI_MODEL = 'openai/gpt-oss-20b';

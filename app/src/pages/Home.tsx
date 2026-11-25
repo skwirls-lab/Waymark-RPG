@@ -6,6 +6,7 @@ import { useAccount, useTidyKeep } from '../data/account';
 import { useMemberships } from '../data/useCampaign';
 import { useCharacterStore } from '../data/useCharacters';
 import { Logo } from '../Logo';
+import { AskRules } from './AskRules';
 import { JoinCampaignForm, RedeemHandoverForm, StartCampaignForm } from './CampaignForms';
 
 export function Home() {
@@ -119,6 +120,8 @@ export function Home() {
         {form === 'join' && <JoinCampaignForm />}
         {form === 'start' && <StartCampaignForm />}
         {form === 'redeem' && <RedeemHandoverForm />}
+
+        <AskRules />
 
         {user?.isAnonymous && (
           <div className="note">

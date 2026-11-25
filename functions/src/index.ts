@@ -4,9 +4,10 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall, onRequest, type CallableRequest } from 'firebase-functions/v2/https';
+import * as ai from './ai';
 import * as billing from './billing';
 import * as campaigns from './campaigns';
-import { PAYMENTS_LIVE } from './config';
+import { AI_LIVE, AI_MODEL, PAYMENTS_LIVE } from './config';
 
 initializeApp();
 const db = getFirestore();
@@ -106,3 +107,19 @@ export const stripeWebhook = secrets
       response.status(200).send(event ? await billing.recordBillingEvent(db, event) : 'ignored');
     })
   : undefined;
+
+// ---- AI help -------------------------------------------------------------------
+
+const aiKey = AI_LIVE ? defineSecret('OPENROUTER_API_KEY') : null;
+/** The real model when connected; fixed replies in the local emulator; otherwise none. */
+const model = (): ai.ModelCall | null =>
+  aiKey
+    ? ai.openRouterCaller(aiKey.value(), AI_MODEL)
+    : process.env.FUNCTIONS_EMULATOR === 'true'
+      ? ai.fixtureModel
+      : null;
+
+export const aiHelp = onCall(
+  aiKey ? { ...options, secrets: [aiKey], timeoutSeconds: 60 } : options,
+  (request) => ai.aiHelp(db, uidOf(request), request.data ?? {}, model()),
+);

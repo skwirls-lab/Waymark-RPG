@@ -10,6 +10,7 @@ import {
   startCheckout,
   useAccount,
 } from '../data/account';
+import { useAiUsed } from '../data/ai';
 import { useMemberships } from '../data/useCampaign';
 import { useCharacterStore } from '../data/useCharacters';
 
@@ -30,6 +31,7 @@ export function Account() {
   const account = useAccount(uid);
   const { characters = [] } = useCharacterStore();
   const run = (useMemberships(uid) ?? []).filter((m) => m.role === 'warden');
+  const aiUsed = useAiUsed(uid);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
   const [confirm, setConfirm] = useState('');
@@ -118,6 +120,9 @@ export function Account() {
                 Campaigns you run: {limitText(run.length, limits.campaigns)}
               </li>
               <li>Campaigns you join as a player: no limit</li>
+              <li data-testid="usage-ai">
+                AI help this month: {aiUsed} of {limits.aiRequests} requests
+              </li>
             </ul>
             {plan === 'free' ? (
               user?.isAnonymous ? (

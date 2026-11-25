@@ -4,8 +4,8 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Current position
 
-- **Phase:** 6 (plans, payments and policies), built; gate waits on John (see Questions)
-- **Task:** phase 6 gate needs John's sign-off and a payment account; phase 7 starts meanwhile
+- **Phase:** 7 (AI help), built; 6 built; 8 designed
+- **Task:** phases 6, 7 and 8 each wait on John (see Questions). Phase 7 is built except its evaluation against a real model
 - **Last verified commit:** 6663839 (CI run 45526620877: verify, all deploys, live guest sign-in and Lighthouse green)
 - **To run everything in a build container:** `npm run verify:container` (see decisions 1 and 22). CI runs plain `npm run verify`.
 
@@ -20,7 +20,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 | 4 Live play | Complete | 2026-11-25 |
 | 5 Warden tools and campaign record | Complete | 2026-11-25 |
 | 6 Plans, payments and policies | Built; waiting on John | |
-| 7 AI help | Not started | |
+| 7 AI help | Built; waiting on a key for the evaluation | |
 | 8 AI Warden | Not started | |
 | 9 Launch readiness | Not started | |
 
@@ -97,6 +97,16 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - [x] 4. Downgrade: nothing deleted; what is over the limit is read-only until the owner chooses what to keep
 - [x] 5. Account page: plan, usage, export my data, delete my account
 - [x] 6. Draft privacy policy and terms on the rules site, marked as drafts
+
+## Phase 7 tasks
+
+- [x] 1. One function that calls OpenRouter; key from Secret Manager; model name in `functions/src/config.ts`
+- [x] 2. Actions with fixed instruction templates (`functions/src/aiTemplates.ts`): creature, person, place, item, Origin, Ability, recap, filing, rules question with a link
+- [x] 3. Structured results checked against the app's own shapes and the rulebook's ranges; one retry, then failure; never saved
+- [x] 4. Nothing saved without review: results fill the ordinary forms or arrive as accept-or-skip proposals
+- [x] 5. Metering per user per month against the plan's allowance
+- [x] 6. Safety: user text travels as data; the function returns proposals and writes only the count
+- [ ] 7. Evaluation against the real model (`npm run eval:ai`, 36 fixed requests). Needs an OpenRouter key.
 
 ## Gate evidence
 
@@ -236,6 +246,15 @@ The memory between build sessions. Read `docs/instructions.md` first.
 61. **2026-11-25. Guests cannot subscribe.** A paid plan needs an account that can be signed in to again.
 62. **2026-11-25. The check after each deploy now starts a campaign and deletes the account** as a guest, which proves Cloud Functions, the database and sign-in deletion all work live, and leaves nothing behind.
 63. **2026-11-25. The policy and terms name no legal entity yet.** They show "[legal name to be confirmed]" and similar until John supplies them, and carry a draft banner.
+64. **2026-11-25. A change waits for a save that is still on its way.** Phase 6's CI run failed on a phase 2 test: four quick taps on a sheet made a moment earlier, and one was refused ("permission denied"), because the tap's transaction reached the server before the character itself had. The extra plan lookups in the new rules made creating a character slightly slower, which widened a gap that had always been there. Saves are now tracked until the server confirms them, and a change to the same document waits for that. Repeated 40 times without a failure.
+65. **2026-11-25. AI help is switched off in code** (`AI_LIVE = false`) until the key exists, like payments. The buttons then say "AI help is not switched on yet." In the local emulator a stand-in model with fixed replies answers, so the whole flow is tested end to end without a model or a key.
+66. **2026-11-25. Results are strict.** A reply with any extra field, any markup, or a number outside the rulebook's ranges is thrown away. The model is asked once more with the reasons; a second failure is reported and the request is not counted.
+67. **2026-11-25. A request counts only if it produced something usable.** It is reserved before the model is called, so requests arriving together cannot pass the allowance, and given back on failure.
+68. **2026-11-25. Rules answers.** The rulebook is cut into 38 sections (generated, with a test that they match the rulebook). The four sections sharing most words with the question are sent to the model. The model may cite only one of those, and the link is built on the server from the rulebook's own list, so it cannot be forged. A question sharing no words with the rulebook is answered without calling the model.
+69. **2026-11-25. Filing proposals add cards as planned,** so players see nothing the Warden has not looked at.
+70. **2026-11-25. Beats may be up to 2,000 characters** (was 500), so a recap fits on the timeline.
+71. **2026-11-25. The model is not chosen yet.** `AI_MODEL` holds a placeholder. The evaluation compares candidates on usable replies and measured cost, and the build log will record the choice.
+72. **2026-11-25. AI Warden design written** (`docs/ai-warden-design.md`) for John's approval, as phase 8 requires before any building.
 
 ## Changed tests
 
@@ -252,6 +271,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 ## Questions for John
 
 2. **Phase 6 needs four things from you (asked 2026-11-25).** (a) Which payment provider: I recommend Stripe and have built for it. (b) A Stripe account in test mode, with its secret key and webhook signing secret stored in Secret Manager as `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`; I will give the Cloud Shell commands once you confirm Stripe. (c) The legal name, a contact email address and the governing law (state or country) for the policy and terms. (d) Sign-off on: $4.99 a month and $49.90 a year; the downgrade behavior (decision 57); and the draft policy and terms at /privacy/ and /terms/ on the rules site.
+4. **Phase 8 needs your approval of `docs/ai-warden-design.md` (asked 2026-11-25),** and answers to the five questions at its end.
 3. **Phase 7 needs an OpenRouter key (asked 2026-11-25).** Stored in Secret Manager as `OPENROUTER_API_KEY`, and a model to use (I will propose one with measured cost).
 
 1. **Please try "Continue with Google" on the deployed app (asked 2026-11-24, not blocking).** Guest sign-in is now checked automatically after each deploy. A real Google sign-in cannot be automated, so it has only ever been tested against the emulator.

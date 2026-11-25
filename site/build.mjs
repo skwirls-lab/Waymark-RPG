@@ -75,6 +75,19 @@ function render(md) {
 }
 for (const p of pages) Object.assign(p, render(p.md));
 
+// The app's rules answers link to sections by address. Those addresses are
+// worked out separately (rules/src/sections.ts), so make sure each one exists.
+const sections = JSON.parse(
+  fs.readFileSync(path.join(here, '..', 'rules', 'data', 'rulebook-sections.json'), 'utf8'),
+);
+for (const section of sections) {
+  const [, , slug, anchor] = section.path.split('/');
+  const page = pages.find((p) => p.slug === slug);
+  if (!page || !page.html.includes(` id="${anchor.slice(1)}"`)) {
+    throw new Error(`A rules answer would link to ${section.path}, which the site does not have.`);
+  }
+}
+
 // ---- Templates
 const logo = fs
   .readFileSync(path.join(here, 'src', 'logo.svg'), 'utf8')

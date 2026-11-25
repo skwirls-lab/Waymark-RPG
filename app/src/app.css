@@ -924,3 +924,33 @@ fieldset.plain:disabled .tab {
   max-width: 34rem;
   margin: 1rem auto 0;
 }
+
+/* ---- AI help ---- */
+.ai {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+.ai label {
+  display: grid;
+  gap: 0.3rem;
+  font-weight: 700;
+}
+.ai .hint:empty,
+.ai .error:empty {
+  display: none;
+}
+.ai-button {
+  justify-self: start;
+  border-style: dashed;
+}
+.ai-row {
+  display: grid;
+  gap: 0.25rem 1rem;
+}
+@media (min-width: 40rem) {
+  .ai-row {
+    grid-template-columns: 1fr 1fr;
+    align-items: end;
+  }
+}
