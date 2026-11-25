@@ -47,6 +47,36 @@ export function removeItem(character: Character, itemId: string): Character {
   return c;
 }
 
+/** How many slots' worth can be held in the hands, and worn on the body. The rest is the pack. */
+export const HAND_SLOTS = 2;
+export const BODY_SLOTS = 2;
+
+/**
+ * Moves an item between hands, body and pack. Two hands hold two slots'
+ * worth, and the body carries two; a bulky item fills both.
+ */
+export function moveItem(character: Character, itemId: string, place: Item['place']): Character {
+  const c = clone(character);
+  const item = c.items.find((i) => i.id === itemId);
+  if (!item) throw new RulesError('no-item', 'That item is not being carried.');
+  if (place !== 'pack') {
+    const there = c.items
+      .filter((i) => i.place === place && i.id !== itemId)
+      .reduce((n, i) => n + i.slots, 0);
+    const room = place === 'hand' ? HAND_SLOTS : BODY_SLOTS;
+    if (there + item.slots > room) {
+      throw new RulesError(
+        'no-room',
+        place === 'hand'
+          ? 'Your hands are full. Put something away first.'
+          : 'You are already wearing all you can. Take something off first.',
+      );
+    }
+  }
+  item.place = place;
+  return c;
+}
+
 export type FatigueOutcome = 'slot' | 'dropped' | 'strength';
 
 export interface FatigueOptions {

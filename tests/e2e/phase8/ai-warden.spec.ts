@@ -55,7 +55,10 @@ test('phase 8: an AI-run campaign, from switching it on to a save and its outcom
   await page.getByRole('button', { name: 'Finish character' }).click();
   await expect(page.getByRole('heading', { name: 'Wren', level: 1 })).toBeVisible();
 
-  await page.goto(campaignUrl);
+  // Back to the campaign through the app, as a person would. (Loading the address afresh at
+  // this instant could cut off the save of the character just made.)
+  await page.getByRole('link', { name: /All characters/ }).click();
+  await page.getByRole('link', { name: /The Rope Bridge/ }).click();
   // Wren is in the campaign once the server has the new character.
   await expect(page.getByTestId('summary-Wren')).toBeVisible();
   await page.getByRole('tab', { name: 'Play' }).click();

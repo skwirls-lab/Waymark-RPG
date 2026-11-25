@@ -9,6 +9,7 @@ import {
   addFatigue,
   armorValue,
   catchCorruption,
+  moveItem,
   removeItem,
   setDeprived,
   slotsUsed,
@@ -162,12 +163,13 @@ export function SheetView({
     }, 'Removed 1 Fatigue.');
   };
   const move = (itemId: string, place: ItemPlace) => {
-    change((s) => {
-      const next = structuredClone(s);
-      const item = next.items.find((i) => i.id === itemId);
-      if (item) item.place = place;
-      return next;
-    });
+    try {
+      // Checked here first, so that "your hands are full" can be said plainly.
+      moveItem(sheet, itemId, place);
+      change((s) => moveItem(s, itemId, place));
+    } catch (problem) {
+      setMessage(problem instanceof RulesError ? problem.message : 'That did not work.');
+    }
   };
   const adjust = (key: AttributeKey | 'hp', by: number) => {
     change((s) => {

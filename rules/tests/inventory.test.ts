@@ -6,6 +6,7 @@ import {
   armorValue,
   freeSlots,
   isFull,
+  moveItem,
   removeItem,
   slotsUsed,
   status,
@@ -155,5 +156,63 @@ describe('Gear: armor', () => {
     const c = wren();
     c.items = [item({ kind: 'armor', armor: 2, slots: 2, place: 'pack' })];
     expect(armorValue(c)).toBe(0);
+  });
+});
+
+describe('hands, body and pack', () => {
+  const carrying = () => ({
+    ...wren(),
+    items: [
+      item({ id: 'sword', name: 'Sword', kind: 'weapon', damage: 8 }),
+      item({ id: 'shield', name: 'Shield', kind: 'armor', armor: 1, stacks: true }),
+      item({ id: 'torch', name: 'Torch' }),
+      item({ id: 'axe', name: 'Great axe', kind: 'weapon', damage: 10, slots: 2 }),
+      item({ id: 'coat', name: 'Coat', kind: 'armor', armor: 1 }),
+      item({ id: 'belt', name: 'Belt' }),
+      item({ id: 'quiver', name: 'Quiver' }),
+    ],
+  });
+
+  it('two hands hold two things', () => {
+    let c = moveItem(carrying(), 'sword', 'hand');
+    c = moveItem(c, 'shield', 'hand');
+    expect(c.items.filter((i) => i.place === 'hand').map((i) => i.id)).toEqual(['sword', 'shield']);
+    expect(() => moveItem(c, 'torch', 'hand')).toThrow(
+      'Your hands are full. Put something away first.',
+    );
+  });
+
+  it('a bulky item fills both hands', () => {
+    const c = moveItem(carrying(), 'axe', 'hand');
+    expect(() => moveItem(c, 'torch', 'hand')).toThrow(/hands are full/);
+    expect(() => moveItem(moveItem(carrying(), 'torch', 'hand'), 'axe', 'hand')).toThrow(
+      /hands are full/,
+    );
+  });
+
+  it('the body carries two things', () => {
+    let c = moveItem(carrying(), 'coat', 'body');
+    c = moveItem(c, 'belt', 'body');
+    expect(() => moveItem(c, 'quiver', 'body')).toThrow(
+      'You are already wearing all you can. Take something off first.',
+    );
+  });
+
+  it('putting something away always works, and frees the hand', () => {
+    let c = moveItem(moveItem(carrying(), 'sword', 'hand'), 'shield', 'hand');
+    c = moveItem(c, 'sword', 'pack');
+    expect(moveItem(c, 'torch', 'hand').items.find((i) => i.id === 'torch')!.place).toBe('hand');
+  });
+
+  it('moving an item to where it already is changes nothing, and an unknown item is refused', () => {
+    const c = moveItem(moveItem(carrying(), 'sword', 'hand'), 'shield', 'hand');
+    expect(moveItem(c, 'sword', 'hand')).toEqual(c);
+    expect(() => moveItem(c, 'nothing', 'hand')).toThrow(RulesError);
+  });
+
+  it('does not change the character it was given', () => {
+    const before = carrying();
+    moveItem(before, 'sword', 'hand');
+    expect(before.items[0]!.place).toBe('pack');
   });
 });

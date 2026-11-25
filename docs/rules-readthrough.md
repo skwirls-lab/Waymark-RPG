@@ -17,11 +17,12 @@ Checked and matching: saves (1 always passes, 20 always fails), advantage and di
 
 | No way to learn an Ability, choose a second Affinity, or rest at a haven. | Parts Four and Five. | The sheet now offers "Learn an Ability" when the Tier has room, "Choose a second Affinity" from Tier 3, and "A night at a haven", which clears tainted Fatigue and cures corruption. Learning offers the rulebook's Abilities; a world's own are still added when the character is made. |
 
+| Any number of items could be "in hand" or "worn". | "2 hand slots… 2 body slots… 6 pack slots." | Moving an item is now a rule in the library: two slots' worth in hand, two on the body, and a bulky item fills both hands. The sheet says "Your hands are full" rather than allowing it. Existing sheets are left as they are until something is next moved. |
+
 ## Still open
 
 | # | What | Rulebook | Notes |
 |---|---|---|---|
-| 1 | Hand, body and pack limits are not enforced: any number of items can be "in hand" or "worn". Only the total is checked. | 2 hand slots, 2 body slots, 6 pack slots. | Needs a sheet change and a decision on what happens to existing sheets that break it. |
 | 2 | Corrupted places cannot be played from the sheet: no disadvantage on the save, no tainted Fatigue, no worst-case misfire. | Part Five. | The library has most of it; the sheet has no way to say "we are in a corrupted place". The worst-case misfire is not in the library. |
 | 3 | Backlash from a misfire takes HP then Strength, but does not lead to a Scar or a Strength save. | The rulebook says this of "an attack". | Needs John's reading: is backlash an attack? |
 | 4 | In the library but not reachable in the app: Fatigue for each deprived day, repair for Built characters, special-item charges, imbuing gear, the other ways of paying for Abilities. The fight tracker has no crowds, and no impaired or enhanced attacks. | Various. | The largest gap. Each is a small screen over tested library code. |

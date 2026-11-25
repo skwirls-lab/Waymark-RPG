@@ -422,6 +422,18 @@ describe('the sheet: saves, dice, scars and housekeeping', () => {
     expect(latest.doomed).toBeFalsy();
   });
 
+  it('a third thing cannot be put in hand: the sheet says the hands are full', () => {
+    render(<Harness />);
+    const places = screen
+      .getAllByRole('combobox')
+      .filter((s) => (s as HTMLSelectElement).value === 'pack');
+    fireEvent.change(places[0]!, { target: { value: 'hand' } });
+    fireEvent.change(places[1]!, { target: { value: 'hand' } });
+    fireEvent.change(places[2]!, { target: { value: 'hand' } });
+    expect(latest.items.filter((i) => i.place === 'hand')).toHaveLength(2);
+    expect(said()).toBe('Your hands are full. Put something away first.');
+  });
+
   it('deleting asks first', () => {
     render(<Harness />);
     click('Delete this character');
