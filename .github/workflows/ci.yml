@@ -72,6 +72,23 @@ jobs:
         run: npx firebase deploy --only hosting:app,firestore:rules --project waymark-rpg --non-interactive
       - name: Deploy the Cloud Functions
         run: npx firebase deploy --only functions --project waymark-rpg --non-interactive --force
+      - name: Let browsers reach the functions they call
+        # Each function checks for itself who is signed in. This only lets the
+        # request arrive. The deploy tool is meant to do this and has not been.
+        run: |
+          set +e
+          failed=0
+          for service in createcampaign joincampaign leavecampaign removemember deletecampaign createhandover redeemhandover createcheckout createportal exportmydata deletemyaccount stripewebhook aihelp wardenturn setaiwarden; do
+            if gcloud run services add-iam-policy-binding "$service" --region us-central1 --project waymark-rpg --member=allUsers --role=roles/run.invoker --quiet > /tmp/iam.log 2>&1; then
+              echo "$service: anyone may call"
+            elif gcloud run services update "$service" --region us-central1 --project waymark-rpg --no-invoker-iam-check --quiet > /tmp/iam2.log 2>&1; then
+              echo "$service: caller check switched off"
+            else
+              failed=1
+              echo "$service: could not be opened"; head -5 /tmp/iam.log; head -5 /tmp/iam2.log
+            fi
+          done
+          exit $failed
       - name: Check that both are up
         run: |
           curl --fail --silent --show-error --retry 5 --retry-delay 5 https://waymark-rpg.web.app/ | grep -q "Waymark"

@@ -434,6 +434,31 @@ describe('the sheet: saves, dice, scars and housekeeping', () => {
     expect(said()).toBe('Your hands are full. Put something away first.');
   });
 
+  it('in a corrupted place an Ability needs two saves, and the worse one counts', () => {
+    render(<Harness />);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Use' })[0]!);
+    fireEvent.click(within(dialog()).getByRole('radio', { name: /^Yes\./ }));
+    fireEvent.click(
+      within(dialog()).getByRole('checkbox', { name: 'We are in a corrupted place' }),
+    );
+    type(/^Willpower save/, '3');
+    expect(within(dialog()).queryByText('The save failed. The Ability misfires.')).toBeNull();
+    type(/^Second Willpower save/, '18');
+    expect(
+      within(dialog()).getByText('The save failed. The Ability misfires.'),
+    ).toBeInTheDocument();
+  });
+
+  it('a short rest in a corrupted place restores no HP', () => {
+    const hurt = wren();
+    hurt.hp.current = 1;
+    render(<Harness sheet={hurt} />);
+    click('Rest');
+    fireEvent.click(within(dialog()).getByRole('checkbox', { name: /corrupted place/ }));
+    inDialog(/^Short rest/);
+    expect(latest.hp.current).toBe(1);
+  });
+
   it('deleting asks first', () => {
     render(<Harness />);
     click('Delete this character');

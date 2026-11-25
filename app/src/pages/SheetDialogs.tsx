@@ -307,18 +307,25 @@ export function AbilityDialog({
   const ability = abilityOf(sheet, abilityId) ?? { name: abilityId, text: '' };
   const [danger, setDanger] = useState<boolean | undefined>(sheet.deprived ? true : undefined);
   const [d20, setD20] = useState<number>();
+  const [second, setSecond] = useState<number>();
+  const [corrupted, setCorrupted] = useState(false);
   const [misfire, setMisfire] = useState<number>();
   const [backlash, setBacklash] = useState<number>();
   const [drops, setDrops] = useState<string[]>([]);
   const [error, setError] = useState<string>();
 
-  const failed = danger && d20 !== undefined && !checkSave(sheet.attributes.wil.current, d20);
+  // In a corrupted place the save is made with disadvantage: two rolls, and the worse one counts.
+  const rolled = d20 !== undefined && (!corrupted || second !== undefined);
+  const failed =
+    danger &&
+    rolled &&
+    !checkSave(sheet.attributes.wil.current, corrupted ? Math.max(d20, second!) : d20);
   const fatigueGained = failed && misfire === 2 ? 2 : 1;
   const droppable = sheet.items.some((i) => i.slots > 0);
   const dropsNeeded = droppable ? Math.max(0, fatigueGained - Math.max(0, freeSlots(sheet))) : 0;
   const ready =
     danger !== undefined &&
-    (!danger || d20 !== undefined) &&
+    (!danger || rolled) &&
     (!failed || misfire !== undefined) &&
     (!(failed && misfire === 3) || backlash !== undefined) &&
     drops.length >= Math.min(dropsNeeded, sheet.items.filter((i) => i.slots > 0).length);
@@ -328,7 +335,8 @@ export function AbilityDialog({
       const input = {
         abilityId,
         inDanger: danger!,
-        saveRolls: danger ? [d20!] : undefined,
+        saveRolls: danger ? (corrupted ? [d20!, second!] : [d20!]) : undefined,
+        inCorruptedPlace: corrupted,
         misfireRoll: misfire,
         backlashDamage: backlash,
         dropItemIds: drops,
@@ -373,6 +381,14 @@ export function AbilityDialog({
           <span>Yes. In a fight, being chased, falling, or deprived.</span>
         </label>
       </fieldset>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={corrupted}
+          onChange={(e) => setCorrupted(e.target.checked)}
+        />
+        We are in a corrupted place
+      </label>
       {danger && (
         <RollInput
           label="Willpower save"
@@ -380,6 +396,15 @@ export function AbilityDialog({
           value={d20}
           onChange={setD20}
           hint={`Roll ${sheet.attributes.wil.current} or less to keep control.`}
+        />
+      )}
+      {danger && corrupted && (
+        <RollInput
+          label="Second Willpower save"
+          spec={{ count: 1, sides: 20 }}
+          value={second}
+          onChange={setSecond}
+          hint="A corrupted place gives disadvantage: the worse of the two rolls counts."
         />
       )}
       {failed && (
@@ -441,6 +466,7 @@ export function FatigueDropDialog({ sheet, onDone, onClose }: Props) {
 }
 
 export function RestDialog({ sheet, onDone, onClose }: Props) {
+  const [corrupted, setCorrupted] = useState(false);
   const rest = (how: (sheet: Character) => Character, what: string) => {
     const after = how(sheet);
     const hp = after.hp.current > sheet.hp.current ? ` HP back to ${after.hp.current}.` : '';
@@ -452,15 +478,29 @@ export function RestDialog({ sheet, onDone, onClose }: Props) {
   };
   return (
     <Dialog title="Rest" onClose={onClose}>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={corrupted}
+          onChange={(e) => setCorrupted(e.target.checked)}
+        />
+        We are in a corrupted place (rest restores no HP here)
+      </label>
       <div className="stack-full">
-        <button type="button" className="button wide" onClick={() => rest(shortRest, 'Short rest')}>
+        <button
+          type="button"
+          className="button wide"
+          onClick={() => rest((s) => shortRest(s, { inCorruptedPlace: corrupted }), 'Short rest')}
+        >
           Short rest
           <small>A few minutes and a drink. All HP returns.</small>
         </button>
         <button
           type="button"
           className="button wide"
-          onClick={() => rest((s) => nightRest(s, { safe: true }), "Night's rest")}
+          onClick={() =>
+            rest((s) => nightRest(s, { safe: true, inCorruptedPlace: corrupted }), "Night's rest")
+          }
         >
           Night's rest, somewhere safe
           <small>Removes all Fatigue.</small>

@@ -19,6 +19,8 @@ Checked and matching: saves (1 always passes, 20 always fails), advantage and di
 
 | Any number of items could be "in hand" or "worn". | "2 hand slots… 2 body slots… 6 pack slots." | Moving an item is now a rule in the library: two slots' worth in hand, two on the body, and a bulky item fills both hands. The sheet says "Your hands are full" rather than allowing it. Existing sheets are left as they are until something is next moved. |
 
+| Corrupted places could not be played from the sheet. | Part Five. | Using an Ability and resting now each have "We are in a corrupted place": the save takes two rolls with the worse one counting, and rest restores no HP. Tainted Fatigue from such a place, and the worst-case misfire, are still open. |
+
 ## Still open
 
 | # | What | Rulebook | Notes |
