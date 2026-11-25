@@ -93,7 +93,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 - [x] 1. Entitlements record per user; every limit reads from it (`rules/src/plans.ts`)
 - [x] 2. Limits enforced in functions and security rules
-- [ ] 3. Payments in test mode. Built and tested against simulated provider messages; switched off (`functions/src/config.ts`) until John has a payment account and its two keys are in Secret Manager
+- [x] 3. Payments, wired to switch on when the two Stripe keys are stored (decision 80). Originally: Built and tested against simulated provider messages; switched off (`functions/src/config.ts`) until John has a payment account and its two keys are in Secret Manager
 - [x] 4. Downgrade: nothing deleted; what is over the limit is read-only until the owner chooses what to keep
 - [x] 5. Account page: plan, usage, export my data, delete my account
 - [x] 6. Draft privacy policy and terms on the rules site, marked as drafts
@@ -107,7 +107,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - [x] 5. Metering per user per month against the plan's allowance
 - [x] 6. Safety: user text travels as data; the function returns proposals and writes only the count
 - [x] 7. Evaluation against the real model (`npm run eval:ai`, 36 fixed requests). See gate evidence.
-- [ ] 8. Switched on in production. Needs `OPENROUTER_API_KEY` in Secret Manager (John), then `AI_LIVE = true`.
+- [x] 8. Wired to switch on by itself when `OPENROUTER_API_KEY` is stored in Secret Manager (decision 80). Not yet exercised live.
 
 ## Gate evidence
 
@@ -280,6 +280,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 77. **2026-11-25. Phase 9 work that does not depend on phase 8 is being done now,** out of order, because phases 6, 7 and 8 each wait on John. The phase 9 gate itself still comes last.
 78. **2026-11-25. Read-through of the app against the rulebook** (`docs/rules-readthrough.md`), done by an independent pass. Six mismatches fixed. Seven remain open and are listed there, the largest being rules the library has but no screen reaches (havens, learning Abilities, a second Affinity, imbuing). Eight places where the rulebook is silent are listed for its next draft.
 79. **2026-11-25. AI-made creatures are held tighter than the rulebook requires** (a Blast does d6 at most), on purpose. Recorded as a deliberate difference.
+80. **2026-11-25. John chose Stripe, and said not to wait on him for its keys or for the OpenRouter key.** So the code switches (decisions 53 and 65) are gone. The functions now read each key from Secret Manager when needed (`functions/src/secrets.ts`): a feature turns itself on within a minute of its key being stored, with no deploy, and a missing key cannot fail a deploy. Until then the app says "not open yet" or "not switched on yet". The Stripe webhook is always deployed and refuses every message until its signing secret exists. Neither can be tested against the real service from here; both are tested against stand-ins.
 
 ## Changed tests
 

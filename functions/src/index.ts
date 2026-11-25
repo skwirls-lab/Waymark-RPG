@@ -2,12 +2,12 @@ import { initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
-import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall, onRequest, type CallableRequest } from 'firebase-functions/v2/https';
 import * as ai from './ai';
 import * as billing from './billing';
 import * as campaigns from './campaigns';
-import { AI_DAILY_CAP, AI_LIVE, AI_MODEL, PAYMENTS_LIVE } from './config';
+import { AI_DAILY_CAP, AI_MODEL } from './config';
+import { readSecret } from './secrets';
 
 initializeApp();
 const db = getFirestore();
@@ -55,13 +55,13 @@ export const onWardenCharacterWritten = onDocumentWritten(
 
 // ---- Plans and payments ------------------------------------------------------
 
-// The secrets are only named once payments are connected, so that a deploy
-// never depends on secrets that do not exist yet.
-const secrets = PAYMENTS_LIVE
-  ? { key: defineSecret('STRIPE_SECRET_KEY'), webhook: defineSecret('STRIPE_WEBHOOK_SECRET') }
-  : null;
-const paying = secrets ? { ...options, secrets: [secrets.key] } : options;
-const stripe = () => (secrets ? billing.stripeCaller(secrets.key.value().trim()) : null);
+const inEmulator = process.env.FUNCTIONS_EMULATOR === 'true';
+
+/** Stripe, once its key is in Secret Manager. Until then, `null`: nobody can be charged. */
+async function stripe(): Promise<billing.StripeCall | null> {
+  const key = inEmulator ? null : await readSecret('STRIPE_SECRET_KEY');
+  return key ? billing.stripeCaller(key) : null;
+}
 
 const isGuest = (request: CallableRequest): boolean =>
   request.auth?.token.firebase?.sign_in_provider === 'anonymous';
@@ -78,55 +78,55 @@ function accountOf(request: CallableRequest): string {
   return uid;
 }
 
-export const createCheckout = onCall(paying, (request) =>
-  billing.createCheckout(db, accountOf(request), request.data ?? {}, stripe()),
+export const createCheckout = onCall(options, async (request) =>
+  billing.createCheckout(db, accountOf(request), request.data ?? {}, await stripe()),
 );
-export const createPortal = onCall(paying, (request) =>
-  billing.createPortal(db, accountOf(request), request.data ?? {}, stripe()),
+export const createPortal = onCall(options, async (request) =>
+  billing.createPortal(db, accountOf(request), request.data ?? {}, await stripe()),
 );
 export const exportMyData = onCall(options, (request) => billing.exportAccount(db, uidOf(request)));
-export const deleteMyAccount = onCall(paying, (request) =>
+export const deleteMyAccount = onCall(options, async (request) =>
   billing.deleteAccount(db, uidOf(request), {
-    stripe: stripe(),
+    stripe: await stripe(),
     deleteSignIn: (uid) => getAuth().deleteUser(uid),
   }),
 );
 
-/** Where the payment provider tells us what happened. Deployed only once payments are connected. */
-export const stripeWebhook = secrets
-  ? onRequest({ ...options, secrets: [secrets.webhook] }, async (request, response) => {
-      const body = request.rawBody.toString('utf8');
-      const signed = billing.verifyStripeSignature(
-        body,
-        request.header('stripe-signature'),
-        secrets.webhook.value().trim(),
-        Date.now() / 1000,
-      );
-      if (!signed) {
-        response.status(400).send('Bad signature');
-        return;
-      }
-      const event = billing.fromStripe(JSON.parse(body));
-      response.status(200).send(event ? await billing.recordBillingEvent(db, event) : 'ignored');
-    })
-  : undefined;
+/**
+ * Where Stripe tells us what happened. Until the signing secret is stored,
+ * every message is refused, because none can be proved genuine.
+ */
+export const stripeWebhook = onRequest(options, async (request, response) => {
+  const secret = inEmulator ? null : await readSecret('STRIPE_WEBHOOK_SECRET');
+  const body = request.rawBody.toString('utf8');
+  const signed =
+    secret !== null &&
+    billing.verifyStripeSignature(
+      body,
+      request.header('stripe-signature'),
+      secret,
+      Date.now() / 1000,
+    );
+  if (!signed) {
+    response.status(400).send('Bad signature');
+    return;
+  }
+  const event = billing.fromStripe(JSON.parse(body));
+  response.status(200).send(event ? await billing.recordBillingEvent(db, event) : 'ignored');
+});
 
 // ---- AI help -------------------------------------------------------------------
 
-const aiKey = AI_LIVE ? defineSecret('OPENROUTER_API_KEY') : null;
-/** The real model when connected; fixed replies in the local emulator; otherwise none. */
-const model = (): ai.ModelCall | null =>
-  aiKey
-    ? ai.openRouterCaller(aiKey.value().trim(), AI_MODEL)
-    : process.env.FUNCTIONS_EMULATOR === 'true'
-      ? ai.fixtureModel
-      : null;
+/** The real model once its key is stored; fixed replies in the local emulator; otherwise none. */
+async function model(): Promise<ai.ModelCall | null> {
+  if (inEmulator) return ai.fixtureModel;
+  const key = await readSecret('OPENROUTER_API_KEY');
+  return key ? ai.openRouterCaller(key, AI_MODEL) : null;
+}
 
-export const aiHelp = onCall(
-  aiKey ? { ...options, secrets: [aiKey], timeoutSeconds: 60 } : options,
-  (request) =>
-    ai.aiHelp(db, uidOf(request), request.data ?? {}, model(), new Date(), {
-      guest: isGuest(request),
-      dailyCap: AI_DAILY_CAP,
-    }),
+export const aiHelp = onCall({ ...options, timeoutSeconds: 60 }, async (request) =>
+  ai.aiHelp(db, uidOf(request), request.data ?? {}, await model(), new Date(), {
+    guest: isGuest(request),
+    dailyCap: AI_DAILY_CAP,
+  }),
 );
