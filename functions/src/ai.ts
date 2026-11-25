@@ -11,7 +11,7 @@ import {
   type AiAction,
   type AiContext,
 } from '@waymark/rules';
-import type { Firestore } from 'firebase-admin/firestore';
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 import { PREAMBLE, TEMPLATES } from './aiTemplates';
 
@@ -81,11 +81,23 @@ export async function reserve(
   const day = now.toISOString().slice(0, 10);
   const usage = db.doc(`usage/${uid}`);
   const everyone = db.doc(EVERYONE);
-  return db.runTransaction(async (tx) => {
-    const [entitlement, record, total] = await Promise.all([
+
+  // A ceiling on the whole app's requests in a day, whoever makes them. It is
+  // a backstop, so it is read outside the transaction: every request sharing
+  // one locked counter would make them queue behind each other.
+  const total = await everyone.get();
+  const today = total.get('day') === day ? Number(total.get('ai') ?? 0) : 0;
+  if (limits.dailyCap !== undefined && today >= limits.dailyCap) {
+    throw new HttpsError(
+      'resource-exhausted',
+      'AI help has been very busy today and is resting. Try again tomorrow.',
+    );
+  }
+
+  const result = await db.runTransaction(async (tx) => {
+    const [entitlement, record] = await Promise.all([
       tx.get(db.doc(`entitlements/${uid}`)),
       tx.get(usage),
-      tx.get(everyone),
     ]);
     const allowance = limits.guest ? GUEST_AI_REQUESTS : limitsOf(entitlement.data()).aiRequests;
     const used = record.get('month') === month ? Number(record.get('ai') ?? 0) : 0;
@@ -97,18 +109,13 @@ export async function reserve(
           : `You have used all ${allowance} AI requests for this month. They renew on the 1st.`,
       );
     }
-    // A ceiling on the whole app's requests in a day, whoever makes them.
-    const today = total.get('day') === day ? Number(total.get('ai') ?? 0) : 0;
-    if (limits.dailyCap !== undefined && today >= limits.dailyCap) {
-      throw new HttpsError(
-        'resource-exhausted',
-        'AI help has been very busy today and is resting. Try again tomorrow.',
-      );
-    }
     tx.set(usage, { month, ai: used + 1, updatedAt: now.getTime() });
-    tx.set(everyone, { day, ai: today + 1 });
     return { used: used + 1, allowance };
   });
+  await (total.get('day') === day
+    ? everyone.update({ ai: FieldValue.increment(1) })
+    : everyone.set({ day, ai: 1 }));
+  return result;
 }
 
 /** Whose allowance applies, and the ceiling for everyone together. */
@@ -127,14 +134,14 @@ async function refund(db: Firestore, uid: string, now: Date): Promise<void> {
   const usage = db.doc(`usage/${uid}`);
   const everyone = db.doc(EVERYONE);
   await db.runTransaction(async (tx) => {
-    const [record, total] = await Promise.all([tx.get(usage), tx.get(everyone)]);
+    const record = await tx.get(usage);
     if (record.get('month') === monthOf(now)) {
       tx.update(usage, { ai: Math.max(0, Number(record.get('ai') ?? 0) - 1) });
     }
-    if (total.get('day') === now.toISOString().slice(0, 10)) {
-      tx.update(everyone, { ai: Math.max(0, Number(total.get('ai') ?? 0) - 1) });
-    }
   });
+  if ((await everyone.get()).get('day') === now.toISOString().slice(0, 10)) {
+    await everyone.update({ ai: FieldValue.increment(-1) });
+  }
 }
 
 interface Prepared {

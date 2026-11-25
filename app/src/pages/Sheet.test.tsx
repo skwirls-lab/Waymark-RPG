@@ -355,6 +355,73 @@ describe('the sheet: saves, dice, scars and housekeeping', () => {
     expect(latest.abilities).toEqual(['mend', 'repair']);
   });
 
+  it('a new Ability can be learned only when the Tier has room for it', () => {
+    render(<Harness />);
+    // Tier 1 allows two, and Wren has two.
+    expect(screen.queryByRole('button', { name: 'Learn an Ability' })).toBeNull();
+  });
+
+  it("at Tier 2 a third Ability is learned from the character's own Affinity", () => {
+    render(<Harness sheet={{ ...wren(), tier: 2 }} />);
+    click('Learn an Ability');
+    expect(within(dialog()).queryByRole('radio', { name: /^Mend\./ })).toBeNull();
+    expect(within(dialog()).getByRole('button', { name: 'Learn it' })).toBeDisabled();
+    const options = within(dialog()).getAllByRole('radio');
+    expect(options).toHaveLength(2);
+    fireEvent.click(options[0]!);
+    inDialog('Learn it');
+    expect(latest.abilities).toHaveLength(3);
+    expect(said()).toMatch(/^Learned /);
+  });
+
+  it('a second Affinity opens at Tier 3, and its Abilities can then be learned', () => {
+    render(<Harness sheet={{ ...wren(), tier: 3 }} />);
+    click('Choose a second Affinity');
+    expect(within(dialog()).queryByRole('option', { name: /^Mending/ })).toBeNull();
+    fireEvent.change(within(dialog()).getByLabelText('Second Affinity'), {
+      target: { value: 'energy' },
+    });
+    inDialog('Choose Energy');
+    expect(latest.secondaryAffinity).toBe('energy');
+    expect(screen.queryByRole('button', { name: 'Choose a second Affinity' })).toBeNull();
+    click('Learn an Ability');
+    fireEvent.click(within(dialog()).getByRole('radio', { name: /^Bolt\./ }));
+    inDialog('Learn it');
+    expect(latest.abilities).toContain('bolt');
+  });
+
+  it('below Tier 3 no second Affinity is offered', () => {
+    render(<Harness sheet={{ ...wren(), tier: 2 }} />);
+    expect(screen.queryByRole('button', { name: 'Choose a second Affinity' })).toBeNull();
+  });
+
+  it('a night at a haven clears tainted Fatigue and cures corruption', () => {
+    const tainted = { ...wren(), taintedFatigue: 2, fatigue: 1 };
+    tainted.corruption = { afflicted: true, failedSaves: 1 };
+    render(<Harness sheet={tainted} />);
+    click('Rest');
+    inDialog(/^A night at a haven/);
+    expect(latest).toMatchObject({
+      taintedFatigue: 0,
+      fatigue: 0,
+      corruption: { afflicted: false, failedSaves: 0 },
+    });
+  });
+
+  it('a Doomed character who passes a Strength save rolls 3d6 for HP', () => {
+    render(<Harness sheet={{ ...wren(), doomed: true }} />);
+    // 7 damage: 1 stopped by Armor, 4 off HP, 2 off Strength (9 to 7).
+    click('Take damage');
+    type('Damage rolled against you', '7');
+    inDialog('Apply damage');
+    type(/^Your roll/, '5');
+    expect(within(dialog()).getByRole('button', { name: 'Resolve' })).toBeDisabled();
+    type(/^You passed/, '12');
+    inDialog('Resolve');
+    expect(latest.hp.full).toBe(12);
+    expect(latest.doomed).toBeFalsy();
+  });
+
   it('deleting asks first', () => {
     render(<Harness />);
     click('Delete this character');

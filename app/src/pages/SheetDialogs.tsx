@@ -1,5 +1,5 @@
 import {
-  RulesError,
+  abilityIndex,
   abilityLimit,
   abilityOf,
   addFatigue,
@@ -8,15 +8,21 @@ import {
   applyDoomedReward,
   applyScar,
   armorValue,
+  canLearnAbility,
   checkSave,
+  chooseSecondaryAffinity,
   corruptionDailySave,
   data,
   freeSlots,
+  learnAbility,
   nightRest,
   recoverFromScar,
   resolveStrengthSave,
+  restAtHaven,
+  RulesError,
   scarNeeds,
   scarRecoveryNeeds,
+  SECOND_AFFINITY_TIER,
   shortRest,
   useAbility as applyAbility,
   weekRest,
@@ -58,7 +64,9 @@ export type DialogState =
   | { kind: 'dice' }
   | { kind: 'add-item' }
   | { kind: 'fatigue-drop' }
-  | { kind: 'corruption' };
+  | { kind: 'corruption' }
+  | { kind: 'learn' }
+  | { kind: 'second-affinity' };
 
 interface Props {
   sheet: Character;
@@ -461,6 +469,16 @@ export function RestDialog({ sheet, onDone, onClose }: Props) {
           Week's rest, with care
           <small>Restores lost attribute points.</small>
         </button>
+        <button
+          type="button"
+          className="button wide"
+          onClick={() =>
+            rest((s) => restAtHaven(nightRest(s, { safe: true })), 'A night at a haven')
+          }
+        >
+          A night at a haven
+          <small>Also clears tainted Fatigue and cures lasting corruption.</small>
+        </button>
       </div>
     </Dialog>
   );
@@ -731,6 +749,103 @@ export function CorruptionDialog({ sheet, onDone, onClose }: Props) {
         onClick={apply}
       >
         Resolve
+      </button>
+    </Dialog>
+  );
+}
+
+/** Learning a new Ability: from the character's own Affinities, up to what their Tier allows. */
+export function LearnDialog({ sheet, onDone, onClose }: Props) {
+  const [chosen, setChosen] = useState('');
+  const open = data.affinities
+    .filter(
+      (a) =>
+        a.id === sheet.primaryAffinity ||
+        (a.id === sheet.secondaryAffinity && sheet.tier >= SECOND_AFFINITY_TIER),
+    )
+    .flatMap((a) => a.abilities.map((b) => ({ ...b, affinity: a.name })))
+    .filter((b) => canLearnAbility(sheet, b.id, abilityIndex).ok);
+  const pick = open.find((b) => b.id === chosen);
+  return (
+    <Dialog title="Learn an Ability" onClose={onClose}>
+      <p>
+        A character learns a new Ability when the story gives them one: a teacher, a discovery, a
+        moment of need. The Warden decides when.
+      </p>
+      {open.length === 0 ? (
+        <p className="muted">
+          There is nothing more to learn from the rulebook&rsquo;s lists for this character&rsquo;s
+          Affinities.
+        </p>
+      ) : (
+        <fieldset className="choices">
+          <legend>Choose one</legend>
+          {open.map((b) => (
+            <label key={b.id} className="choice">
+              <input
+                type="radio"
+                name="learn"
+                checked={chosen === b.id}
+                onChange={() => setChosen(b.id)}
+              />
+              <span>
+                <strong>{b.name}.</strong> {b.text} <span className="muted">({b.affinity})</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      )}
+      <button
+        type="button"
+        className="button primary wide"
+        disabled={!pick}
+        onClick={() =>
+          onDone({
+            apply: (s) => learnAbility(s, pick!.id, abilityIndex),
+            message: `Learned ${pick!.name}.`,
+          })
+        }
+      >
+        Learn it
+      </button>
+    </Dialog>
+  );
+}
+
+/** At Tier 3 a second Affinity opens. */
+export function SecondAffinityDialog({ sheet, onDone, onClose }: Props) {
+  const [chosen, setChosen] = useState('');
+  const others = data.affinities.filter((a) => a.id !== sheet.primaryAffinity);
+  const pick = others.find((a) => a.id === chosen);
+  return (
+    <Dialog title="Choose a second Affinity" onClose={onClose}>
+      <p>
+        From Tier 3, a character can learn Abilities from one more Affinity. Choose with care: it
+        cannot be changed.
+      </p>
+      <label className="form-row">
+        Second Affinity
+        <select value={chosen} onChange={(e) => setChosen(e.target.value)}>
+          <option value="">Choose one…</option>
+          {others.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}: {a.about.toLowerCase()}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button
+        type="button"
+        className="button primary wide"
+        disabled={!pick}
+        onClick={() =>
+          onDone({
+            apply: (s) => chooseSecondaryAffinity(s, pick!.id),
+            message: `${pick!.name} is now their second Affinity.`,
+          })
+        }
+      >
+        Choose {pick?.name ?? 'it'}
       </button>
     </Dialog>
   );

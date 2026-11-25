@@ -37,7 +37,9 @@ import {
   DamageDialog,
   DiceDialog,
   FatigueDropDialog,
+  LearnDialog,
   RestDialog,
+  SecondAffinityDialog,
   SaveDialog,
   ScarDialog,
   ScarRecoveryDialog,
@@ -473,6 +475,31 @@ export function SheetView({
             </li>
           ))}
         </ul>
+        {affinity && (
+          <div className="button-row">
+            {sheet.abilities.length < abilityLimit(sheet.tier) && (
+              <button
+                type="button"
+                className="button small"
+                onClick={() => setDialog({ kind: 'learn' })}
+              >
+                Learn an Ability
+              </button>
+            )}
+            {sheet.tier >= 3 && !sheet.secondaryAffinity && (
+              <button
+                type="button"
+                className="button small"
+                onClick={() => setDialog({ kind: 'second-affinity' })}
+              >
+                Choose a second Affinity
+              </button>
+            )}
+          </div>
+        )}
+        {sheet.secondaryAffinity && (
+          <p className="hint">Second Affinity: {affinityNameOf(sheet, sheet.secondaryAffinity)}.</p>
+        )}
       </section>
 
       <section>
@@ -591,6 +618,10 @@ export function SheetView({
         <AbilityDialog sheet={sheet} abilityId={dialog.abilityId} onDone={done} onClose={close} />
       )}
       {dialog?.kind === 'rest' && <RestDialog sheet={sheet} onDone={done} onClose={close} />}
+      {dialog?.kind === 'learn' && <LearnDialog sheet={sheet} onDone={done} onClose={close} />}
+      {dialog?.kind === 'second-affinity' && (
+        <SecondAffinityDialog sheet={sheet} onDone={done} onClose={close} />
+      )}
       {dialog?.kind === 'save' && <SaveDialog sheet={sheet} onClose={close} />}
       {dialog?.kind === 'dice' && <DiceDialog onClose={close} />}
       {dialog?.kind === 'add-item' && <AddItemDialog sheet={sheet} onDone={done} onClose={close} />}
