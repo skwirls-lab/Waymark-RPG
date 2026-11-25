@@ -4,9 +4,9 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Current position
 
-- **Phase:** 4 (Live play), in progress
-- **Task:** phase 4 built; gate pending CI
-- **Last verified commit:** 8e9bf9d (CI run 45491052219: verify, all deploys, live guest sign-in and Lighthouse green)
+- **Phase:** 5 (Warden tools and the campaign record), in progress
+- **Task:** phase 5, task 1 (campaign brief and session briefs)
+- **Last verified commit:** 6aea3e8 (CI run 45521691249: verify, all deploys, live guest sign-in and Lighthouse green)
 - **To run everything in a build container:** `npm run verify:container` (see decisions 1 and 22). CI runs plain `npm run verify`.
 
 ## Phase status
@@ -17,8 +17,8 @@ The memory between build sessions. Read `docs/instructions.md` first.
 | 1 Rules as data and code | Complete | 2026-11-24 |
 | 2 Character sheets | Complete | 2026-11-24 |
 | 3 Campaigns and joining | Complete | 2026-11-25 |
-| 4 Live play | In progress | |
-| 5 Warden tools and campaign record | Not started | |
+| 4 Live play | Complete | 2026-11-25 |
+| 5 Warden tools and campaign record | In progress | |
 | 6 Plans, payments and policies | Not started | |
 | 7 AI help | Not started | |
 | 8 AI Warden | Not started | |
@@ -78,6 +78,17 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - [x] 7. Undo of the most recent change
 - [x] 8. Presence
 
+## Phase 5 tasks
+
+- [ ] 1. Campaign brief and session briefs
+- [ ] 2. Timeline of story beats, with quick notes
+- [ ] 3. Cards with statuses, hidden from players until revealed
+- [ ] 4. Creatures: the rulebook's ten and the Warden's own
+- [ ] 5. Fight tracker
+- [ ] 6. Custom content: Origins, Affinities, Abilities, gear
+- [ ] 7. Worlds: custom content saved as a pack
+- [ ] 8. Wide layout for the Warden
+
 ## Gate evidence
 
 ### Phase 0 (gate passed 2026-11-24)
@@ -121,7 +132,10 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - End to end, three devices: a Warden starts a campaign; an account holder joins by code and brings a character in; a guest follows the join link while signed out; the Warden adds a character to run; all three see the right summaries and only the Warden sees the join code and the full Warden-run sheet; a change to a sheet reaches the others' summaries; another player cannot open a full sheet by its address; the permission choice shows for the Warden; hand-over works once; a guest becomes an account holder and keeps everything; leaving, removing and deleting.
 - Defects the tests found and that were fixed: screens did not refresh after a guest created an account; a removed player's open screen did not show they had been removed; the permission choice lagged until the server answered; the summary trigger crashed on a malformed sheet.
 
-### Phase 4
+### Phase 4 (gate passed 2026-11-25)
+
+- CI run 45521691249 on commit 6aea3e8: `verify` passed (268 rules, 54 app, 65 security-rules, 34 Cloud Functions, 62 end-to-end tests including the Google sign-in window); latency 205 ms on both profiles; site, app, rules and functions deployed; live guest sign-in passed; Lighthouse performance 86, 99, 99 (median 99), accessibility 100.
+- John was given the deployed link and a five-step script for trying it on two devices.
 
 - Local `verify`: 268 rules, 54 app, 65 security-rules, 34 Cloud Functions and 60 end-to-end tests, all passing.
 - **Two-second requirement:** time from the Warden pressing Apply to the player's HP changing on a second device, measured in the test itself: 202 ms (phone), 196 ms (tablet). The test fails above 2,000 ms.
