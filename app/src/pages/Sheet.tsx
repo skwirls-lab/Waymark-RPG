@@ -21,6 +21,7 @@ import {
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth';
+import { useAccount } from '../data/account';
 import { deleteWardenCharacter, saveWardenCharacter } from '../data/campaigns';
 import { addLog, answerRequest, type CampaignRequest } from '../data/campaigns';
 import { changeSheetAt, undoSheetAt, type CharacterDoc } from '../data/characters';
@@ -698,6 +699,7 @@ export function Sheet() {
   const requests = useRequests(campaignId, campaignId ? user!.uid : null);
   const myName = user?.displayName ?? doc?.name ?? 'A player';
   usePresence(campaignId, user!.uid, myName);
+  const account = useAccount(user!.uid);
 
   if (store.characters === undefined) {
     return (
@@ -726,7 +728,8 @@ export function Sheet() {
         text.startsWith(doc.name) ? text : `${doc.name}: ${text}`,
       );
   };
-  return (
+  const readOnly = account.entitlement !== undefined && !account.characterInUse(doc.id, doc.slot);
+  const view = (
     <SheetView
       doc={doc}
       onSave={store.save}
@@ -749,6 +752,19 @@ export function Sheet() {
         navigate('/');
       }}
     />
+  );
+  if (!readOnly) return view;
+  // Over the plan's limit: the sheet can be read, and nothing on it can be changed.
+  return (
+    <>
+      <p className="note warn banner" role="status">
+        <strong>{doc.name} is read-only.</strong> Your plan keeps one character in use. Nothing has
+        been deleted. <Link to="/account">Choose which to keep, or see the paid plan.</Link>
+      </p>
+      <fieldset className="plain" disabled>
+        {view}
+      </fieldset>
+    </>
   );
 }
 

@@ -909,3 +909,18 @@ details > summary {
   gap: 2.5rem;
   align-items: start;
 }
+
+/* ---- Plans ---- */
+fieldset.plain {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+fieldset.plain:disabled .tab {
+  cursor: pointer;
+}
+.note.banner {
+  max-width: 34rem;
+  margin: 1rem auto 0;
+}

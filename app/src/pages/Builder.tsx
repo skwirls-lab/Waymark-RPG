@@ -8,6 +8,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth';
+import { useAccount } from '../data/account';
 import { WARDEN_CHARACTER_IDS, saveWardenCharacter } from '../data/campaigns';
 import { characterId } from '../data/characters';
 import { useContent } from '../data/record';
@@ -450,6 +451,7 @@ export function Builder() {
   // Made for a campaign: its world's Origins and Abilities are offered too,
   // and the finished character goes straight into it.
   const campaignId = useSearchParams()[0].get('campaign');
+  const { limits } = useAccount(uid);
   const extra = useContent(campaignId);
   const [draft, setDraft] = useState<Draft>(() => {
     const saved = localStorage.getItem(draftKey(uid));
@@ -463,11 +465,15 @@ export function Builder() {
   const finish = () => {
     const sheet = buildCharacter(draft, extra);
     const now = Date.now();
-    const id = characterId(uid, 1);
+    // The lowest empty slot the plan allows. The security rules refuse any other.
+    const taken = new Set((store.characters ?? []).map((c) => c.slot));
+    let slot = 1;
+    while (taken.has(slot) && slot < limits.characters) slot++;
+    const id = characterId(uid, slot);
     store.save({
       id,
       ownerUid: uid,
-      slot: 1,
+      slot,
       name: sheet.name,
       description: draft.description,
       age: draft.age ?? null,

@@ -32,6 +32,7 @@ const next = (page: Page) => page.getByRole('button', { name: 'Next' }).click();
 export async function buildWren(
   page: Page,
   check: (step: string) => Promise<void> = async () => {},
+  name = 'Wren',
 ) {
   await page.getByRole('link', { name: 'Make a character' }).click();
 
@@ -45,7 +46,7 @@ export async function buildWren(
   await check('hit protection');
   await next(page);
 
-  await page.getByLabel('Name', { exact: true }).fill('Wren');
+  await page.getByLabel('Name', { exact: true }).fill(name);
   await page.getByLabel('Background').fill('Scout');
   await check('background');
   await next(page);
@@ -67,7 +68,7 @@ export async function buildWren(
   await page.getByLabel('Tools').fill('1');
   await check('gear');
   await page.getByRole('button', { name: 'Finish character' }).click();
-  await expect(page.getByRole('heading', { name: 'Wren', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
 }
 
 export const stat = (page: Page, name: string) => page.getByTestId(`stat-${name}`);
@@ -126,4 +127,30 @@ export async function joinWithCode(
   await form.getByLabel('Your name').fill(playerName);
   await form.getByRole('button', { name: 'Join', exact: true }).click();
   await expect(page.getByRole('heading', { name: campaignName, level: 1 })).toBeVisible();
+}
+
+/**
+ * Writes a document straight into the Firestore emulator, past the security
+ * rules, as the server would. Used to stand in for the payment provider.
+ */
+export async function writeToEmulator(
+  request: APIRequestContext,
+  path: string,
+  data: Record<string, string | number | null>,
+) {
+  const fields = Object.fromEntries(
+    Object.entries(data).map(([key, value]) => [
+      key,
+      value === null
+        ? { nullValue: null }
+        : typeof value === 'number'
+          ? { integerValue: String(value) }
+          : { stringValue: value },
+    ]),
+  );
+  const response = await request.patch(
+    `http://127.0.0.1:8080/v1/projects/demo-waymark/databases/(default)/documents/${path}`,
+    { headers: { Authorization: 'Bearer owner' }, data: { fields } },
+  );
+  expect(response.ok()).toBe(true);
 }

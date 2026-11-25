@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth';
+import { useAccount } from '../data/account';
 import {
   WARDEN_CHARACTER_IDS,
   addLog,
@@ -81,6 +82,7 @@ export function Campaign() {
   const content = useContent(isWarden ? cid! : null);
   const [params, setParams] = useSearchParams();
   const wide = useWide();
+  const account = useAccount(uid);
   const myName = members.find((m) => m.uid === uid)?.displayName ?? user?.displayName ?? 'Someone';
   const present = usePresence(memberList ? cid! : null, uid, myName);
   const [problem, setProblem] = useState<string>();
@@ -141,6 +143,9 @@ export function Campaign() {
     (id) => !wardenCharacters.some((c) => c.id === id),
   );
 
+  // A campaign over the Warden's plan limit can be read and not changed.
+  const readOnly =
+    isWarden && account.entitlement !== undefined && !account.campaignInUse(campaign.id);
   // On a wide screen the Warden keeps the party in view beside the other tools.
   const split = isWarden && wide;
   const tabs = TABS.filter((t) => (isWarden || !t.wardenOnly) && !(split && t.id === 'party'));
@@ -324,8 +329,19 @@ export function Campaign() {
         </p>
       )}
 
+      {readOnly && (
+        <p className="note warn" role="status">
+          <strong>This campaign is read-only.</strong> Your plan keeps one campaign running. Nothing
+          has been deleted, and your players can still read everything.{' '}
+          <Link to="/account">Choose which to keep, or see the paid plan.</Link>
+        </p>
+      )}
       <div className={split ? 'split' : undefined}>
-        {split && <div className="split-main">{partyPanel}</div>}
+        {split && (
+          <fieldset className="plain split-main" disabled={readOnly}>
+            {partyPanel}
+          </fieldset>
+        )}
         <div className="split-side">
           <div className="tabs" role="tablist" aria-label="Campaign">
             {tabs.map((t) => (
@@ -346,12 +362,14 @@ export function Campaign() {
             ))}
           </div>
           <div id="tab-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
-            {tab === 'party' && partyPanel}
-            {tab === 'story' && <Story campaignId={campaign.id} uid={uid} isWarden={isWarden} />}
-            <Suspense fallback={<p className="lede">Loading…</p>}>
-              {tab === 'fight' && <Fight campaignId={campaign.id} summaries={summaries} />}
-              {tab === 'workshop' && <Workshop campaignId={campaign.id} uid={uid} />}
-            </Suspense>
+            <fieldset className="plain" disabled={readOnly}>
+              {tab === 'party' && partyPanel}
+              {tab === 'story' && <Story campaignId={campaign.id} uid={uid} isWarden={isWarden} />}
+              <Suspense fallback={<p className="lede">Loading…</p>}>
+                {tab === 'fight' && <Fight campaignId={campaign.id} summaries={summaries} />}
+                {tab === 'workshop' && <Workshop campaignId={campaign.id} uid={uid} />}
+              </Suspense>
+            </fieldset>
           </div>
         </div>
       </div>

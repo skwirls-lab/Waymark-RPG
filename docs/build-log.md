@@ -4,9 +4,9 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Current position
 
-- **Phase:** 5 (Warden tools and the campaign record), in progress
-- **Task:** phase 5 gate (all eight tasks built; waiting on CI)
-- **Last verified commit:** 6aea3e8 (CI run 45521691249: verify, all deploys, live guest sign-in and Lighthouse green)
+- **Phase:** 6 (plans, payments and policies), built; gate waits on John (see Questions)
+- **Task:** phase 6 gate needs John's sign-off and a payment account; phase 7 starts meanwhile
+- **Last verified commit:** 6663839 (CI run 45526620877: verify, all deploys, live guest sign-in and Lighthouse green)
 - **To run everything in a build container:** `npm run verify:container` (see decisions 1 and 22). CI runs plain `npm run verify`.
 
 ## Phase status
@@ -18,8 +18,8 @@ The memory between build sessions. Read `docs/instructions.md` first.
 | 2 Character sheets | Complete | 2026-11-24 |
 | 3 Campaigns and joining | Complete | 2026-11-25 |
 | 4 Live play | Complete | 2026-11-25 |
-| 5 Warden tools and campaign record | In progress | |
-| 6 Plans, payments and policies | Not started | |
+| 5 Warden tools and campaign record | Complete | 2026-11-25 |
+| 6 Plans, payments and policies | Built; waiting on John | |
 | 7 AI help | Not started | |
 | 8 AI Warden | Not started | |
 | 9 Launch readiness | Not started | |
@@ -89,6 +89,15 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - [x] 7. Worlds as packs
 - [x] 8. Wide layout for the Warden
 
+## Phase 6 tasks
+
+- [x] 1. Entitlements record per user; every limit reads from it (`rules/src/plans.ts`)
+- [x] 2. Limits enforced in functions and security rules
+- [ ] 3. Payments in test mode. Built and tested against simulated provider messages; switched off (`functions/src/config.ts`) until John has a payment account and its two keys are in Secret Manager
+- [x] 4. Downgrade: nothing deleted; what is over the limit is read-only until the owner chooses what to keep
+- [x] 5. Account page: plan, usage, export my data, delete my account
+- [x] 6. Draft privacy policy and terms on the rules site, marked as drafts
+
 ## Gate evidence
 
 ### Phase 0 (gate passed 2026-11-24)
@@ -142,6 +151,13 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - End to end, two and three devices: direct damage with feed entry and undo; damage to exactly 0 HP sends the player a Scar roll and the Warden sees its result; give and take items, add Fatigue, award a Tier; a Warden change and a player change at the same moment are both kept (checked on screen and in the stored document); ask-first accept with its follow-up Strength save; ask-first decline and clearing; a called save and its result; a Blast across three characters; open dice, sheet changes in the feed, and presence.
 - Security rules (`tests/rules/phase4-live-play.test.ts`): the Warden's direct write succeeds for "directly" and is refused for "ask me first", follows a change of choice at once, and covers the sheet only; requests can be created only by the Warden and answered only once, only by their player, without altering what was asked; the feed is append-only and in one's own name; presence is one's own.
 - Defects the tests found and that were fixed: the browser's online flag reported "online" for a moment while offline, sending one change down the online path where it raced an earlier queued one and lost it (seen as fatigue 1 instead of 2 on the server); the randomized rules tests were generating characters carrying more than their slots allow.
+
+### Phase 5 (gate passed 2026-11-25)
+
+- CI run 45526620877 on commit 6663839: verify and deploy both green.
+- 299 rules-library tests, 64 app tests, 83 security-rules tests, 34 functions tests, 72 end-to-end tests locally (74 in CI).
+- The four phase 5 end-to-end tests pass at phone (390), tablet (820) and laptop (1366) widths: brief, timeline and revealed card; timeline order from two devices; a fight to a morale check; custom Origin, Ability, creature, gear and world, and a player's character built with them.
+- Security rules: a player cannot read a planned card, any card's private note, a private beat, or the Warden's notes, creatures or fight (18 tests).
 
 ## Decisions made without asking
 
@@ -207,9 +223,25 @@ The memory between build sessions. Read `docs/instructions.md` first.
 48. **2026-11-25. Worlds are saved per account** under `users/{uid}/worlds`. Bringing one into a campaign adds what is not already there. No limit on the number of worlds yet; phase 6 sets plan limits.
 49. **2026-11-25. Laptop width is tested for phase 5 only** (a third Playwright project, 1366 pixels wide). Earlier phases have no wide layout to test.
 50. **2026-11-25. Deleting a campaign now removes everything under it,** including requests, the activity feed and presence, which the earlier version left behind.
+51. **2026-11-25. Stripe is assumed as the payment provider,** pending John's choice. Everything except one small adapter is provider-neutral: each provider message is turned into a `BillingEvent`, and the entitlement is computed from that. Changing provider means rewriting `fromStripe`, the signature check and two API calls.
+52. **2026-11-25. Yearly price: $49.90,** which is ten months for twelve. Proposed; John signs off at the gate.
+53. **2026-11-25. Payments stay switched off in code** (`PAYMENTS_LIVE = false`) until the keys exist, so nobody can be charged and deploys cannot fail for a missing secret. The app says "Paid plans are not open yet."
+54. **2026-11-25. No Stripe library.** The server makes two plain web requests and checks the webhook signature itself, so there is nothing extra to keep up to date. Prices are sent with each checkout, so no products need setting up in the Stripe dashboard.
+55. **2026-11-25. A failed payment keeps the plan** while the provider retries; the plan ends only when the provider says the subscription has ended. A cancelled plan runs to the end of the paid period.
+56. **2026-11-25. Events are applied once and newest-wins.** Each event id is recorded; an event older than the newest one applied is ignored. The end of an old subscription cannot end a newer one.
+57. **2026-11-25. Downgrade.** With no choice made, the character and campaign in the lowest slots stay in use. The owner can choose others on the Account page. A read-only campaign can still be read by its players. The choice is cleared automatically once the account is back within its limit.
+58. **2026-11-25. "Unlimited" is 50** characters and 50 campaigns, a number the database can enforce.
+59. **2026-11-25. Deleting an account** deletes the campaigns it runs for everyone (players keep their characters, now in no campaign), leaves the campaigns it joined, deletes its characters and worlds, cancels a paid plan first, and then removes the sign-in. If a paid plan cannot be cancelled, nothing is deleted.
+60. **2026-11-25. The export leaves out join codes** and other members' presence, and includes the Warden's own private notes.
+61. **2026-11-25. Guests cannot subscribe.** A paid plan needs an account that can be signed in to again.
+62. **2026-11-25. The check after each deploy now starts a campaign and deletes the account** as a guest, which proves Cloud Functions, the database and sign-in deletion all work live, and leaves nothing behind.
+63. **2026-11-25. The policy and terms name no legal entity yet.** They show "[legal name to be confirmed]" and similar until John supplies them, and carry a draft banner.
 
 ## Changed tests
 
+- **App shell unit tests (2026-11-25).** Old: the stand-in for the campaign data module had no `watchDoc`. New: it has one that reports no plan record. Reason: the home screen now reads the account's plan.
+- **Live check after deploy (2026-11-25).** Old: guest signs in and signs out. New: guest signs in, starts a campaign and deletes their account. Reason: decision 62.
+- **`buildWren` test helper (2026-11-25).** New optional name, so a test can build a second character. Existing calls are unchanged.
 - **Phase 3 hand-over end-to-end step (2026-11-25).** Old: pressed a "Hand over" button on the party row. New: opens "Act on Pip" and presses "Hand this character to a player". Reason: decision 40.
 - **Randomized rules tests (2026-11-25).** Old: generated characters could carry more than their capacity. New: the generator keeps only what fits, and a test asserts every generated character is one the rules could produce. Reason: an impossible starting character was being reported as a rules failure.
 - **Sheet component tests (2026-11-25).** Old: the test harness received whole changed sheets. New: it receives change functions and applies them. Reason: decision 33.
@@ -219,10 +251,16 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Questions for John
 
+2. **Phase 6 needs four things from you (asked 2026-11-25).** (a) Which payment provider: I recommend Stripe and have built for it. (b) A Stripe account in test mode, with its secret key and webhook signing secret stored in Secret Manager as `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`; I will give the Cloud Shell commands once you confirm Stripe. (c) The legal name, a contact email address and the governing law (state or country) for the policy and terms. (d) Sign-off on: $4.99 a month and $49.90 a year; the downgrade behavior (decision 57); and the draft policy and terms at /privacy/ and /terms/ on the rules site.
+3. **Phase 7 needs an OpenRouter key (asked 2026-11-25).** Stored in Secret Manager as `OPENROUTER_API_KEY`, and a model to use (I will propose one with measured cost).
+
 1. **Please try "Continue with Google" on the deployed app (asked 2026-11-24, not blocking).** Guest sign-in is now checked automatically after each deploy. A real Google sign-in cannot be automated, so it has only ever been tested against the emulator.
 
 *(Resolved 2026-11-25: sign-in methods enabled; the live guest check passes. Resolved 2026-11-24: Cloud Functions permissions.)*
 
 ## Suggestions
+
+- Let players add their own notes to the timeline (decision 43).
+- A printable campaign summary from the brief, timeline and cards.
 
 *(Ideas outside the plan. Not to be built without John's say-so.)*

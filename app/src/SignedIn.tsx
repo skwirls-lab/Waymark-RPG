@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { CharacterStoreProvider } from './data/useCharacters';
+import { Account } from './pages/Account';
 import { Builder, CampaignBuilder } from './pages/Builder';
 import { Campaign } from './pages/Campaign';
 import { JoinPage } from './pages/CampaignForms';
@@ -26,6 +27,7 @@ export default function SignedIn() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/new" element={<Builder />} />
+        <Route path="/account" element={<Account />} />
         <Route path="/c/:id" element={<Sheet />} />
         <Route path="/join/:code" element={<JoinPage />} />
         <Route path="/k/:cid" element={<Campaign />} />

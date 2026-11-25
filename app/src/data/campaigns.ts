@@ -175,7 +175,7 @@ export async function setMyControl(
 }
 
 /** Calls one of the campaign Cloud Functions. Throws an Error whose message is fit to show. */
-async function call<T>(name: string, data: Record<string, unknown>): Promise<T> {
+export async function call<T>(name: string, data: Record<string, unknown>): Promise<T> {
   const [{ app }, fn] = await Promise.all([getServices(), import('firebase/functions')]);
   const functions = fn.getFunctions(app, 'us-central1');
   if (useEmulators) fn.connectFunctionsEmulator(functions, '127.0.0.1', 5001);

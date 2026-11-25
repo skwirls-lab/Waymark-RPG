@@ -18,17 +18,45 @@ service cloud.firestore {
       return exists(path) ? get(path).data.plan : 'free';
     }
 
-    // A free account may own one character.
-    function characterSlots() {
+    // A free account may own one character and run one campaign. Paid plans
+    // are "unlimited", which is 50. These numbers match rules/src/plans.ts.
+    function slots() {
       return plan() == 'free' ? 1 : 50;
+    }
+
+    // What the owner chose to keep in use after a plan ended: a list of ids
+    // in their own user record. Empty until they choose.
+    function kept(uid, field) {
+      let path = /databases/$(database)/documents/users/$(uid);
+      return exists(path) ? get(path).data.get(field, []) : [];
+    }
+
+    // Nothing is deleted when a plan ends. What is over the limit becomes
+    // read-only: with no choice made the lowest slots stay in use, and a
+    // choice counts only if it fits within the limit.
+    function inUse(id, slot, field) {
+      let limit = slots();
+      let chosen = kept(request.auth.uid, field);
+      return limit >= 50
+        || (chosen.size() > 0 && chosen.size() <= limit ? id in chosen : slot <= limit);
+    }
+
+    // New things fill the lowest slots only, and not while a choice stands.
+    function mayCreate(slot, field) {
+      return slot >= 1 && slot <= slots()
+        && (slots() >= 50 || kept(request.auth.uid, field).size() == 0);
     }
 
     match /users/{uid} {
       allow read: if isUser(uid);
       allow create, update: if isUser(uid)
-        && request.resource.data.keys().hasOnly(['displayName', 'updatedAt'])
-        && request.resource.data.displayName is string
-        && request.resource.data.displayName.size() <= 80;
+        && request.resource.data.keys().hasOnly(['displayName', 'updatedAt', 'keepCharacters', 'keepCampaigns'])
+        && request.resource.data.get('displayName', '') is string
+        && request.resource.data.get('displayName', '').size() <= 80
+        && request.resource.data.get('keepCharacters', []) is list
+        && request.resource.data.get('keepCharacters', []).size() <= 50
+        && request.resource.data.get('keepCampaigns', []) is list
+        && request.resource.data.get('keepCampaigns', []).size() <= 50;
     }
 
     match /entitlements/{uid} {
@@ -49,6 +77,17 @@ service cloud.firestore {
     function isWarden(campaignId) {
       return signedIn()
         && get(/databases/$(database)/documents/campaigns/$(campaignId)).data.wardenUid == request.auth.uid;
+    }
+
+    // The Warden may change a campaign only while it is in use under their
+    // plan. A campaign over the limit can still be read by everyone in it.
+    function wardenMayWrite(campaignId) {
+      return isWarden(campaignId)
+        && inUse(
+          campaignId,
+          get(/databases/$(database)/documents/campaigns/$(campaignId)).data.get('slot', 1),
+          'keepCampaigns'
+        );
     }
 
     // A character's id is its owner's uid and a slot number, so the number of
@@ -77,16 +116,18 @@ service cloud.firestore {
       allow read: if signedIn() && (resource.data.ownerUid == request.auth.uid || inMyCampaign());
       allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
       allow create: if signedIn() && wellFormed()
-        && request.resource.data.slot >= 1
-        && request.resource.data.slot <= characterSlots();
+        && mayCreate(request.resource.data.slot, 'keepCharacters');
       allow update: if signedIn() && (
         (resource.data.ownerUid == request.auth.uid
           && wellFormed()
-          && request.resource.data.slot == resource.data.slot)
+          && request.resource.data.slot == resource.data.slot
+          // A character over the plan's limit is read-only.
+          && inUse(characterId, resource.data.slot, 'keepCharacters'))
         // The Warden may change the sheet, and nothing else, of a player who
         // chose "directly". For a player who chose "ask me first" this is
         // refused, and the Warden must send a request instead.
         || (inMyCampaign()
+          && wardenMayWrite(resource.data.campaignId)
           && controlOf(resource.data.campaignId, resource.data.ownerUid) == 'direct'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sheet', 'undo', 'name', 'updatedAt'])
           && request.resource.data.sheet is map
@@ -142,7 +183,7 @@ service cloud.firestore {
       match /requests/{requestId} {
         allow read: if isWarden(campaignId)
           || (signedIn() && resource.data.toUid == request.auth.uid);
-        allow create: if isWarden(campaignId)
+        allow create: if wardenMayWrite(campaignId)
           && request.resource.data.fromUid == request.auth.uid
           && request.resource.data.status == 'pending'
           && request.resource.data.kind in ['change', 'save', 'scar', 'strength-save']
@@ -183,13 +224,14 @@ service cloud.firestore {
       // Abilities and gear. The Warden writes; every member reads.
       match /shared/{docId} {
         allow read: if isMember(campaignId);
-        allow write: if isWarden(campaignId) && docId in ['brief', 'content'];
+        allow write: if wardenMayWrite(campaignId) && docId in ['brief', 'content'];
       }
 
       // The Warden's own working papers: private notes, creatures, and the
       // fight in progress. No player can read these.
       match /private/{docId} {
-        allow read, write: if isWarden(campaignId) && docId in ['notes', 'creatures', 'fight'];
+        allow read: if isWarden(campaignId) && docId in ['notes', 'creatures', 'fight'];
+        allow write: if wardenMayWrite(campaignId) && docId in ['notes', 'creatures', 'fight'];
       }
 
       // The timeline: what happened, in order. The server's clock stamps
@@ -207,9 +249,9 @@ service cloud.firestore {
         }
         allow read: if isWarden(campaignId)
           || (isMember(campaignId) && resource.data.private == false);
-        allow create: if isWarden(campaignId) && beatOk()
+        allow create: if wardenMayWrite(campaignId) && beatOk()
           && request.resource.data.at == request.time;
-        allow update: if isWarden(campaignId) && beatOk()
+        allow update: if wardenMayWrite(campaignId) && beatOk()
           && request.resource.data.at == resource.data.at;
         allow delete: if isWarden(campaignId);
       }
@@ -219,7 +261,7 @@ service cloud.firestore {
       match /cards/{cardId} {
         allow read: if isWarden(campaignId)
           || (isMember(campaignId) && resource.data.status != 'planned');
-        allow create, update: if isWarden(campaignId)
+        allow create, update: if wardenMayWrite(campaignId)
           && request.resource.data.keys().hasOnly(['kind', 'name', 'text', 'status', 'createdAt', 'updatedAt'])
           && request.resource.data.kind in ['person', 'place', 'creature', 'faction', 'item', 'thread']
           && request.resource.data.status in ['planned', 'met', 'changed', 'gone']
@@ -233,14 +275,15 @@ service cloud.firestore {
 
       // What the Warden knows about a card and the players do not.
       match /cardNotes/{cardId} {
-        allow read, write: if isWarden(campaignId);
+        allow read, delete: if isWarden(campaignId);
+        allow create, update: if wardenMayWrite(campaignId);
       }
 
       // Characters the Warden runs for players without a device. Six at most:
       // their ids are w1 to w6.
       match /characters/{characterId} {
         allow read, delete: if isWarden(campaignId);
-        allow create, update: if isWarden(campaignId)
+        allow create, update: if wardenMayWrite(campaignId)
           && characterId.matches('^w[1-6]$')
           && request.resource.data.keys().hasOnly(['name', 'description', 'notes', 'sheet', 'undo', 'createdAt', 'updatedAt'])
           && request.resource.data.name is string

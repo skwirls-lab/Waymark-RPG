@@ -1,4 +1,4 @@
-import { status, type Character } from '@waymark/rules';
+import { canCreate, limitsOf, status, type Character } from '@waymark/rules';
 import type { Firestore } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 
@@ -11,7 +11,6 @@ import { HttpsError } from 'firebase-functions/v2/https';
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 export const CODE_LENGTH = 6;
 export const WARDEN_CHARACTER_LIMIT = 6;
-const PAID_SLOTS = 50;
 
 export type Random = () => number;
 
@@ -34,10 +33,18 @@ function cleanName(value: unknown, what: string, max = 60): string {
   return name;
 }
 
-async function slotsFor(db: Firestore, uid: string): Promise<number> {
-  const entitlements = await db.doc(`entitlements/${uid}`).get();
-  const plan = entitlements.exists ? entitlements.get('plan') : 'free';
-  return plan === 'free' || plan === undefined ? 1 : PAID_SLOTS;
+/** How many of a thing the account's plan allows, and what they chose to keep if a plan ended. */
+async function allowance(
+  db: Firestore,
+  uid: string,
+  what: 'characters' | 'campaigns',
+): Promise<{ limit: number; kept: string[] }> {
+  const [entitlement, user] = await Promise.all([
+    db.doc(`entitlements/${uid}`).get(),
+    db.doc(`users/${uid}`).get(),
+  ]);
+  const kept = user.get(what === 'characters' ? 'keepCharacters' : 'keepCampaigns');
+  return { limit: limitsOf(entitlement.data())[what], kept: Array.isArray(kept) ? kept : [] };
 }
 
 /** Reserves a code that nothing else is using, in the given collection. */
@@ -94,11 +101,12 @@ export async function createCampaign(
 ): Promise<{ campaignId: string; joinCode: string }> {
   const name = cleanName(input.name, 'The campaign name');
   const displayName = cleanName(input.displayName, 'Your name', 40);
-  const slots = await slotsFor(db, uid);
+  const { limit: slots, kept } = await allowance(db, uid, 'campaigns');
 
   // A campaign's id is its Warden's uid and a slot number, so the limit
   // cannot be passed by two requests arriving together.
   for (let slot = 1; slot <= slots; slot++) {
+    if (!canCreate(slot, slots, kept)) break;
     const campaignId = `${uid}_${slot}`;
     const ref = db.doc(`campaigns/${campaignId}`);
     if ((await ref.get()).exists) continue;
@@ -106,7 +114,7 @@ export async function createCampaign(
     const now = Date.now();
     try {
       const batch = db.batch();
-      batch.create(ref, { name, wardenUid: uid, joinCode, createdAt: now });
+      batch.create(ref, { name, wardenUid: uid, slot, joinCode, createdAt: now });
       batch.set(ref.collection('members').doc(uid), {
         role: 'warden',
         displayName,
@@ -278,7 +286,7 @@ export async function redeemHandover(
 ): Promise<{ characterId: string; campaignId: string }> {
   const code = normalizeCode(input.code);
   const displayName = cleanName(input.displayName, 'Your name', 40);
-  const slots = await slotsFor(db, uid);
+  const { limit: slots, kept } = await allowance(db, uid, 'characters');
   const handoverRef = db.doc(`handovers/${code || 'none'}`);
 
   return db.runTransaction(async (tx) => {
@@ -292,6 +300,7 @@ export async function redeemHandover(
 
     let slot = 0;
     for (let candidate = 1; candidate <= slots && slot === 0; candidate++) {
+      if (!canCreate(candidate, slots, kept)) break;
       if (!(await tx.get(db.doc(`characters/${uid}_${candidate}`))).exists) slot = candidate;
     }
     if (slot === 0) {

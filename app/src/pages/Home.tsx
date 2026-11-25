@@ -2,13 +2,11 @@ import { armorValue, status } from '@waymark/rules';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth';
+import { useAccount, useTidyKeep } from '../data/account';
 import { useMemberships } from '../data/useCampaign';
 import { useCharacterStore } from '../data/useCharacters';
 import { Logo } from '../Logo';
 import { JoinCampaignForm, RedeemHandoverForm, StartCampaignForm } from './CampaignForms';
-
-/** A free account may own one character. Paid plans arrive in a later phase. */
-const FREE_CHARACTERS = 1;
 
 export function Home() {
   const { user, signOut, upgradeWithGoogle, error } = useAuth();
@@ -16,6 +14,9 @@ export function Home() {
   const [form, setForm] = useState<'start' | 'join' | 'redeem' | null>(null);
   const { characters, problem } = useCharacterStore();
   const name = user?.isAnonymous ? 'guest' : (user?.displayName ?? 'traveler');
+  const account = useAccount(user!.uid);
+  const limit = account.limits.characters;
+  useTidyKeep(user!.uid, account, characters?.length);
   return (
     <>
       <header className="app-header">
@@ -23,9 +24,14 @@ export function Home() {
           <Logo size={32} />
           Waymark
         </span>
-        <button className="button small" onClick={signOut}>
-          Sign out
-        </button>
+        <span className="button-row">
+          <Link to="/account" className="button small as-link">
+            Account
+          </Link>
+          <button className="button small" onClick={signOut}>
+            Sign out
+          </button>
+        </span>
       </header>
       <main className="screen">
         <h1>Welcome, {name}</h1>
@@ -43,7 +49,12 @@ export function Home() {
           {characters?.map((c) => (
             <li key={c.id}>
               <Link to={`/c/${c.id}`} className="character-card">
-                <strong>{c.name}</strong>
+                <strong>
+                  {c.name}
+                  {!account.characterInUse(c.id, c.slot) && (
+                    <span className="tag warn">Read-only</span>
+                  )}
+                </strong>
                 <span className="muted">{c.sheet.background}</span>
                 <span>
                   HP {c.sheet.hp.current} of {c.sheet.hp.full} · Armor {armorValue(c.sheet)}
@@ -53,14 +64,15 @@ export function Home() {
             </li>
           ))}
         </ul>
-        {characters !== undefined && characters.length < FREE_CHARACTERS && (
+        {characters !== undefined && characters.length < limit && (
           <Link to="/new" className="button primary as-link">
             Make a character
           </Link>
         )}
-        {characters !== undefined && characters.length >= FREE_CHARACTERS && (
+        {characters !== undefined && characters.length >= limit && account.plan === 'free' && (
           <p className="fineprint">
-            A free account holds one character. Delete this one to make another.
+            A free account holds one character. Delete this one to make another, or{' '}
+            <Link to="/account">see the paid plan</Link>.
           </p>
         )}
         <h2>Your campaigns</h2>

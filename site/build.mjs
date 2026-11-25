@@ -126,7 +126,7 @@ ${sidebar}
 <main id="main">${body}</main>
 </div>
 <footer class="site-footer">
-  <p>Waymark${version ? ' draft ' + version : ''}. Based on <a href="https://cairnrpg.com">Cairn</a> by Yochai Gal. Text licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>. <a href="/about/">Credits</a></p>
+  <p>Waymark${version ? ' draft ' + version : ''}. Based on <a href="https://cairnrpg.com">Cairn</a> by Yochai Gal. Text licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>. <a href="/about/">Credits</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></p>
 </footer>
 ${
   search
@@ -220,7 +220,18 @@ write(
 );
 
 // Hand-written pages
-const vars = { '{{VERSION}}': version, '{{LOGO}}': logo, '{{FIRST}}': `/rules/${pages[0].slug}/` };
+// The legal name, contact address and governing law are John's to supply.
+// Until then the drafts say plainly that they are missing.
+const vars = {
+  '{{VERSION}}': version,
+  '{{LOGO}}': logo,
+  '{{FIRST}}': `/rules/${pages[0].slug}/`,
+  '{{LEGAL_NAME}}': '[legal name to be confirmed]',
+  '{{CONTACT}}': '[contact address to be confirmed]',
+  '{{JURISDICTION}}': '[place to be confirmed]',
+  '{{APP_HOST}}': 'waymark-rpg-app.web.app',
+  '{{SITE_HOST}}': 'waymark-rpg.web.app',
+};
 const fill = (s) => Object.entries(vars).reduce((acc, [k, v]) => acc.split(k).join(v), s);
 const src = (name) => fill(fs.readFileSync(path.join(here, 'src', name), 'utf8'));
 write(
@@ -250,6 +261,22 @@ write(
     description: 'About Waymark, its license, and its debt to Cairn.',
     body: src('about.html'),
     active: 'about',
+  }),
+);
+write(
+  'privacy/index.html',
+  layout({
+    title: 'Privacy Policy (draft) | Waymark',
+    description: 'What the Waymark app knows about you, and your choices.',
+    body: src('privacy.html'),
+  }),
+);
+write(
+  'terms/index.html',
+  layout({
+    title: 'Terms of Use (draft) | Waymark',
+    description: 'The terms for using the Waymark app.',
+    body: src('terms.html'),
   }),
 );
 write(

@@ -11,6 +11,11 @@ vi.mock('./data/campaigns', () => ({
     onChange([]);
     return () => {};
   },
+  // No plan record and no choices: a free account.
+  watchDoc: (_path: string, onChange: (value: null) => void) => {
+    onChange(null);
+    return () => {};
+  },
 }));
 vi.mock('./data/characters', () => ({
   characterId: (uid: string, slot: number) => `${uid}_${slot}`,
