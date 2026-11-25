@@ -686,3 +686,65 @@ input.number {
 .button.undo {
   margin-top: 0.4rem;
 }
+
+/* ---- Live play ---- */
+.select-row {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  flex: 1;
+  cursor: pointer;
+}
+.select-row input {
+  width: 1.3rem;
+  height: 1.3rem;
+  margin-top: 0.2rem;
+  flex: none;
+  accent-color: var(--forest);
+}
+.summary-line {
+  display: block;
+  font-size: 0.93rem;
+  color: var(--muted);
+}
+.request {
+  background: color-mix(in srgb, var(--forest) 12%, var(--card));
+  border: 1.5px solid var(--forest);
+  border-radius: 12px;
+  padding: 0.6rem 0.9rem 0.8rem;
+  margin-top: 0.8rem;
+}
+.request p {
+  margin: 0 0 0.5rem;
+}
+.button.small.primary {
+  background: var(--blaze);
+  border-color: var(--blaze);
+  color: var(--blaze-ink);
+}
+.tag.here {
+  margin-left: 0.4rem;
+}
+.feed {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+  display: grid;
+  gap: 0.3rem;
+}
+.feed li {
+  display: grid;
+  grid-template-columns: 3.6rem 1fr;
+  gap: 0.5rem;
+  padding: 0.4rem 0.2rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.95rem;
+}
+.feed time {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+h3 {
+  font-size: 1.05rem;
+  margin: 1.25rem 0 0.25rem;
+}

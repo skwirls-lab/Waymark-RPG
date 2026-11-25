@@ -1,6 +1,8 @@
 import {
   RulesError,
   abilityLimit,
+  applyWardenAction,
+  checkSave,
   addFatigue,
   armorValue,
   catchCorruption,
@@ -18,9 +20,12 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { deleteWardenCharacter, saveWardenCharacter } from '../data/campaigns';
+import { addLog, answerRequest, type CampaignRequest } from '../data/campaigns';
 import { changeSheetAt, undoSheetAt, type CharacterDoc } from '../data/characters';
-import { useCampaign } from '../data/useCampaign';
+import { useCampaign, usePresence, useRequests } from '../data/useCampaign';
 import { useCharacterStore } from '../data/useCharacters';
+import { Dialog } from '../ui/Dialog';
+import { RollInput } from '../ui/RollInput';
 import {
   ATTRIBUTE_NAMES,
   AbilityDialog,
@@ -65,6 +70,9 @@ interface ViewProps {
   onChange: (apply: (sheet: Character) => Character, text: string) => void;
   /** Puts back the sheet as it was before the most recent change. */
   onUndo?: () => void;
+  /** In a campaign: what the Warden has asked of this character's player. */
+  requests?: CampaignRequest[];
+  onAnswer?: (requestId: string, status: 'accepted' | 'declined' | 'done', result: string) => void;
   onDelete: () => void;
   /** Where the back link goes. Defaults to the home screen. */
   back?: { to: string; label: string };
@@ -76,6 +84,8 @@ export function SheetView({
   onSave,
   onChange,
   onUndo,
+  requests = [],
+  onAnswer,
   onDelete,
   back = { to: '/', label: 'All characters' },
 }: ViewProps) {
@@ -88,9 +98,33 @@ export function SheetView({
     onChange(apply, said ?? '');
     if (said !== undefined) setMessage(said);
   };
+  // The Warden's request that the open dialog is answering, if any.
+  const [answering, setAnswering] = useState<string | null>(null);
+  const [saveRequest, setSaveRequest] = useState<CampaignRequest | null>(null);
   const done = (outcome: Outcome) => {
     change(outcome.apply, outcome.message);
+    if (answering) onAnswer?.(answering, 'done', outcome.message);
+    setAnswering(null);
     setDialog(outcome.next ?? null);
+  };
+  const pending = requests.filter((r) => r.status === 'pending' && r.characterId === doc.id);
+  const accept = (request: CampaignRequest) => {
+    try {
+      const action = request.action!;
+      const preview = applyWardenAction(sheet, action);
+      change((s) => applyWardenAction(s, action).character, preview.text);
+      onAnswer?.(request.id, 'accepted', preview.text);
+      const followUp = preview.followUps[0];
+      if (followUp) setDialog({ kind: followUp });
+    } catch (problem) {
+      setMessage(
+        problem instanceof RulesError && problem.code === 'must-drop'
+          ? 'You have no free slot. Put something down, then accept.'
+          : problem instanceof RulesError
+            ? problem.message
+            : 'That did not work.',
+      );
+    }
   };
   const close = () => setDialog(null);
 
@@ -218,6 +252,55 @@ export function SheetView({
           Undo: {doc.undo.text || 'the last change'}
         </button>
       )}
+
+      {pending.map((request) => (
+        <div key={request.id} className="request" role="group" aria-label="Request from the Warden">
+          <p>
+            <strong>The Warden asks:</strong> {request.text}
+          </p>
+          <div className="button-row">
+            {request.kind === 'change' && (
+              <>
+                <button
+                  type="button"
+                  className="button small primary"
+                  onClick={() => accept(request)}
+                >
+                  Accept
+                </button>
+                <button
+                  type="button"
+                  className="button small"
+                  onClick={() => onAnswer?.(request.id, 'declined', '')}
+                >
+                  Decline
+                </button>
+              </>
+            )}
+            {(request.kind === 'scar' || request.kind === 'strength-save') && (
+              <button
+                type="button"
+                className="button small primary"
+                onClick={() => {
+                  setAnswering(request.id);
+                  setDialog({ kind: request.kind as 'scar' | 'strength-save' });
+                }}
+              >
+                Roll now
+              </button>
+            )}
+            {request.kind === 'save' && (
+              <button
+                type="button"
+                className="button small primary"
+                onClick={() => setSaveRequest(request)}
+              >
+                Roll now
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
 
       <section className="actions" aria-label="Actions">
         <button
@@ -483,6 +566,18 @@ export function SheetView({
         )}
       </section>
 
+      {saveRequest && (
+        <SaveRequestDialog
+          sheet={sheet}
+          request={saveRequest}
+          onClose={() => setSaveRequest(null)}
+          onResult={(result) => {
+            onAnswer?.(saveRequest.id, 'done', result);
+            setMessage(result);
+            setSaveRequest(null);
+          }}
+        />
+      )}
       {dialog?.kind === 'damage' && <DamageDialog sheet={sheet} onDone={done} onClose={close} />}
       {dialog?.kind === 'strength-save' && (
         <StrengthSaveDialog sheet={sheet} onDone={done} onClose={close} />
@@ -552,11 +647,58 @@ function Stat({
   );
 }
 
+/** A save the Warden called for: one roll against the named attribute, sent back when made. */
+function SaveRequestDialog({
+  sheet,
+  request,
+  onResult,
+  onClose,
+}: {
+  sheet: Character;
+  request: CampaignRequest;
+  onResult: (result: string) => void;
+  onClose: () => void;
+}) {
+  const [d20, setD20] = useState<number>();
+  const key = request.attribute ?? 'dex';
+  const score = sheet.attributes[key].current;
+  return (
+    <Dialog title={request.text} onClose={onClose}>
+      <RollInput
+        label="Your roll"
+        spec={{ count: 1, sides: 20 }}
+        value={d20}
+        onChange={setD20}
+        hint={`Roll ${score} or less.`}
+      />
+      <button
+        type="button"
+        className="button primary wide"
+        disabled={d20 === undefined}
+        onClick={() =>
+          onResult(
+            `${sheet.name} rolled ${d20} against ${ATTRIBUTE_NAMES[key]} ${score}: ${checkSave(score, d20!) ? 'success' : 'failure'}.`,
+          )
+        }
+      >
+        Send result
+      </button>
+    </Dialog>
+  );
+}
+
 /** The sheet, connected to the saved character named in the address. */
 export function Sheet() {
   const { id } = useParams();
+  const { user } = useAuth();
   const store = useCharacterStore();
   const navigate = useNavigate();
+  const doc = store.characters?.find((c) => c.id === id);
+  const campaignId = doc?.campaignId ?? null;
+  const requests = useRequests(campaignId, campaignId ? user!.uid : null);
+  const myName = user?.displayName ?? doc?.name ?? 'A player';
+  usePresence(campaignId, user!.uid, myName);
+
   if (store.characters === undefined) {
     return (
       <main className="screen center" aria-busy="true">
@@ -564,7 +706,6 @@ export function Sheet() {
       </main>
     );
   }
-  const doc = store.characters.find((c) => c.id === id);
   if (!doc) {
     return (
       <main className="screen">
@@ -575,12 +716,34 @@ export function Sheet() {
       </main>
     );
   }
+  // In a campaign, what happens to the sheet is told to the table.
+  const tell = (text: string) => {
+    if (campaignId && text)
+      void addLog(
+        campaignId,
+        user!.uid,
+        myName,
+        text.startsWith(doc.name) ? text : `${doc.name}: ${text}`,
+      );
+  };
   return (
     <SheetView
       doc={doc}
       onSave={store.save}
-      onChange={(apply, text) => store.change(doc.id, apply, text)}
-      onUndo={() => store.undo(doc.id)}
+      onChange={(apply, text) => {
+        store.change(doc.id, apply, text);
+        tell(text);
+      }}
+      onUndo={() => {
+        store.undo(doc.id);
+        tell('undid the last change.');
+      }}
+      requests={requests}
+      onAnswer={(requestId, status, result) => {
+        if (!campaignId) return;
+        void answerRequest(campaignId, requestId, status, result);
+        if (status === 'done' && result) tell(result);
+      }}
       onDelete={() => {
         store.remove(doc.id);
         navigate('/');

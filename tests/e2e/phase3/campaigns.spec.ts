@@ -145,7 +145,8 @@ test.describe('phase 3: handing over and keeping', () => {
     await expect(warden.getByTestId('fatigue')).toHaveText('1');
     await warden.getByRole('link', { name: new RegExp(CAMPAIGN) }).click();
 
-    await warden.getByRole('button', { name: 'Hand over' }).click();
+    await warden.getByRole('button', { name: 'Act on Pip' }).click();
+    await warden.getByRole('button', { name: 'Hand this character to a player' }).click();
     const handover = (await warden.getByTestId('handover-code').textContent())!.trim();
 
     // The guest redeems the code and now owns Pip, Fatigue and all.

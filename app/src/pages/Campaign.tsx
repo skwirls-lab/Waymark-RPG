@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth';
 import {
   WARDEN_CHARACTER_IDS,
-  createHandover,
+  addLog,
   deleteCampaign,
   leaveCampaign,
   removeMember,
@@ -11,8 +11,15 @@ import {
   type Member,
   type Summary,
 } from '../data/campaigns';
-import { useCampaign } from '../data/useCampaign';
+import {
+  useCampaign,
+  useCampaignCharacters,
+  useLog,
+  usePresence,
+  useRequests,
+} from '../data/useCampaign';
 import { useCharacterStore } from '../data/useCharacters';
+import { ActivityFeed, WardenParty } from './Party';
 
 const STATUS_LABEL: Record<string, string> = {
   critical: 'critical damage',
@@ -41,8 +48,12 @@ export function Campaign() {
     isWarden,
   } = useCampaign(cid!, uid);
   const members = memberList ?? [];
+  const playerCharacters = useCampaignCharacters(cid!, isWarden);
+  const requests = useRequests(isWarden ? cid! : null, null);
+  const log = useLog(cid!);
+  const myName = members.find((m) => m.uid === uid)?.displayName ?? user?.displayName ?? 'Someone';
+  const present = usePresence(memberList ? cid! : null, uid, myName);
   const [problem, setProblem] = useState<string>();
-  const [handover, setHandover] = useState<{ name: string; code: string }>();
   const [confirming, setConfirming] = useState(false);
   const [qr, setQr] = useState<string>();
   // The choice shows at once; the saved value follows.
@@ -136,63 +147,41 @@ export function Campaign() {
         </section>
       )}
 
-      <section aria-labelledby="party">
-        <h2 id="party">The party</h2>
-        {summaries.length === 0 && <p className="muted">No characters yet.</p>}
-        <ul className="party">
-          {summaries.map((s) => (
-            <li key={s.id} data-testid={`summary-${s.name}`}>
-              <div>
-                <strong>{s.name}</strong>
-                <span className="muted">
-                  {' '}
-                  {s.kind === 'warden' ? 'run by the Warden' : `played by ${nameOf(s.ownerUid)}`}
-                </span>
+      {isWarden ? (
+        <WardenParty
+          campaign={campaign}
+          uid={uid}
+          wardenName={myName}
+          members={members}
+          summaries={summaries}
+          wardenCharacters={wardenCharacters}
+          playerCharacters={playerCharacters}
+          requests={requests}
+          canAddCharacter={!!freeWardenSlot}
+        />
+      ) : (
+        <section aria-labelledby="party">
+          <h2 id="party">The party</h2>
+          {summaries.length === 0 && <p className="muted">No characters yet.</p>}
+          <ul className="party">
+            {summaries.map((s) => (
+              <li key={s.id} data-testid={`summary-${s.name}`}>
                 <div>
-                  HP {s.hp.current} of {s.hp.full}
-                  {conditions(s)}
+                  <strong>{s.name}</strong>
+                  <span className="muted">
+                    {' '}
+                    {s.kind === 'warden' ? 'run by the Warden' : `played by ${nameOf(s.ownerUid)}`}
+                  </span>
+                  <div>
+                    HP {s.hp.current} of {s.hp.full}
+                    {conditions(s)}
+                  </div>
                 </div>
-              </div>
-              {isWarden && s.kind === 'warden' && (
-                <span className="row-actions">
-                  <Link className="button small as-link" to={`/k/${campaign.id}/w/${s.id}`}>
-                    Open
-                  </Link>
-                  <button
-                    type="button"
-                    className="button small"
-                    onClick={() =>
-                      run(async () =>
-                        setHandover({
-                          name: s.name,
-                          code: (await createHandover(campaign.id, s.id)).code,
-                        }),
-                      )
-                    }
-                  >
-                    Hand over
-                  </button>
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-        {handover && (
-          <p className="note" role="status">
-            To hand {handover.name} to a player, give them this one-time code:{' '}
-            <strong data-testid="handover-code">{handover.code}</strong>. They enter it on their
-            home screen.
-          </p>
-        )}
-        {isWarden &&
-          (freeWardenSlot ? (
-            <Link className="button small as-link" to={`/k/${campaign.id}/new`}>
-              Add a character you run
-            </Link>
-          ) : (
-            <p className="fineprint">A Warden can run six characters in a campaign.</p>
-          ))}
-      </section>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section aria-labelledby="yours">
         <h2 id="yours">Your character here</h2>
@@ -264,6 +253,7 @@ export function Campaign() {
             <li key={m.uid}>
               <span>
                 <strong>{m.displayName}</strong>
+                {present.has(m.uid) && <span className="tag here">here now</span>}
                 <span className="muted">
                   {' '}
                   {m.role === 'warden'
@@ -287,6 +277,11 @@ export function Campaign() {
           ))}
         </ul>
       </section>
+
+      <ActivityFeed
+        log={log}
+        onRoll={(text) => void addLog(campaign.id, uid, myName, `${myName} ${text}`)}
+      />
 
       <section className="danger-zone">
         {confirming ? (

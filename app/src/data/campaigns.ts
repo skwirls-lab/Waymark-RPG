@@ -1,4 +1,5 @@
-import type { Character } from '@waymark/rules';
+import type { AttributeKey, Character, WardenAction } from '@waymark/rules';
+import type { CharacterDoc } from './characters';
 import { getDb, getServices, useEmulators } from '../firebase';
 
 export interface Membership {
@@ -45,11 +46,15 @@ export const WARDEN_CHARACTER_IDS = ['w1', 'w2', 'w3', 'w4', 'w5', 'w6'];
 
 type Unsubscribe = () => void;
 
+type Fs = typeof import('firebase/firestore');
+type Constraint = (fs: Fs) => import('firebase/firestore').QueryConstraint[];
+
 /** Watches a collection, online or off, and reports each change. Refusals report an empty list. */
 function watchCollection<T>(
   path: string,
   map: (id: string, data: Record<string, unknown>) => T,
   onChange: (items: T[]) => void,
+  constraints: Constraint = () => [],
 ): Unsubscribe {
   let stop: Unsubscribe = () => {};
   let cancelled = false;
@@ -57,7 +62,7 @@ function watchCollection<T>(
     const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
     if (cancelled) return;
     stop = fs.onSnapshot(
-      fs.collection(db, path),
+      fs.query(fs.collection(db, path), ...constraints(fs)),
       (snapshot) => onChange(snapshot.docs.map((d) => map(d.id, d.data()))),
       () => onChange([]),
     );
@@ -180,3 +185,140 @@ export const createHandover = (campaignId: string, characterId: string) =>
   call<{ code: string }>('createHandover', { campaignId, characterId });
 export const redeemHandover = (code: string, displayName: string) =>
   call<{ characterId: string; campaignId: string }>('redeemHandover', { code, displayName });
+
+/** Something the Warden asks of a player: to accept a change, or to make a roll. */
+export interface CampaignRequest {
+  id: string;
+  fromUid: string;
+  toUid: string;
+  characterId: string;
+  kind: 'change' | 'save' | 'scar' | 'strength-save';
+  /** What is being asked, in words. */
+  text: string;
+  action?: WardenAction;
+  attribute?: AttributeKey;
+  status: 'pending' | 'accepted' | 'declined' | 'done';
+  result?: string;
+  createdAt: number;
+}
+
+export interface LogEntry {
+  id: string;
+  at: number;
+  byUid: string;
+  byName: string;
+  text: string;
+}
+
+export interface Presence {
+  uid: string;
+  at: number;
+  displayName: string;
+}
+
+/** For the Warden: the full sheet of every player's character in the campaign. */
+export const watchCampaignCharacters = (
+  campaignId: string,
+  onChange: (items: CharacterDoc[]) => void,
+) =>
+  watchCollection(
+    'characters',
+    (id, d) => ({ ...(d as Omit<CharacterDoc, 'id'>), id }),
+    onChange,
+    (fs) => [fs.where('campaignId', '==', campaignId)],
+  );
+
+/** The Warden sees every request; a player sees those addressed to them. */
+export const watchRequests = (
+  campaignId: string,
+  toUid: string | null,
+  onChange: (items: CampaignRequest[]) => void,
+) =>
+  watchCollection(
+    `campaigns/${campaignId}/requests`,
+    (id, d) => ({ ...(d as Omit<CampaignRequest, 'id'>), id }),
+    (items) => onChange(items.sort((a, b) => a.createdAt - b.createdAt)),
+    (fs) => (toUid ? [fs.where('toUid', '==', toUid)] : []),
+  );
+
+export const watchLog = (campaignId: string, onChange: (items: LogEntry[]) => void) =>
+  watchCollection(
+    `campaigns/${campaignId}/log`,
+    (id, d) => ({ ...(d as Omit<LogEntry, 'id'>), id }),
+    onChange,
+    (fs) => [fs.orderBy('at', 'desc'), fs.limit(40)],
+  );
+
+export const watchPresence = (campaignId: string, onChange: (items: Presence[]) => void) =>
+  watchCollection(
+    `campaigns/${campaignId}/presence`,
+    (id, d) => ({ ...(d as Omit<Presence, 'uid'>), uid: id }),
+    onChange,
+  );
+
+export async function createRequest(
+  campaignId: string,
+  request: Omit<CampaignRequest, 'id' | 'status' | 'createdAt'>,
+): Promise<void> {
+  const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
+  await fs.addDoc(fs.collection(db, 'campaigns', campaignId, 'requests'), {
+    ...request,
+    status: 'pending',
+    createdAt: Date.now(),
+  });
+}
+
+export async function answerRequest(
+  campaignId: string,
+  id: string,
+  status: 'accepted' | 'declined' | 'done',
+  result = '',
+): Promise<void> {
+  const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
+  await fs.updateDoc(fs.doc(db, 'campaigns', campaignId, 'requests', id), {
+    status,
+    result,
+    answeredAt: Date.now(),
+  });
+}
+
+export async function clearRequest(campaignId: string, id: string): Promise<void> {
+  const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
+  await fs.deleteDoc(fs.doc(db, 'campaigns', campaignId, 'requests', id));
+}
+
+/** Adds a line to the campaign's activity feed. Never throws: the feed is not worth failing an action for. */
+export async function addLog(
+  campaignId: string,
+  byUid: string,
+  byName: string,
+  text: string,
+): Promise<void> {
+  try {
+    const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
+    await fs.addDoc(fs.collection(db, 'campaigns', campaignId, 'log'), {
+      at: Date.now(),
+      byUid,
+      byName,
+      text: text.slice(0, 500),
+    });
+  } catch {
+    // Offline or no longer a member.
+  }
+}
+
+export async function markPresent(
+  campaignId: string,
+  uid: string,
+  displayName: string,
+): Promise<void> {
+  try {
+    const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
+    await fs.setDoc(fs.doc(db, 'campaigns', campaignId, 'presence', uid), {
+      at: Date.now(),
+      displayName,
+    });
+  } catch {
+    // Presence is a nicety.
+  }
+}

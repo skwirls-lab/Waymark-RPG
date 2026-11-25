@@ -94,5 +94,11 @@ async function startDb(): Promise<Firestore> {
     }),
   });
   if (useEmulators) firestore.connectFirestoreEmulator(db, '127.0.0.1', 8080);
+  // After a spell offline Firestore waits longer and longer between attempts
+  // to reconnect. When the browser says the connection is back, reconnect at
+  // once, so changes made offline reach the server promptly.
+  window.addEventListener('online', () => {
+    void firestore.disableNetwork(db).then(() => firestore.enableNetwork(db));
+  });
   return db;
 }

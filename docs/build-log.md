@@ -5,7 +5,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 ## Current position
 
 - **Phase:** 4 (Live play), in progress
-- **Task:** phase 4, task 1 (Warden actions as pure functions in the rules library)
+- **Task:** phase 4 built; gate pending CI
 - **Last verified commit:** 8e9bf9d (CI run 45491052219: verify, all deploys, live guest sign-in and Lighthouse green)
 - **To run everything in a build container:** `npm run verify:container` (see decisions 1 and 22). CI runs plain `npm run verify`.
 
@@ -69,14 +69,14 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 ## Phase 4 tasks
 
-- [ ] 1. Warden actions as pure functions in the rules library
-- [ ] 2. Sheet changes that rebase on the latest saved sheet, so simultaneous changes are both kept
-- [ ] 3. Party view with Warden actions, and several targets for a Blast
-- [ ] 4. Direct or ask first, enforced by security rules; requests
-- [ ] 5. Save prompts
-- [ ] 6. Shared dice and activity feed
-- [ ] 7. Undo of the most recent change
-- [ ] 8. Presence
+- [x] 1. Warden actions as pure functions in the rules library
+- [x] 2. Sheet changes that rebase on the latest saved sheet, so simultaneous changes are both kept
+- [x] 3. Party view with Warden actions, and several targets for a Blast
+- [x] 4. Direct or ask first, enforced by security rules; requests
+- [x] 5. Save prompts
+- [x] 6. Shared dice and activity feed
+- [x] 7. Undo of the most recent change
+- [x] 8. Presence
 
 ## Gate evidence
 
@@ -120,6 +120,14 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - Cloud Functions (`tests/functions/campaigns.test.ts`): good and bad join codes; used, bad and orphaned hand-over codes; the one-campaign limit including three simultaneous requests; paid plans; leaving, removing and deleting with full clean-up; summaries following characters; malformed sheets.
 - End to end, three devices: a Warden starts a campaign; an account holder joins by code and brings a character in; a guest follows the join link while signed out; the Warden adds a character to run; all three see the right summaries and only the Warden sees the join code and the full Warden-run sheet; a change to a sheet reaches the others' summaries; another player cannot open a full sheet by its address; the permission choice shows for the Warden; hand-over works once; a guest becomes an account holder and keeps everything; leaving, removing and deleting.
 - Defects the tests found and that were fixed: screens did not refresh after a guest created an account; a removed player's open screen did not show they had been removed; the permission choice lagged until the server answered; the summary trigger crashed on a malformed sheet.
+
+### Phase 4
+
+- Local `verify`: 268 rules, 54 app, 65 security-rules, 34 Cloud Functions and 60 end-to-end tests, all passing.
+- **Two-second requirement:** time from the Warden pressing Apply to the player's HP changing on a second device, measured in the test itself: 202 ms (phone), 196 ms (tablet). The test fails above 2,000 ms.
+- End to end, two and three devices: direct damage with feed entry and undo; damage to exactly 0 HP sends the player a Scar roll and the Warden sees its result; give and take items, add Fatigue, award a Tier; a Warden change and a player change at the same moment are both kept (checked on screen and in the stored document); ask-first accept with its follow-up Strength save; ask-first decline and clearing; a called save and its result; a Blast across three characters; open dice, sheet changes in the feed, and presence.
+- Security rules (`tests/rules/phase4-live-play.test.ts`): the Warden's direct write succeeds for "directly" and is refused for "ask me first", follows a change of choice at once, and covers the sheet only; requests can be created only by the Warden and answered only once, only by their player, without altering what was asked; the feed is append-only and in one's own name; presence is one's own.
+- Defects the tests found and that were fixed: the browser's online flag reported "online" for a moment while offline, sending one change down the online path where it raced an earlier queued one and lost it (seen as fatigue 1 instead of 2 on the server); the randomized rules tests were generating characters carrying more than their slots allow.
 
 ## Decisions made without asking
 
@@ -167,8 +175,20 @@ The memory between build sessions. Read `docs/instructions.md` first.
 
 32. **2026-11-24. A live sign-in check after every deploy.** John found that neither guest nor Google sign-in worked on the deployed app, though every gate had passed. The emulator-backed tests cannot see whether sign-in is switched on in the real project, and the post-deploy check only fetched the page. CI now signs in as a guest on the deployed app after each deploy, and the app shows the reason and code when sign-in fails. This gap means the phase 0 and phase 2 gates were recorded without real sign-in ever having been exercised.
 
+33. **2026-11-25. Sheet changes are functions, not results.** Every change to a sheet is now a function of the sheet. It runs at once on the copy shown, and again inside a transaction on the copy the server holds, so two people changing one character at the same moment both keep their change. Changes to one character are sent in order.
+34. **2026-11-25. Three signals decide whether to queue a change offline:** the browser's online flag, whether Firestore's latest answer came from its local copy, and whether an earlier change to the same document is still waiting. The browser's flag alone was wrong for a moment in tests (decision evidence above).
+35. **2026-11-25. Undo is stored on the character itself,** as the sheet from before the most recent change with a line saying what it was. It is visible to exactly the people who can see the sheet, and is written in the same step as the change.
+36. **2026-11-25. Requests.** In "ask me first" a Warden's change is stored as a request holding the action as data; the player's own device applies it on acceptance. Follow-up rolls after a direct change (a Scar, a Strength save) are also sent to the player as requests, since they are the player's dice. A Warden-run character's follow-ups are rolled on its sheet by the Warden.
+37. **2026-11-25. The feed takes every sheet change in a campaign,** not only rolls, in the words the sheet already shows. Entries can never be edited or deleted, by anyone.
+38. **2026-11-25. Presence** is a timestamp each member refreshes every 30 seconds while the campaign or their sheet is open; someone counts as here for 75 seconds after the last one.
+39. **2026-11-25. When Fatigue has nowhere to go under a direct Warden change,** the Warden is told to take an item first or ask the player to put something down. Which item to drop is the player's choice, so the app does not pick one.
+40. **2026-11-25. Hand-over moved into the Warden's "Act" dialog** for a Warden-run character.
+
 ## Changed tests
 
+- **Phase 3 hand-over end-to-end step (2026-11-25).** Old: pressed a "Hand over" button on the party row. New: opens "Act on Pip" and presses "Hand this character to a player". Reason: decision 40.
+- **Randomized rules tests (2026-11-25).** Old: generated characters could carry more than their capacity. New: the generator keeps only what fits, and a test asserts every generated character is one the rules could produce. Reason: an impossible starting character was being reported as a rules failure.
+- **Sheet component tests (2026-11-25).** Old: the test harness received whole changed sheets. New: it receives change functions and applies them. Reason: decision 33.
 - **Cloud Functions summary assertions (phase 3, same day).** Old: checked the moment a function returned. New: wait up to five seconds for the settled state. Reason: summaries are kept by background triggers and are consistent within moments, not instantly; the emulator runs those triggers alongside the tests.
 - **Cloud Functions summary tests (phase 3, same day).** Old: `syncOwnedSummary` and `syncWardenSummary` were given before-and-after snapshots. New: they are given only ids and read the stored document, so the tests now store the document first. Reason: decision 29.
 - **Phase 0 "nothing is readable or writable".** Old: `users/alice` and `characters/c1` were refused for everyone. New: those two paths are opened by phase 2 with their own allowed-and-refused tests; the deny-all test now covers only paths no phase has opened. Reason: phase 2 legitimately opens them, as the test's own comment anticipated.

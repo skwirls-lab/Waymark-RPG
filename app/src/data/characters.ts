@@ -35,7 +35,9 @@ export function watchCharacters(
     const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
     if (cancelled) return;
     const mine = fs.query(fs.collection(db, 'characters'), fs.where('ownerUid', '==', uid));
-    stop = fs.onSnapshot(mine, (snapshot) => {
+    stop = fs.onSnapshot(mine, { includeMetadataChanges: true }, (snapshot) => {
+      // Firestore knows whether it is hearing from the server; remember it.
+      servedFromCache = snapshot.metadata.fromCache;
       const docs = snapshot.docs.map((d) => ({
         ...(d.data() as Omit<CharacterDoc, 'id'>),
         id: d.id,
@@ -92,6 +94,22 @@ export function changeSheetAt(
 
 const queues = new Map<string, Promise<void>>();
 
+/** True while the latest answer from Firestore came from this device's own copy, not the server. */
+let servedFromCache = false;
+/** How many offline writes to each document have not yet reached the server. */
+const waitingOffline = new Map<string, number>();
+
+/**
+ * Whether a change to this document should be queued instead of run as a
+ * transaction. The browser's own online flag is not enough: it can say
+ * "online" for a moment while the connection is still down. So this also
+ * asks Firestore, and never lets a transaction jump ahead of an earlier
+ * change to the same document that is still waiting to be sent.
+ */
+function mustQueue(key: string): boolean {
+  return !navigator.onLine || servedFromCache || (waitingOffline.get(key) ?? 0) > 0;
+}
+
 async function sendChange(
   key: string,
   apply: SheetChange,
@@ -102,9 +120,13 @@ async function sendChange(
   const ref = fs.doc(db, key);
   // Queued by Firestore and sent when the connection returns. Not awaited:
   // it only settles once the server has it, which offline may be much later.
-  const queueOffline = () => void fs.setDoc(ref, fallback).catch(() => {});
+  const settle = () => waitingOffline.set(key, Math.max(0, (waitingOffline.get(key) ?? 1) - 1));
+  const queueOffline = () => {
+    waitingOffline.set(key, (waitingOffline.get(key) ?? 0) + 1);
+    void fs.setDoc(ref, fallback).then(settle, settle);
+  };
 
-  if (!navigator.onLine) return queueOffline();
+  if (mustQueue(key)) return queueOffline();
   try {
     await fs.runTransaction(db, async (tx) => {
       const current = await tx.get(ref);
