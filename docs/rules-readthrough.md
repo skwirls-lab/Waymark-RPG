@@ -21,16 +21,17 @@ Checked and matching: saves (1 always passes, 20 always fails), advantage and di
 
 | Corrupted places could not be played from the sheet. | Part Five. | Using an Ability and resting now each have "We are in a corrupted place": the save takes two rolls with the worse one counting, and rest restores no HP. Tainted Fatigue from such a place, and the worst-case misfire, are still open. |
 
+| Wording that had drifted: "Stabilized", "Mark as corrupted", "a full pack", "Small: no slot". | The rulebook says "saved", "catches lasting corruption", "every slot full", and that tiny things need no slot. | Reworded. |
+
 ## Still open
 
 | # | What | Rulebook | Notes |
 |---|---|---|---|
-| 2 | Corrupted places cannot be played from the sheet: no disadvantage on the save, no tainted Fatigue, no worst-case misfire. | Part Five. | The library has most of it; the sheet has no way to say "we are in a corrupted place". The worst-case misfire is not in the library. |
+| 2 | The worst-case misfire in a corrupted place is not in the library. | "Misfires are as bad as they can be." | Needs a ruling on what "as bad as they can be" means for each misfire. |
 | 3 | Backlash from a misfire takes HP then Strength, but does not lead to a Scar or a Strength save. | The rulebook says this of "an attack". | Needs John's reading: is backlash an attack? |
 | 4 | In the library but not reachable in the app: Fatigue for each deprived day, repair for Built characters, special-item charges, imbuing gear, the other ways of paying for Abilities. The fight tracker has no crowds, and no impaired or enhanced attacks. | Various. | The largest gap. Each is a small screen over tested library code. |
 | 5 | Custom Origins: no check on the kit weapon's die or on more than one piece of armor. The AI caps a kit at four items; the rulebook allows five. Custom gear has no "small" size. | Part Two and Part Six guidance. | Minor. |
 | 6 | "Small: no slot" when adding an item. | "Small items can share a slot. A few tiny things do not need a slot at all." | Wording, and a way to share a slot. |
-| 7 | Wording drift: "short rest" (the rulebook says "rests for a few minutes"), "Stabilized" ("saved"), "a full pack" for every slot full, "Mark as corrupted". | | To tidy in one pass. |
 
 ## Deliberate differences
 

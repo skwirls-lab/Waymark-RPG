@@ -315,7 +315,7 @@ describe('the sheet: saves, dice, scars and housekeeping', () => {
 
   it('corruption: three failed daily saves take a Tier 1 character', () => {
     render(<Harness />);
-    click('Mark as corrupted');
+    click('Caught lasting corruption');
     for (let i = 0; i < 3; i++) {
       click('Daily save');
       type(/^Willpower save/, '19');

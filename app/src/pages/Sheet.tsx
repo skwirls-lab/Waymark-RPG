@@ -210,7 +210,7 @@ export function SheetView({
             <button
               type="button"
               className="button small"
-              onClick={() => change(stabilize, 'Stabilized. They need rest before acting again.')}
+              onClick={() => change(stabilize, 'Saved. They need rest before acting again.')}
             >
               Someone tends them
             </button>
@@ -557,7 +557,7 @@ export function SheetView({
               change(catchCorruption, 'Caught lasting corruption. Save at the start of each day.')
             }
           >
-            Mark as corrupted
+            Caught lasting corruption
           </button>
         )}
       </section>

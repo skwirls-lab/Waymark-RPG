@@ -472,7 +472,7 @@ export function RestDialog({ sheet, onDone, onClose }: Props) {
     const hp = after.hp.current > sheet.hp.current ? ` HP back to ${after.hp.current}.` : '';
     const why =
       after.hp.current < after.hp.full
-        ? ' HP did not fully return: check for deprivation, a full pack, or critical damage.'
+        ? ' HP did not fully return: check whether they are deprived, have every slot full, or have critical damage.'
         : '';
     onDone({ apply: how, message: `${what}.${hp}${why}` });
   };
@@ -650,7 +650,7 @@ export function AddItemDialog({ sheet, onDone, onClose }: Props) {
           <select value={slots} onChange={(e) => setSlots(Number(e.target.value) as 0 | 1 | 2)}>
             <option value={1}>Ordinary: 1 slot</option>
             <option value={2}>Bulky: 2 slots</option>
-            <option value={0}>Small: no slot</option>
+            <option value={0}>Tiny: needs no slot</option>
           </select>
         </label>
         {kind === 'weapon' && (

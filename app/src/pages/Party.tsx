@@ -614,7 +614,7 @@ function ActDialog({
               >
                 <option value={1}>Ordinary: 1 slot</option>
                 <option value={2}>Bulky: 2 slots</option>
-                <option value={0}>Small: no slot</option>
+                <option value={0}>Tiny: needs no slot</option>
               </select>
             </label>
             {itemKind === 'weapon' && (
