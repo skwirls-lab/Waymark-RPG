@@ -18,7 +18,14 @@ function uidOf(request: CallableRequest): string {
   return request.auth.uid;
 }
 
-const options = { region: 'us-central1', maxInstances: 5 } as const;
+const background = { region: 'us-central1', maxInstances: 5 } as const;
+/**
+ * For functions a browser calls. "public" lets the request reach the
+ * function at all; each function then checks who is signed in. It is stated
+ * outright so that every deploy applies it: left to the default, the first
+ * functions were deployed without it and could not be called.
+ */
+const options = { ...background, invoker: 'public' } as const;
 
 export const createCampaign = onCall(options, (request) =>
   campaigns.createCampaign(db, uidOf(request), request.data ?? {}),
@@ -43,13 +50,13 @@ export const redeemHandover = onCall(options, (request) =>
 );
 
 export const onCharacterWritten = onDocumentWritten(
-  { ...options, document: 'characters/{characterId}' },
+  { ...background, document: 'characters/{characterId}' },
   (event) =>
     campaigns.syncOwnedSummary(db, event.params.characterId, event.data?.before.data()?.campaignId),
 );
 
 export const onWardenCharacterWritten = onDocumentWritten(
-  { ...options, document: 'campaigns/{campaignId}/characters/{characterId}' },
+  { ...background, document: 'campaigns/{campaignId}/characters/{characterId}' },
   (event) => campaigns.syncWardenSummary(db, event.params.campaignId, event.params.characterId),
 );
 

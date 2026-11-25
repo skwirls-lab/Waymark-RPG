@@ -21,7 +21,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 | 5 Warden tools and campaign record | Complete | 2026-11-25 |
 | 6 Plans, payments and policies | Built; waiting on John | |
 | 7 AI help | Gate criteria met 2026-11-25; switched off until the key is in Secret Manager | |
-| 8 AI Warden | Not started | |
+| 8 AI Warden | Design approved 2026-11-25; building | |
 | 9 Launch readiness | Started early: security review and rulebook read-through done | |
 
 ## Phase 0 tasks
@@ -281,6 +281,8 @@ The memory between build sessions. Read `docs/instructions.md` first.
 78. **2026-11-25. Read-through of the app against the rulebook** (`docs/rules-readthrough.md`), done by an independent pass. Six mismatches fixed. Seven remain open and are listed there, the largest being rules the library has but no screen reaches (havens, learning Abilities, a second Affinity, imbuing). Eight places where the rulebook is silent are listed for its next draft.
 79. **2026-11-25. AI-made creatures are held tighter than the rulebook requires** (a Blast does d6 at most), on purpose. Recorded as a deliberate difference.
 80. **2026-11-25. John chose Stripe, and said not to wait on him for its keys or for the OpenRouter key.** So the code switches (decisions 53 and 65) are gone. The functions now read each key from Secret Manager when needed (`functions/src/secrets.ts`): a feature turns itself on within a minute of its key being stored, with no deploy, and a missing key cannot fail a deploy. Until then the app says "not open yet" or "not switched on yet". The Stripe webhook is always deployed and refuses every message until its signing secret exists. Neither can be tested against the real service from here; both are tested against stand-ins.
+81. **2026-11-25. Campaigns had never worked on the live app.** The first Cloud Functions were deployed without permission for browsers to call them, and until decision 62 no check after deploy called one. The new live check caught it on its first run. Every browser-called function now states `invoker: 'public'`, so each deploy applies it. John granted the deploy account `roles/run.admin` the same day.
+82. **2026-11-25. John approved** the AI Warden design with its default answers, the prices ($4.99 a month, $49.90 a year), and the downgrade behavior. He ran the deploy permission and OpenRouter key commands. Stripe keys will follow later; legal name, contact and governing law for the policies are still to come.
 
 ## Changed tests
 
