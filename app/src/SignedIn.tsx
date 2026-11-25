@@ -7,6 +7,7 @@ import { Campaign } from './pages/Campaign';
 import { JoinPage } from './pages/CampaignForms';
 import { Home } from './pages/Home';
 import { Sheet, WardenSheet } from './pages/Sheet';
+import { WorldEditor, Worlds } from './pages/Worlds';
 
 /** Where a signed-out visitor was heading, such as a join link. See App.tsx. */
 export const NEXT_KEY = 'waymark.next';
@@ -28,6 +29,8 @@ export default function SignedIn() {
         <Route path="/" element={<Home />} />
         <Route path="/new" element={<Builder />} />
         <Route path="/account" element={<Account />} />
+        <Route path="/worlds" element={<Worlds />} />
+        <Route path="/worlds/:id" element={<WorldEditor />} />
         <Route path="/c/:id" element={<Sheet />} />
         <Route path="/join/:code" element={<JoinPage />} />
         <Route path="/k/:cid" element={<Campaign />} />

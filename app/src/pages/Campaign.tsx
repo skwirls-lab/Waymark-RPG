@@ -408,9 +408,19 @@ export function Campaign() {
             <fieldset className="plain" disabled={readOnly}>
               {tab === 'party' && partyPanel}
               {tab === 'play' && <Play campaignId={campaign.id} uid={uid} isOwner={isWarden} />}
-              {tab === 'story' && <Story campaignId={campaign.id} uid={uid} isWarden={isWarden} />}
+              {tab === 'story' && (
+                <Story
+                  campaignId={campaign.id}
+                  uid={uid}
+                  isWarden={isWarden}
+                  party={summaries.map((s) => ({ id: s.id, name: s.name }))}
+                  onFight={() => setParams({ tab: 'fight' }, { replace: true })}
+                />
+              )}
               <Suspense fallback={<p className="lede">Loading…</p>}>
-                {tab === 'fight' && <Fight campaignId={campaign.id} summaries={summaries} />}
+                {tab === 'fight' && (
+                  <Fight campaignId={campaign.id} uid={uid} summaries={summaries} />
+                )}
                 {tab === 'workshop' && <Workshop campaignId={campaign.id} uid={uid} />}
               </Suspense>
             </fieldset>

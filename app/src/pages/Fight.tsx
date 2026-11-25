@@ -1,7 +1,13 @@
 import { data, reactionFor, type Band, type CustomCreature } from '@waymark/rules';
 import { useState } from 'react';
 import type { Summary } from '../data/campaigns';
-import { saveFight, useCreatures, useFight, type Fight as FightState } from '../data/record';
+import {
+  addBeat,
+  saveFight,
+  useCreatures,
+  useFight,
+  type Fight as FightState,
+} from '../data/record';
 import { RollInput } from '../ui/RollInput';
 import {
   BANDS,
@@ -21,6 +27,7 @@ import {
 
 interface Props {
   campaignId: string;
+  uid: string;
   summaries: Summary[];
 }
 
@@ -47,7 +54,7 @@ function ReactionRoll() {
 }
 
 /** The Warden's fight tracker: sides, turn order, enemy HP, distance and morale. */
-export function Fight({ campaignId, summaries }: Props) {
+export function Fight({ campaignId, uid, summaries }: Props) {
   const saved = useFight(campaignId, true);
   const custom = useCreatures(campaignId, true);
   const creatures: (CustomCreature | (typeof data.creatures)[number])[] = [
@@ -63,12 +70,30 @@ export function Fight({ campaignId, summaries }: Props) {
   const [said, setSaid] = useState('');
   const [problem, setProblem] = useState<string>();
 
-  const store = (fight: FightState | null, text = '') => {
+  /**
+   * Saves the fight. `tell` also writes a line on the campaign's timeline, so
+   * the story shows where the fight sat in it without the Warden noting each
+   * step. Lines that give away the enemies' numbers are for the Warden alone.
+   */
+  const store = (
+    fight: FightState | null,
+    text = '',
+    tell?: { line: string; onlyWarden: boolean },
+  ) => {
     setSaid(text);
     setProblem(undefined);
-    saveFight(campaignId, fight).catch(() =>
-      setProblem('That could not be saved. Check your connection and try again.'),
-    );
+    const failed = () =>
+      setProblem('That could not be saved. Check your connection and try again.');
+    saveFight(campaignId, fight).catch(failed);
+    if (tell) {
+      addBeat(campaignId, uid, {
+        text: tell.line.slice(0, 500),
+        milestone: false,
+        private: tell.onlyWarden,
+        cardId: null,
+        kind: 'fight',
+      }).catch(failed);
+    }
   };
 
   if (!saved) {
@@ -86,7 +111,13 @@ export function Fight({ campaignId, summaries }: Props) {
               {problem}
             </p>
           )}
-          <button type="button" className="button primary" onClick={() => store(startFight(party))}>
+          <button
+            type="button"
+            className="button primary"
+            onClick={() =>
+              store(startFight(party), '', { line: 'A fight began.', onlyWarden: false })
+            }
+          >
             Start a fight
           </button>
         </section>
@@ -126,10 +157,24 @@ export function Fight({ campaignId, summaries }: Props) {
           )}
         </p>
         <div className="button-row">
-          <button type="button" className="button primary" onClick={() => store(nextTurn(fight))}>
+          <button
+            type="button"
+            className="button primary"
+            onClick={() => {
+              const next = nextTurn(fight);
+              store(next, '', {
+                line: `Round ${next.round}: ${TURN_LABEL[next.turn].toLowerCase()}.`,
+                onlyWarden: true,
+              });
+            }}
+          >
             Next turn
           </button>
-          <button type="button" className="button" onClick={() => store(null)}>
+          <button
+            type="button"
+            className="button"
+            onClick={() => store(null, '', { line: 'The fight ended.', onlyWarden: false })}
+          >
             End the fight
           </button>
         </div>
@@ -162,7 +207,10 @@ export function Fight({ campaignId, summaries }: Props) {
               onClick={() => {
                 const result = resolveMorale(fight, moraleRoll!);
                 setMoraleRoll(undefined);
-                store(result.fight, result.text);
+                store(result.fight, result.text, {
+                  line: `Morale: ${result.text}`,
+                  onlyWarden: false,
+                });
               }}
             >
               Check morale
@@ -237,7 +285,7 @@ export function Fight({ campaignId, summaries }: Props) {
                     onClick={() => {
                       const result = damageEnemy(fight, e.id, amounts[e.id]!);
                       setAmounts({ ...amounts, [e.id]: undefined });
-                      store(result.fight, result.text);
+                      store(result.fight, result.text, { line: result.text, onlyWarden: true });
                     }}
                   >
                     Apply
@@ -260,7 +308,7 @@ export function Fight({ campaignId, summaries }: Props) {
                     onClick={() => {
                       const result = enemyStrengthSave(fight, e.id, saves[e.id]!);
                       setSaves({ ...saves, [e.id]: undefined });
-                      store(result.fight, result.text);
+                      store(result.fight, result.text, { line: result.text, onlyWarden: true });
                     }}
                   >
                     Make the save
@@ -290,6 +338,8 @@ export function Fight({ campaignId, summaries }: Props) {
                 addEnemies(fight, { ...creature, attack: creature.attack ?? '' }, count, () =>
                   crypto.randomUUID(),
                 ),
+                '',
+                { line: `Joined the fight: ${count} × ${creature.name}.`, onlyWarden: false },
               );
             }
           }}

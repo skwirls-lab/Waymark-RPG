@@ -1,4 +1,4 @@
-import type { AiResult } from '@waymark/rules';
+import { addEnemies, data, startFight, type AiResult } from '@waymark/rules';
 import { useEffect, useState, type FormEvent } from 'react';
 import {
   CARD_KINDS,
@@ -10,15 +10,19 @@ import {
   deleteCard,
   saveBrief,
   saveCard,
+  saveFight,
   saveNotes,
   setCardStatus,
   updateBeat,
   useBeats,
   useBrief,
+  useCardDetails,
   useCardNotes,
+  useCreatures,
   useCards,
   useNotes,
   type Card,
+  type CardDetails,
   type CardKind,
   type CardStatus,
   type SessionBrief,
@@ -29,6 +33,12 @@ interface Props {
   campaignId: string;
   uid: string;
   isWarden: boolean;
+}
+
+interface StoryProps extends Props {
+  /** The characters in the campaign, for starting a fight from a card. */
+  party?: { id: string; name: string }[];
+  onFight?: () => void;
 }
 
 const when = (at: number) =>
@@ -48,12 +58,18 @@ function useSaver() {
 }
 
 /** The campaign's story: the brief, what has happened, and who and what is in it. */
-export function Story({ campaignId, uid, isWarden }: Props) {
+export function Story({ campaignId, uid, isWarden, party = [], onFight }: StoryProps) {
   return (
     <>
       <BriefSection campaignId={campaignId} isWarden={isWarden} />
       <Timeline campaignId={campaignId} uid={uid} isWarden={isWarden} />
-      <Cards campaignId={campaignId} isWarden={isWarden} />
+      <Cards
+        campaignId={campaignId}
+        uid={uid}
+        isWarden={isWarden}
+        party={party}
+        onFight={onFight}
+      />
       {isWarden && <PrivateNotes campaignId={campaignId} />}
     </>
   );
@@ -258,7 +274,9 @@ function Timeline({ campaignId, uid, isWarden }: Props) {
   const [milestone, setMilestone] = useState(false);
   const [secret, setSecret] = useState(false);
   const [cardId, setCardId] = useState('');
+  const [reveal, setReveal] = useState(true);
   const [problem, setProblem] = useState<string>();
+  const about = cards.find((c) => c.id === cardId);
   const cardName = (id: string | null) => cards.find((c) => c.id === id)?.name;
   const fail = () => setProblem('That could not be saved. Check your connection and try again.');
 
@@ -272,9 +290,14 @@ function Timeline({ campaignId, uid, isWarden }: Props) {
       private: secret,
       cardId: cardId || null,
     }).catch(fail);
+    // Telling the table about a planned card can reveal it in the same breath.
+    if (about?.status === 'planned' && reveal && !secret) {
+      setCardStatus(campaignId, about.id, 'met').catch(fail);
+    }
     setText('');
     setMilestone(false);
     setCardId('');
+    setReveal(true);
   };
 
   return (
@@ -322,6 +345,16 @@ function Timeline({ campaignId, uid, isWarden }: Props) {
               </select>
             </label>
           )}
+          {about?.status === 'planned' && !secret && (
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={reveal}
+                onChange={(e) => setReveal(e.target.checked)}
+              />
+              Reveal {about.name} to the players as well
+            </label>
+          )}
           <button type="submit" className="button primary" disabled={!text.trim()}>
             Add to the timeline
           </button>
@@ -342,6 +375,7 @@ function Timeline({ campaignId, uid, isWarden }: Props) {
           <li key={b.id} className={b.milestone ? 'milestone' : undefined}>
             <span className="muted small">{when(b.at)}</span>
             {b.milestone && <span className="tag">Milestone</span>}
+            {b.kind === 'fight' && <span className="tag">Fight</span>}
             {b.private && <span className="tag quiet">Only you</span>}
             {cardName(b.cardId) && <span className="tag quiet">{cardName(b.cardId)}</span>}
             <p>{b.text}</p>
@@ -373,12 +407,61 @@ function Timeline({ campaignId, uid, isWarden }: Props) {
   );
 }
 
-function Cards({ campaignId, isWarden }: Omit<Props, 'uid'>) {
+/** What each kind of card is for, shown as the form is filled in. */
+const KIND_HELP: Record<CardKind, { shown: string; secret: string }> = {
+  person: {
+    shown: 'Who they are, how they look and sound, what they want.',
+    secret: 'What they are hiding, and what they will do about it.',
+  },
+  place: {
+    shown: 'What the characters see, hear and smell on arriving.',
+    secret: 'Dangers, ways in, and anything hidden here.',
+  },
+  creature: {
+    shown: 'What it looks like from a safe distance.',
+    secret: 'What it wants, and how the players will see it coming.',
+  },
+  fight: {
+    shown: 'Where it happens and what can be seen as it starts.',
+    secret: 'What the enemies want, when they would run, and what they carry.',
+  },
+  puzzle: {
+    shown: 'What stands in the way, as the characters find it.',
+    secret: 'Ways through, and what happens on a wrong try. Let any sensible plan work.',
+  },
+  faction: {
+    shown: 'Who they are and what they are known for.',
+    secret: 'What they are really after, and who leads them.',
+  },
+  item: {
+    shown: 'What it is and what it plainly does.',
+    secret: 'What else it does, where it is found, and who wants it.',
+  },
+  thread: {
+    shown: 'The open question, as the players would put it.',
+    secret: 'The answer, or your best guess at one.',
+  },
+};
+
+interface CardsProps extends Omit<Props, 'uid'> {
+  uid: string;
+  party: { id: string; name: string }[];
+  /** Called when a fight has been started from a card, to show the fight tracker. */
+  onFight?: () => void;
+}
+
+function Cards({ campaignId, uid, isWarden, party, onFight }: CardsProps) {
   const cards = useCards(campaignId, isWarden);
   const notes = useCardNotes(campaignId, isWarden);
+  const details = useCardDetails(campaignId, isWarden);
+  const custom = useCreatures(campaignId, isWarden);
+  const brief = useBrief(campaignId);
+  const creatures = [...data.creatures, ...custom];
+  const creature = (id: string | null | undefined) => creatures.find((c) => c.id === id);
   const [editing, setEditing] = useState<Partial<Card> | null>(null);
   // A card the AI suggested: its private note, and a number so each suggestion gets a fresh form.
   const [suggested, setSuggested] = useState<{ secret: string; n: number }>();
+  const [show, setShow] = useState('');
   const [problem, setProblem] = useState<string>();
   const fail = () => setProblem('That could not be saved. Check your connection and try again.');
   const suggest = (kind: 'person' | 'place') => (proposal: AiResult<'person'>) => {
@@ -389,14 +472,43 @@ function Cards({ campaignId, isWarden }: Omit<Props, 'uid'>) {
     setEditing(null);
     setSuggested(undefined);
   };
+  const sessionTitle = (id: string | null | undefined) =>
+    brief.sessions.find((s) => s.id === id)?.title;
+  const visible = cards.filter((c) => show === '' || c.sessionId === show);
+
+  /** Starts the fight a card describes, and notes it on the timeline. */
+  const startFightFrom = (card: Card) => {
+    let fight = startFight(party);
+    for (const enemy of details[card.id]?.enemies ?? []) {
+      const found = creature(enemy.creatureId);
+      if (found) {
+        fight = addEnemies(fight, { ...found, attack: found.attack ?? '' }, enemy.count, () =>
+          crypto.randomUUID(),
+        );
+      }
+    }
+    saveFight(campaignId, fight).catch(fail);
+    addBeat(campaignId, uid, {
+      text: `A fight began: ${card.name}.`,
+      milestone: false,
+      private: false,
+      cardId: card.id,
+      kind: 'fight',
+    }).catch(fail);
+    if (card.status === 'planned') setCardStatus(campaignId, card.id, 'met').catch(fail);
+    onFight?.();
+  };
 
   return (
     <section aria-labelledby="cards">
-      <h2 id="cards">People, places and things</h2>
+      <h2 id="cards">
+        {isWarden ? 'Cards: your plan and your record' : 'People, places and things'}
+      </h2>
       {isWarden && (
         <p className="hint">
-          A planned card is yours alone. Players see it once you reveal it. They never see your
-          private notes.
+          Make a card for anything you want to plan or remember: a person, a place, a creature, a
+          fight, a puzzle, loot, an open question. A planned card is yours alone until you reveal
+          it, and players never see your private notes. Tie cards to a session to lay out its plan.
         </p>
       )}
       {problem && (
@@ -404,46 +516,91 @@ function Cards({ campaignId, isWarden }: Omit<Props, 'uid'>) {
           {problem}
         </p>
       )}
-      {cards.length === 0 && (
+      {isWarden && brief.sessions.length > 0 && cards.length > 0 && (
+        <label className="form-row">
+          Show
+          <select value={show} onChange={(e) => setShow(e.target.value)}>
+            <option value="">Every card</option>
+            {brief.sessions.map((s) => (
+              <option key={s.id} value={s.id}>
+                The plan for {s.title}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {visible.length === 0 && (
         <p className="muted">{isWarden ? 'No cards yet.' : 'Nothing has been revealed yet.'}</p>
       )}
       <ul className="record">
-        {cards.map((c) => (
-          <li key={c.id} data-testid={`card-${c.name}`}>
-            <strong>{c.name}</strong>
-            <span className="tag quiet">{CARD_KIND_LABEL[c.kind]}</span>
-            <span className={c.status === 'planned' ? 'tag warn' : 'tag'}>
-              {c.status === 'planned' ? 'Planned' : CARD_STATUS_LABEL[c.status]}
-            </span>
-            {c.text && <p className="prewrap">{c.text}</p>}
-            {isWarden && notes[c.id] && (
-              <p className="prewrap muted">
-                <em>Private:</em> {notes[c.id]}
-              </p>
-            )}
-            {isWarden && (
-              <div className="button-row">
-                {c.status === 'planned' && (
+        {visible.map((c) => {
+          const stats =
+            isWarden && c.kind === 'creature' ? creature(details[c.id]?.creatureId) : undefined;
+          const enemies = isWarden && c.kind === 'fight' ? (details[c.id]?.enemies ?? []) : [];
+          return (
+            <li key={c.id} data-testid={`card-${c.name}`}>
+              <strong>{c.name}</strong>
+              <span className="tag quiet">{CARD_KIND_LABEL[c.kind]}</span>
+              <span className={c.status === 'planned' ? 'tag warn' : 'tag'}>
+                {c.status === 'planned' ? 'Planned' : CARD_STATUS_LABEL[c.status]}
+              </span>
+              {isWarden && sessionTitle(c.sessionId) && (
+                <span className="tag quiet">{sessionTitle(c.sessionId)}</span>
+              )}
+              {c.text && <p className="prewrap">{c.text}</p>}
+              {stats && (
+                <p>
+                  <em>{stats.name}:</em> HP {stats.hp} · Armor {stats.armor} · STR {stats.str} · DEX{' '}
+                  {stats.dex} · WIL {stats.wil}
+                  {stats.attack ? ` · ${stats.attack}` : ''}
+                </p>
+              )}
+              {enemies.length > 0 && (
+                <p>
+                  <em>Enemies:</em>{' '}
+                  {enemies
+                    .map((e) => `${e.count} × ${creature(e.creatureId)?.name ?? 'unknown'}`)
+                    .join(', ')}
+                </p>
+              )}
+              {isWarden && notes[c.id] && (
+                <p className="prewrap muted">
+                  <em>Private:</em> {notes[c.id]}
+                </p>
+              )}
+              {isWarden && (
+                <div className="button-row">
+                  {c.kind === 'fight' && enemies.length > 0 && (
+                    <button
+                      type="button"
+                      className="button small primary"
+                      onClick={() => startFightFrom(c)}
+                    >
+                      Start this fight<span className="sr-only">: {c.name}</span>
+                    </button>
+                  )}
+                  {c.status === 'planned' && (
+                    <button
+                      type="button"
+                      className={c.kind === 'fight' ? 'button small' : 'button small primary'}
+                      onClick={() => setCardStatus(campaignId, c.id, 'met').catch(fail)}
+                    >
+                      Reveal <span className="sr-only">{c.name} </span>to players
+                    </button>
+                  )}
                   <button
                     type="button"
-                    className="button small primary"
-                    onClick={() => setCardStatus(campaignId, c.id, 'met').catch(fail)}
+                    className="button small"
+                    aria-label={`Edit ${c.name}`}
+                    onClick={() => setEditing(c)}
                   >
-                    Reveal <span className="sr-only">{c.name} </span>to players
+                    Edit
                   </button>
-                )}
-                <button
-                  type="button"
-                  className="button small"
-                  aria-label={`Edit ${c.name}`}
-                  onClick={() => setEditing(c)}
-                >
-                  Edit
-                </button>
-              </div>
-            )}
-          </li>
-        ))}
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
       {isWarden &&
         (editing ? (
@@ -452,8 +609,11 @@ function Cards({ campaignId, isWarden }: Omit<Props, 'uid'>) {
             card={editing}
             suggested={!editing.id && suggested !== undefined}
             notes={editing.id ? (notes[editing.id] ?? '') : (suggested?.secret ?? '')}
-            onSave={(card, privateNotes) => {
-              saveCard(campaignId, card, privateNotes).catch(fail);
+            details={editing.id ? (details[editing.id] ?? {}) : {}}
+            creatures={creatures.map((c) => ({ id: c.id, name: c.name }))}
+            sessions={brief.sessions.map((s) => ({ id: s.id, title: s.title }))}
+            onSave={(card, privateNotes, cardDetails) => {
+              saveCard(campaignId, card, privateNotes, cardDetails).catch(fail);
               closeForm();
             }}
             onDelete={
@@ -467,7 +627,11 @@ function Cards({ campaignId, isWarden }: Omit<Props, 'uid'>) {
             onCancel={() => closeForm()}
           />
         ) : (
-          <button type="button" className="button small" onClick={() => setEditing({})}>
+          <button
+            type="button"
+            className="button small"
+            onClick={() => setEditing(show ? { sessionId: show } : {})}
+          >
             New card
           </button>
         ))}
@@ -495,6 +659,9 @@ function Cards({ campaignId, isWarden }: Omit<Props, 'uid'>) {
 function CardForm({
   card,
   notes,
+  details,
+  creatures,
+  sessions,
   suggested = false,
   onSave,
   onDelete,
@@ -502,11 +669,18 @@ function CardForm({
 }: {
   card: Partial<Card>;
   notes: string;
+  details: CardDetails;
+  creatures: { id: string; name: string }[];
+  sessions: { id: string; title: string }[];
   /** Whether the AI filled this in. */
   suggested?: boolean;
   onSave: (
-    card: Pick<Card, 'kind' | 'name' | 'text' | 'status'> & { id?: string; createdAt?: number },
+    card: Pick<Card, 'kind' | 'name' | 'text' | 'status' | 'sessionId'> & {
+      id?: string;
+      createdAt?: number;
+    },
     notes: string,
+    details: CardDetails,
   ) => void;
   onDelete?: () => void;
   onCancel: () => void;
@@ -515,7 +689,15 @@ function CardForm({
   const [name, setName] = useState(card.name ?? '');
   const [text, setText] = useState(card.text ?? '');
   const [status, setStatus] = useState<CardStatus>(card.status ?? 'planned');
+  const [sessionId, setSessionId] = useState(card.sessionId ?? '');
   const [privateNotes, setPrivateNotes] = useState(notes);
+  const [creatureId, setCreatureId] = useState(details.creatureId ?? '');
+  const [enemies, setEnemies] = useState(
+    details.enemies?.length ? details.enemies : [{ creatureId: creatures[0]!.id, count: 1 }],
+  );
+  const help = KIND_HELP[kind];
+  const setEnemy = (index: number, patch: Partial<(typeof enemies)[number]>) =>
+    setEnemies(enemies.map((e, i) => (i === index ? { ...e, ...patch } : e)));
   return (
     <form
       className="form panel"
@@ -524,8 +706,20 @@ function CardForm({
         e.preventDefault();
         if (!name.trim()) return;
         onSave(
-          { id: card.id, createdAt: card.createdAt, kind, name: name.trim(), text, status },
+          {
+            id: card.id,
+            createdAt: card.createdAt,
+            kind,
+            name: name.trim(),
+            text,
+            status,
+            sessionId: sessionId || null,
+          },
           privateNotes,
+          {
+            creatureId: kind === 'creature' ? creatureId || null : null,
+            enemies: kind === 'fight' ? enemies.filter((x) => x.count > 0) : [],
+          },
         );
       }}
     >
@@ -544,12 +738,80 @@ function CardForm({
         Name
         <input value={name} maxLength={80} required onChange={(e) => setName(e.target.value)} />
       </label>
+      {kind === 'creature' && (
+        <label>
+          Its numbers
+          <select value={creatureId} onChange={(e) => setCreatureId(e.target.value)}>
+            <option value="">None yet</option>
+            {creatures.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <span className="hint">
+            Choose a creature from the rulebook or your Workshop. Make a new one on the Workshop
+            tab.
+          </span>
+        </label>
+      )}
+      {kind === 'fight' && (
+        <fieldset className="choices">
+          <legend>Who is in the fight</legend>
+          {enemies.map((enemy, index) => (
+            <div key={index} className="kit-row">
+              <label>
+                Enemy {index + 1}
+                <select
+                  value={enemy.creatureId}
+                  onChange={(e) => setEnemy(index, { creatureId: e.target.value })}
+                >
+                  {creatures.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                How many<span className="sr-only"> of enemy {index + 1}</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={12}
+                  value={enemy.count}
+                  onChange={(e) =>
+                    setEnemy(index, {
+                      count: Math.max(0, Math.min(12, Number(e.target.value) || 0)),
+                    })
+                  }
+                />
+              </label>
+            </div>
+          ))}
+          {enemies.length < 4 && (
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => setEnemies([...enemies, { creatureId: creatures[0]!.id, count: 1 }])}
+            >
+              Add another kind of enemy
+            </button>
+          )}
+          <p className="hint">
+            When the moment comes, &ldquo;Start this fight&rdquo; on the card sets up the fight
+            tracker with these enemies.
+          </p>
+        </fieldset>
+      )}
       <label>
         What the players can know
         <textarea
           rows={3}
           maxLength={2000}
           value={text}
+          placeholder={help.shown}
           onChange={(e) => setText(e.target.value)}
         />
       </label>
@@ -559,9 +821,23 @@ function CardForm({
           rows={3}
           maxLength={2000}
           value={privateNotes}
+          placeholder={help.secret}
           onChange={(e) => setPrivateNotes(e.target.value)}
         />
       </label>
+      {sessions.length > 0 && (
+        <label>
+          Part of the plan for
+          <select value={sessionId} onChange={(e) => setSessionId(e.target.value)}>
+            <option value="">No session in particular</option>
+            {sessions.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.title}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <label>
         Status
         <select value={status} onChange={(e) => setStatus(e.target.value as CardStatus)}>

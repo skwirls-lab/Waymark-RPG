@@ -150,6 +150,38 @@ describe('cards', () => {
     await assertFails(as('stranger').doc(`${K}/cards/met`).get());
   });
 
+  it("a card can be a fight or a puzzle, and can belong to a session's plan", async () => {
+    await assertSucceeds(
+      as('warden')
+        .doc(`${K}/cards/f1`)
+        .set(card({ kind: 'fight', name: 'Ambush', sessionId: 's1' })),
+    );
+    await assertSucceeds(
+      as('warden')
+        .doc(`${K}/cards/p1`)
+        .set(card({ kind: 'puzzle', name: 'The sealed door', sessionId: null })),
+    );
+    await assertSucceeds(
+      as('warden')
+        .doc(`${K}/cardNotes/f1`)
+        .set({ text: '', creatureId: null, enemies: [{ creatureId: 'bandit', count: 2 }] }),
+    );
+    await assertFails(as('player').doc(`${K}/cardNotes/f1`).get());
+  });
+
+  it("the fight tracker's own lines on the timeline are marked as such, and nothing else may be", async () => {
+    await assertSucceeds(
+      as('warden')
+        .collection(`${K}/beats`)
+        .add({ ...beat('warden'), kind: 'fight' }),
+    );
+    await assertFails(
+      as('warden')
+        .collection(`${K}/beats`)
+        .add({ ...beat('warden'), kind: 'system' }),
+    );
+  });
+
   it('a card must be of a known kind and status, with a name', async () => {
     await assertFails(
       as('warden')

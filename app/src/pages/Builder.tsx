@@ -1,20 +1,15 @@
-import {
-  allAffinities,
-  allOrigins,
-  data,
-  type AttributeKey,
-  type ExtraContent,
-} from '@waymark/rules';
-import { useEffect, useState } from 'react';
+import { allAffinities, allOrigins, type AttributeKey, type ExtraContent } from '@waymark/rules';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { useAccount } from '../data/account';
 import { WARDEN_CHARACTER_IDS, saveWardenCharacter } from '../data/campaigns';
 import { characterId } from '../data/characters';
-import { useContent } from '../data/record';
-import { useCampaign } from '../data/useCampaign';
+import { useContent, useWorlds } from '../data/record';
+import { useCampaign, useMemberships } from '../data/useCampaign';
 import { useCharacterStore } from '../data/useCharacters';
 import { RollInput } from '../ui/RollInput';
+import { IDEAS, ideasFor } from './ideas';
 import {
   STEPS,
   buildCharacter,
@@ -24,18 +19,12 @@ import {
   rolledAttributes,
   stepComplete,
   type Draft,
-  type Genre,
 } from './draft';
 
 const ATTRIBUTES: { key: AttributeKey; name: string; about: string }[] = [
   { key: 'str', name: 'Strength', about: 'Muscle, toughness, and stamina' },
   { key: 'dex', name: 'Dexterity', about: 'Speed, balance, and reflexes' },
   { key: 'wil', name: 'Willpower', about: 'Nerve, focus, and force of personality' },
-];
-const GENRES: { key: Genre; name: string }[] = [
-  { key: 'fantasy', name: 'Fantasy' },
-  { key: 'modern', name: 'Modern' },
-  { key: 'scifi', name: 'Science fiction' },
 ];
 const SWAPS: { label: string; pair: [AttributeKey, AttributeKey] }[] = [
   { label: 'Strength and Dexterity', pair: ['str', 'dex'] },
@@ -50,10 +39,19 @@ interface ViewProps {
   onCancel: () => void;
   /** A world's own Origins, Affinities and Abilities, offered beside the rulebook's. */
   extra?: ExtraContent;
+  /** Shown under the heading on the first step. */
+  header?: ReactNode;
 }
 
 /** The six steps of making a character. Holds no data of its own, so it can be tested alone. */
-export function BuilderView({ draft, onChange, onFinish, onCancel, extra = {} }: ViewProps) {
+export function BuilderView({
+  draft,
+  onChange,
+  onFinish,
+  onCancel,
+  extra = {},
+  header,
+}: ViewProps) {
   const set = (patch: Partial<Draft>) => onChange({ ...draft, ...patch });
   const step = draft.step;
   const last = step === STEPS.length - 1;
@@ -76,6 +74,7 @@ export function BuilderView({ draft, onChange, onFinish, onCancel, extra = {} }:
         <span style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
       </div>
 
+      {step === 0 && header}
       {step === 0 && <AttributesStep draft={draft} set={set} />}
       {step === 1 && (
         <section>
@@ -174,7 +173,8 @@ function AttributesStep({ draft, set }: StepProps) {
 }
 
 function IdentityStep({ draft, set }: StepProps) {
-  const backgrounds = data.backgrounds[draft.genre];
+  const ideas = ideasFor(draft.genre);
+  const backgrounds = ideas.backgrounds;
   return (
     <section className="form">
       <label>
@@ -187,17 +187,21 @@ function IdentityStep({ draft, set }: StepProps) {
           autoComplete="off"
         />
       </label>
-      <p className="hint">Stuck? Try one of these: {data.names[draft.genre].join(', ')}.</p>
+      <p className="hint">Stuck? Try one of these: {ideas.names.join(', ')}.</p>
       <label>
-        Kind of world
-        <select value={draft.genre} onChange={(e) => set({ genre: e.target.value as Genre })}>
-          {GENRES.map((g) => (
-            <option key={g.key} value={g.key}>
+        Kind of world, for ideas
+        <select value={draft.genre} onChange={(e) => set({ genre: e.target.value })}>
+          {Object.entries(IDEAS).map(([key, g]) => (
+            <option key={key} value={key}>
               {g.name}
             </option>
           ))}
         </select>
       </label>
+      <p className="hint">
+        This only changes the name and background ideas offered here. It decides nothing else, and
+        you can always type your own.
+      </p>
       <label>
         Background: what your character did before
         <input
@@ -450,9 +454,10 @@ export function Builder() {
   const uid = user!.uid;
   // Made for a campaign: its world's Origins and Abilities are offered too,
   // and the finished character goes straight into it.
-  const campaignId = useSearchParams()[0].get('campaign');
+  const asked = useSearchParams()[0].get('campaign');
   const { limits } = useAccount(uid);
-  const extra = useContent(campaignId);
+  const memberships = useMemberships(uid) ?? [];
+  const worlds = useWorlds(uid, true);
   const [draft, setDraft] = useState<Draft>(() => {
     const saved = localStorage.getItem(draftKey(uid));
     return saved ? { ...emptyDraft(), ...(JSON.parse(saved) as Draft) } : emptyDraft();
@@ -461,6 +466,16 @@ export function Builder() {
   useEffect(() => {
     localStorage.setItem(draftKey(uid), JSON.stringify(draft));
   }, [draft, uid]);
+
+  // Where the character is from decides which extra Origins and Abilities are offered.
+  const source = asked ? `c:${asked}` : (draft.source ?? '');
+  const campaignId = source.startsWith('c:') ? source.slice(2) : null;
+  const fromCampaign = useContent(campaignId);
+  const world = worlds.find((w) => `w:${w.id}` === source);
+  const extra = world ? world.content : fromCampaign;
+  const choose = (next: string) =>
+    // Choices made from another world's lists may not exist in this one.
+    setDraft({ ...draft, source: next, originId: undefined, affinity: null, abilities: [] });
 
   const finish = () => {
     const sheet = buildCharacter(draft, extra);
@@ -492,8 +507,32 @@ export function Builder() {
       draft={draft}
       onChange={setDraft}
       onFinish={finish}
-      onCancel={() => navigate(campaignId ? `/k/${campaignId}` : '/')}
+      onCancel={() => navigate(asked ? `/k/${asked}` : '/')}
       extra={extra}
+      header={
+        !asked && memberships.length + worlds.length > 0 ? (
+          <label className="form-row">
+            Which world is this character for?
+            <select value={source} onChange={(e) => choose(e.target.value)}>
+              <option value="">Any world: the rulebook&rsquo;s own lists</option>
+              {memberships.map((m) => (
+                <option key={m.campaignId} value={`c:${m.campaignId}`}>
+                  The campaign {m.name}
+                </option>
+              ))}
+              {worlds.map((w) => (
+                <option key={w.id} value={`w:${w.id}`}>
+                  Your world {w.name}
+                </option>
+              ))}
+            </select>
+            <span className="hint">
+              A campaign or world can add its own Origins and Abilities to choose from. A character
+              made for a campaign joins it.
+            </span>
+          </label>
+        ) : undefined
+      }
     />
   );
 }

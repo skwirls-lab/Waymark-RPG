@@ -20,7 +20,8 @@ export const STEPS = [
   'Starting gear',
 ] as const;
 
-export type Genre = 'fantasy' | 'modern' | 'scifi';
+/** A key of the idea lists in ideas.ts. */
+export type Genre = string;
 
 /** Everything chosen so far. Saved as the player goes, so a half-made character survives a closed tab. */
 export interface Draft {
@@ -45,6 +46,8 @@ export interface Draft {
   kitWeapon?: number;
   kitArmor?: number;
   kitTools?: number;
+  /** Whose extra Origins and Abilities to offer: a campaign (`c:id`) or one of your worlds (`w:id`). */
+  source?: string;
 }
 
 export const emptyDraft = (): Draft => ({

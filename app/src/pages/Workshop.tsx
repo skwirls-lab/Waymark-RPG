@@ -115,7 +115,7 @@ function Maker<T extends { id: string; name: string }, A extends AiAction>({
   title: string;
   addLabel: string;
   /** The AI button that can fill the form in. */
-  ai: { action: A; label: string; campaignId: string };
+  ai: { action: A; label: string; campaignId: string | undefined };
   items: T[];
   describe: (item: T) => ReactNode;
   onDelete: (item: T) => void;
@@ -160,15 +160,18 @@ function Maker<T extends { id: string; name: string }, A extends AiAction>({
           {addLabel}
         </button>
       )}
-      <AiSuggest
-        action={ai.action}
-        campaignId={ai.campaignId}
-        label={ai.label}
-        onProposal={(value) => {
-          setProposal({ value, n: (proposal?.n ?? 0) + 1 });
-          setOpen(true);
-        }}
-      />
+      {/* AI help draws on a campaign's setting, so it is offered inside a campaign. */}
+      {ai.campaignId && (
+        <AiSuggest
+          action={ai.action}
+          campaignId={ai.campaignId}
+          label={ai.label}
+          onProposal={(value) => {
+            setProposal({ value, n: (proposal?.n ?? 0) + 1 });
+            setOpen(true);
+          }}
+        />
+      )}
     </section>
   );
 }
@@ -636,11 +639,30 @@ function CreatureForm({
 }
 
 /** Where the Warden makes their world's own creatures, Origins, Abilities and gear. */
-export function Workshop({ campaignId, uid }: { campaignId: string; uid: string }) {
-  const content = useContent(campaignId);
-  const creatures = useCreatures(campaignId, true);
-  const worlds = useWorlds(uid, true);
-  const [worldName, setWorldName] = useState('');
+interface ViewProps {
+  content: Content;
+  creatures: CustomCreature[];
+  saveContentTo: (next: Content) => Promise<unknown>;
+  saveCreaturesTo: (next: CustomCreature[]) => Promise<unknown>;
+  /** The campaign whose setting AI suggestions draw on. Without one, AI help is not offered. */
+  aiCampaignId?: string;
+  intro: ReactNode;
+  children?: ReactNode;
+}
+
+/**
+ * Where creatures, Origins, Abilities and gear are made. It works on
+ * whatever it is given: a campaign's own content, or a world kept for later.
+ */
+export function WorkshopView({
+  content,
+  creatures,
+  saveContentTo,
+  saveCreaturesTo,
+  aiCampaignId,
+  intro,
+  children,
+}: ViewProps) {
   const [message, setMessage] = useState<string>();
   const run = (action: Promise<unknown>, done = '') => {
     setMessage(undefined);
@@ -649,17 +671,15 @@ export function Workshop({ campaignId, uid }: { campaignId: string; uid: string 
       () => setMessage('That could not be saved. Check your connection and try again.'),
     );
   };
-  const put = (next: Content, done: string) => run(saveContent(campaignId, next), done);
+  const put = (next: Content, done: string) => run(saveContentTo(next), done);
   const affinityName = (id: string) => allAffinities(content).find((a) => a.id === id)?.name ?? id;
-  const nothingMade =
-    creatures.length + content.origins.length + content.abilities.length + content.gear.length ===
-    0;
 
   return (
     <>
+      <p className="hint">{intro}</p>
       <p className="hint">
-        Everything here is made from the rulebook&rsquo;s own forms. Origins and Abilities you make
-        appear when anyone builds a character for this campaign.
+        The rulebook&rsquo;s own Origins, Affinities, Abilities, gear and creatures are always there
+        as well. What you make here is added to them.
       </p>
       <p className="note" role="status" hidden={!message}>
         {message}
@@ -668,19 +688,13 @@ export function Workshop({ campaignId, uid }: { campaignId: string; uid: string 
       <Maker
         title="Creatures"
         addLabel="New creature"
-        ai={{ action: 'creature', label: 'Suggest a creature', campaignId }}
+        ai={{ action: 'creature', label: 'Suggest a creature', campaignId: aiCampaignId }}
         items={creatures}
         describe={(c) =>
           `HP ${c.hp} · Armor ${c.armor} · STR ${c.str} · DEX ${c.dex} · WIL ${c.wil} · ${c.attack}`
         }
         onDelete={(c) =>
-          run(
-            saveCreatures(
-              campaignId,
-              creatures.filter((x) => x.id !== c.id),
-            ),
-            `${c.name} deleted.`,
-          )
+          run(saveCreaturesTo(creatures.filter((x) => x.id !== c.id)), `${c.name} deleted.`)
         }
       >
         {(close, initial) => (
@@ -689,7 +703,7 @@ export function Workshop({ campaignId, uid }: { campaignId: string; uid: string 
             onCancel={close}
             onSave={(c) => {
               run(
-                saveCreatures(campaignId, [...creatures, c]),
+                saveCreaturesTo([...creatures, c]),
                 `${c.name} saved. Find it in the fight tracker.`,
               );
               close();
@@ -720,7 +734,7 @@ export function Workshop({ campaignId, uid }: { campaignId: string; uid: string 
       <Maker
         title="Origins"
         addLabel="New Origin"
-        ai={{ action: 'origin', label: 'Suggest an Origin', campaignId }}
+        ai={{ action: 'origin', label: 'Suggest an Origin', campaignId: aiCampaignId }}
         items={content.origins}
         describe={(o) => `+1 ${o.bonus.attribute.toUpperCase()} · ${o.trait} Kit: ${o.kitText}`}
         onDelete={(o) =>
@@ -745,7 +759,7 @@ export function Workshop({ campaignId, uid }: { campaignId: string; uid: string 
       <Maker
         title="Abilities and Affinities"
         addLabel="New Ability"
-        ai={{ action: 'ability', label: 'Suggest an Ability', campaignId }}
+        ai={{ action: 'ability', label: 'Suggest an Ability', campaignId: aiCampaignId }}
         items={content.abilities}
         describe={(a) => `${affinityName(a.affinity)} · ${a.text}`}
         onDelete={(a) => {
@@ -784,7 +798,7 @@ export function Workshop({ campaignId, uid }: { campaignId: string; uid: string 
       <Maker
         title="Gear"
         addLabel="New item"
-        ai={{ action: 'item', label: 'Suggest an item', campaignId }}
+        ai={{ action: 'item', label: 'Suggest an item', campaignId: aiCampaignId }}
         items={content.gear}
         describe={(g) =>
           [
@@ -817,6 +831,41 @@ export function Workshop({ campaignId, uid }: { campaignId: string; uid: string 
         )}
       </Maker>
 
+      {children}
+    </>
+  );
+}
+
+/** The workshop inside a campaign: what is made here is used in that campaign at once. */
+export function Workshop({ campaignId, uid }: { campaignId: string; uid: string }) {
+  const content = useContent(campaignId);
+  const creatures = useCreatures(campaignId, true);
+  const worlds = useWorlds(uid, true);
+  const [worldName, setWorldName] = useState('');
+  const [message, setMessage] = useState<string>();
+  const run = (action: Promise<unknown>, done = '') => {
+    setMessage(undefined);
+    action.then(
+      () => setMessage(done),
+      () => setMessage('That could not be saved. Check your connection and try again.'),
+    );
+  };
+  const nothingMade =
+    creatures.length + content.origins.length + content.abilities.length + content.gear.length ===
+    0;
+
+  return (
+    <WorkshopView
+      content={content}
+      creatures={creatures}
+      saveContentTo={(next) => saveContent(campaignId, next)}
+      saveCreaturesTo={(next) => saveCreatures(campaignId, next)}
+      aiCampaignId={campaignId}
+      intro="Everything here is made from the rulebook's own forms. Origins and Abilities you make appear when anyone builds a character for this campaign."
+    >
+      <p className="note" role="status" hidden={!message}>
+        {message}
+      </p>
       <section aria-labelledby="worlds">
         <h2 id="worlds">Worlds</h2>
         <p className="hint">
@@ -901,6 +950,6 @@ export function Workshop({ campaignId, uid }: { campaignId: string; uid: string 
           })}
         </ul>
       </section>
-    </>
+    </WorkshopView>
   );
 }

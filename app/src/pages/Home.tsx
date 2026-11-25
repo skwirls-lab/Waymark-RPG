@@ -121,6 +121,15 @@ export function Home() {
         {form === 'start' && <StartCampaignForm />}
         {form === 'redeem' && <RedeemHandoverForm />}
 
+        <h2>Your worlds</h2>
+        <p>
+          Make your own Origins, Abilities, gear and creatures, and use them in any character or
+          campaign.
+        </p>
+        <Link to="/worlds" className="button small as-link">
+          Open your worlds
+        </Link>
+
         <AskRules />
         <p className="fineprint">
           New here? <a href="https://waymark-rpg.web.app/guide/">A short guide to the app</a> ·{' '}

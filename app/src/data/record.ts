@@ -35,14 +35,27 @@ export interface Beat {
   private: boolean;
   cardId: string | null;
   byUid: string;
+  /** Set on lines the fight tracker adds by itself. */
+  kind?: 'fight';
 }
 
-export const CARD_KINDS = ['person', 'place', 'creature', 'faction', 'item', 'thread'] as const;
+export const CARD_KINDS = [
+  'person',
+  'place',
+  'creature',
+  'fight',
+  'puzzle',
+  'faction',
+  'item',
+  'thread',
+] as const;
 export type CardKind = (typeof CARD_KINDS)[number];
 export const CARD_KIND_LABEL: Record<CardKind, string> = {
   person: 'Person',
   place: 'Place',
   creature: 'Creature',
+  fight: 'Fight',
+  puzzle: 'Puzzle or obstacle',
   faction: 'Faction',
   item: 'Item',
   thread: 'Open thread',
@@ -61,8 +74,18 @@ export interface Card {
   name: string;
   text: string;
   status: CardStatus;
+  /** The session brief this card is part of the plan for, if any. */
+  sessionId?: string | null;
   createdAt: number;
   updatedAt: number;
+}
+
+/** What only the Warden keeps about a card, beyond a private note. */
+export interface CardDetails {
+  /** For a creature card: which creature's numbers it uses. */
+  creatureId?: string | null;
+  /** For a fight card: who is in it. */
+  enemies?: { creatureId: string; count: number }[];
 }
 
 /** A world's own Origins, Affinities, Abilities and gear. */
@@ -114,7 +137,7 @@ export const saveFight = (campaignId: string, fight: Fight | null) =>
 export async function addBeat(
   campaignId: string,
   byUid: string,
-  beat: Pick<Beat, 'text' | 'milestone' | 'private' | 'cardId'>,
+  beat: Pick<Beat, 'text' | 'milestone' | 'private' | 'cardId'> & { kind?: 'fight' },
 ): Promise<void> {
   const { db, fs } = await tools();
   await fs.addDoc(fs.collection(db, `campaigns/${campaignId}/beats`), {
@@ -141,6 +164,7 @@ export async function saveCard(
   campaignId: string,
   card: Omit<Card, 'id' | 'createdAt' | 'updatedAt'> & { id?: string; createdAt?: number },
   notes: string,
+  details: CardDetails = {},
 ): Promise<void> {
   const { db, fs } = await tools();
   const id = card.id ?? newId();
@@ -151,10 +175,15 @@ export async function saveCard(
     name: card.name,
     text: card.text,
     status: card.status,
+    sessionId: card.sessionId ?? null,
     createdAt: card.createdAt ?? now,
     updatedAt: now,
   });
-  batch.set(fs.doc(db, `campaigns/${campaignId}/cardNotes/${id}`), { text: notes });
+  batch.set(fs.doc(db, `campaigns/${campaignId}/cardNotes/${id}`), {
+    text: notes,
+    creatureId: details.creatureId ?? null,
+    enemies: details.enemies ?? [],
+  });
   await batch.commit();
 }
 export async function setCardStatus(campaignId: string, id: string, status: CardStatus) {
@@ -172,15 +201,18 @@ export async function deleteCard(campaignId: string, id: string): Promise<void> 
   await batch.commit();
 }
 
+/** Saves a world, new or existing, and returns its id. */
 export async function saveWorld(
   uid: string,
-  world: Omit<World, 'id' | 'updatedAt'>,
-): Promise<void> {
+  world: Omit<World, 'id' | 'updatedAt'> & { id?: string },
+): Promise<string> {
   const { db, fs } = await tools();
+  const { id = newId(), ...rest } = world;
   await fs.setDoc(
-    fs.doc(db, `users/${uid}/worlds/${newId()}`),
-    JSON.parse(JSON.stringify({ ...world, updatedAt: Date.now() })),
+    fs.doc(db, `users/${uid}/worlds/${id}`),
+    JSON.parse(JSON.stringify({ ...rest, updatedAt: Date.now() })),
   );
+  return id;
 }
 export async function deleteWorld(uid: string, id: string): Promise<void> {
   const { db, fs } = await tools();
@@ -283,6 +315,29 @@ export function useCardNotes(campaignId: string, enabled: boolean): Record<strin
     );
   }, [campaignId, enabled]);
   return notes;
+}
+
+/** Warden only: the creature or enemies behind each card, by card id. */
+export function useCardDetails(campaignId: string, enabled: boolean): Record<string, CardDetails> {
+  const [details, setDetails] = useState<Record<string, CardDetails>>({});
+  useEffect(() => {
+    if (!enabled) {
+      setDetails({});
+      return;
+    }
+    return watchCollection<[string, CardDetails]>(
+      `campaigns/${campaignId}/cardNotes`,
+      (id, d) => [
+        id,
+        {
+          creatureId: (d.creatureId as string | null | undefined) ?? null,
+          enemies: Array.isArray(d.enemies) ? (d.enemies as CardDetails['enemies']) : [],
+        },
+      ],
+      (items) => setDetails(Object.fromEntries(items)),
+    );
+  }, [campaignId, enabled]);
+  return details;
 }
 
 export function useWorlds(uid: string, enabled: boolean): World[] {
