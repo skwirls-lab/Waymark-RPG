@@ -1,4 +1,4 @@
-import { abilityIndex, data, type Origin } from './data.ts';
+import { data, type Origin } from './data.ts';
 import { roll, rollSum, type Rng } from './dice.ts';
 import { settle, slotsUsed } from './inventory.ts';
 import { RulesError, type AttributeKey, type Character, type Die, type Item } from './types.ts';
@@ -101,8 +101,18 @@ export interface NewCharacter {
   items?: Item[];
 }
 
-/** Puts the six steps together into a finished character. */
-export function createCharacter(input: NewCharacter): Character {
+/** Content a world adds, as far as making a character is concerned. See workshop.ts. */
+export interface CreationContent {
+  origins?: Origin[];
+  affinities?: { id: string; name: string }[];
+  abilities?: { id: string; name: string; text: string; affinity: string }[];
+}
+
+/**
+ * Puts the six steps together into a finished character.
+ * `extra` adds a world's own Origins, Affinities and Abilities to the rulebook's.
+ */
+export function createCharacter(input: NewCharacter, extra: CreationContent = {}): Character {
   for (const key of ['str', 'dex', 'wil'] as const) {
     const value = input.attributes[key];
     if (!Number.isInteger(value) || value < 3 || value > 18) {
@@ -112,11 +122,17 @@ export function createCharacter(input: NewCharacter): Character {
   if (!Number.isInteger(input.hp) || input.hp < 1 || input.hp > 6) {
     throw new RulesError('bad-hp', 'Starting Hit Protection is 1d6: 1 to 6.');
   }
-  const origin = input.originId ? data.origins.find((o) => o.id === input.originId) : undefined;
+  const customOrigin = input.originId
+    ? extra.origins?.find((o) => o.id === input.originId)
+    : undefined;
+  const origin =
+    customOrigin ??
+    (input.originId ? data.origins.find((o) => o.id === input.originId) : undefined);
   if (input.originId && !origin) throw new RulesError('no-origin', 'That Origin does not exist.');
 
   const primary = input.primaryAffinity ?? null;
-  if (primary && !data.affinities.some((a) => a.id === primary)) {
+  const customAffinity = extra.affinities?.find((a) => a.id === primary);
+  if (primary && !customAffinity && !data.affinities.some((a) => a.id === primary)) {
     throw new RulesError('no-affinity', 'That Affinity does not exist.');
   }
   const abilities = input.abilities ?? [];
@@ -124,7 +140,10 @@ export function createCharacter(input: NewCharacter): Character {
     throw new RulesError('too-many-abilities', 'A new character knows two Abilities at most.');
   if (new Set(abilities).size !== abilities.length)
     throw new RulesError('duplicate-ability', 'Choose two different Abilities.');
-  if (abilities.some((id) => !primary || abilityIndex[id] !== primary)) {
+  const affinityOf = (id: string) =>
+    extra.abilities?.find((a) => a.id === id)?.affinity ??
+    data.affinities.find((a) => a.abilities.some((b) => b.id === id))?.id;
+  if (abilities.some((id) => !primary || affinityOf(id) !== primary)) {
     throw new RulesError('wrong-affinity', 'Starting Abilities come from the Primary Affinity.');
   }
 
@@ -160,6 +179,30 @@ export function createCharacter(input: NewCharacter): Character {
     coins: input.coins,
     rulesVersion: data.meta.version,
   };
+  const customAbilities = abilities.flatMap(
+    (id) => extra.abilities?.filter((a) => a.id === id) ?? [],
+  );
+  if (customOrigin || customAffinity || customAbilities.length > 0) {
+    character.homebrew = {
+      ...(customOrigin
+        ? {
+            origin: {
+              name: customOrigin.name,
+              trait: customOrigin.trait,
+              drawback: customOrigin.drawback,
+            },
+          }
+        : {}),
+      ...(customAffinity ? { affinities: { [customAffinity.id]: customAffinity.name } } : {}),
+      ...(customAbilities.length > 0
+        ? {
+            abilities: Object.fromEntries(
+              customAbilities.map((a) => [a.id, { name: a.name, text: a.text }]),
+            ),
+          }
+        : {}),
+    };
+  }
   if (slotsUsed(character) > character.slotCapacity) {
     throw new RulesError('no-room', 'That is more than this character can carry.');
   }

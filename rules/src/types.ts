@@ -62,6 +62,16 @@ export interface Character {
   scars: ScarRecord[];
   conditions: string[];
   coins: number;
+  /**
+   * Content from a world, not the rulebook, that this character uses. Kept
+   * on the character so the sheet still reads correctly if the character
+   * leaves the campaign it was made in.
+   */
+  homebrew?: {
+    origin?: { name: string; trait: string; drawback: string | null };
+    affinities?: Record<string, string>;
+    abilities?: Record<string, { name: string; text: string }>;
+  };
   /** Only in worlds where Abilities cost charges instead of Fatigue. */
   abilityCharges?: Score;
   /** Only in worlds where an Ability needs a short rest before it can be used again. */
