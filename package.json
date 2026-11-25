@@ -21,7 +21,8 @@
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run test:emulators",
     "test:functions": "vitest run --config tests/functions/vitest.config.ts",
     "verify:container": "WAYMARK_NO_GOOGLE_NETWORK=1 env -u HTTPS_PROXY -u https_proxy -u HTTP_PROXY -u http_proxy -u ALL_PROXY -u all_proxy npm run verify",
-    "eval:ai": "vitest run --config tests/eval/vitest.config.ts"
+    "eval:ai": "vitest run --config tests/eval/vitest.config.ts ai.eval",
+    "eval:warden": "vitest run --config tests/eval/vitest.config.ts warden"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.0",

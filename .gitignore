@@ -10,3 +10,4 @@ coverage/
 .env.local
 functions/lib/
 tests/eval/last-run.json
+tests/eval/last-warden-run.json

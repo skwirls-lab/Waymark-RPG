@@ -118,7 +118,7 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - [x] 5. Spoken narration with pause, replay, voice, speed and off; one small interface for a hosted voice later
 - [x] 6. Memory: scene summary, beats, revealed and proposed cards
 - [x] 7. Available only on the AI Warden plan
-- [ ] 8. Rubric on 20 scripted scenes against the real model, and the measured cost of a three-hour session
+- [x] 8. Rubric on 20 scripted scenes against the real model, and the measured cost of a three-hour session (see gate evidence)
 - [ ] 9. John plays a session and signs off
 
 ## Gate evidence
@@ -198,6 +198,23 @@ The memory between build sessions. Read `docs/instructions.md` first.
 - **Chosen: anthropic/claude-haiku-5.5.** Its filing and recaps showed better judgment in reading (threads for open questions, a creature card for "something under the water"), at a cost that is still negligible: a free account's 30 requests cost about 1 cent a month, a paid account's 1,000 about 37 cents. gpt-6-luna is a sound cheaper fallback.
 - Total spent on evaluation: about 10 cents of the $2 allowed.
 - With AI switched off: the deployed app has `AI_LIVE = false` and every earlier phase's tests pass in CI (run 45531788034, Verify job green).
+
+### Phase 8 (built 2026-11-25; gate waits for John to play a session)
+
+- **Architecture:** a test fails if the engine imports anything but the rules library and its own instructions, or if anything is spliced into the instructions. 33 scripted-session tests with a scripted model: every change to a sheet, the fight or the record comes from a tool; a made-up tool, an unknown character and a model-supplied amount change nothing; narration stating a number the rules did not produce never reaches the players.
+- **Stored sessions:** 12 tests against the database emulator, including "every change appears as a result line", who may roll, one answer at a time, and the monthly limit.
+- **Speech:** 10 tests: narration is read in order, pauses and resumes, replays, stops; with speech off or no voice on the device everything still works. The end-to-end test plays a scene with speech turned off.
+- **Rubric, 20 scenes against real models** (`npm run eval:warden`), each marked by code:
+
+| Model | Passed | Danger signalled before harm | Questions answered | Outcome followed the rules | Cost per turn | Three-hour session |
+|---|---|---|---|---|---|---|
+| anthropic/claude-haiku-5.5 | 20 of 20 | 7 of 7 | 6 of 6 | 7 of 7 | $0.0006 | about 9 cents |
+| openai/gpt-6-luna | 19 of 20 | 7 of 7 | 6 of 6 | 6 of 7 | $0.0004 | about 6 cents |
+
+- The one failure: gpt-6-luna asked for a roll when the players had made a careful, sensible plan. claude-haiku-5.5 let the plan work.
+- **Cost.** A three-hour session is taken as 145 turns. Measured: 1.2 model requests a turn, about 9 cents a session, far below the design's estimate (47 cents) because the instructions and data are smaller than assumed. Twenty hours a month costs about 60 cents.
+- **Proposed price:** John approved $12.99 a month with 20 hours. At the measured cost that leaves a wide margin; it could be set lower, or a stronger model used, without loss. Chosen model: anthropic/claude-haiku-5.5.
+- Evaluation spend so far, phases 7 and 8 together: about 15 cents.
 
 ## Decisions made without asking
 
