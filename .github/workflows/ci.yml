@@ -81,5 +81,19 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           npx playwright test --config playwright.live.config.ts
+      - name: If the live check failed, show what the functions answer
+        if: failure()
+        run: |
+          set +e
+          for fn in createCampaign exportMyData; do
+            echo "== OPTIONS $fn"
+            curl -s -i -X OPTIONS "https://us-central1-waymark-rpg.cloudfunctions.net/$fn" -H "Origin: https://waymark-rpg-app.web.app" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: content-type,authorization" | head -20
+            echo "== POST $fn"
+            curl -s -i -X POST "https://us-central1-waymark-rpg.cloudfunctions.net/$fn" -H "Content-Type: application/json" -d '{"data":{}}' | head -20
+          done
+          echo "== Who may call createCampaign"
+          gcloud run services get-iam-policy createcampaign --region us-central1 --project waymark-rpg
+          echo "== Recent log lines"
+          gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="createcampaign"' --project waymark-rpg --limit 15 --format='value(severity,textPayload,httpRequest.status)'
       - name: Check the app's speed and accessibility on a phone profile
         run: node scripts/check-lighthouse.mjs https://waymark-rpg-app.web.app/

@@ -139,7 +139,7 @@ ${sidebar}
 <main id="main">${body}</main>
 </div>
 <footer class="site-footer">
-  <p>Waymark${version ? ' draft ' + version : ''}. Based on <a href="https://cairnrpg.com">Cairn</a> by Yochai Gal. Text licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>. <a href="/about/">Credits</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></p>
+  <p>Waymark${version ? ' draft ' + version : ''}. Based on <a href="https://cairnrpg.com">Cairn</a> by Yochai Gal. Text licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>. <a href="/about/">Credits</a> · <a href="/guide/">App guide</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></p>
 </footer>
 ${
   search
@@ -244,6 +244,7 @@ const vars = {
   '{{JURISDICTION}}': '[place to be confirmed]',
   '{{APP_HOST}}': 'waymark-rpg-app.web.app',
   '{{SITE_HOST}}': 'waymark-rpg.web.app',
+  '{{APP_URL}}': APP_URL,
 };
 const fill = (s) => Object.entries(vars).reduce((acc, [k, v]) => acc.split(k).join(v), s);
 const src = (name) => fill(fs.readFileSync(path.join(here, 'src', name), 'utf8'));
@@ -274,6 +275,14 @@ write(
     description: 'About Waymark, its license, and its debt to Cairn.',
     body: src('about.html'),
     active: 'about',
+  }),
+);
+write(
+  'guide/index.html',
+  layout({
+    title: 'Using the App | Waymark',
+    description: 'A short guide to the Waymark app for players and Wardens.',
+    body: src('guide.html'),
   }),
 );
 write(

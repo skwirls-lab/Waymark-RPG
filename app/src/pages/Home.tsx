@@ -122,6 +122,10 @@ export function Home() {
         {form === 'redeem' && <RedeemHandoverForm />}
 
         <AskRules />
+        <p className="fineprint">
+          New here? <a href="https://waymark-rpg.web.app/guide/">A short guide to the app</a> ·{' '}
+          <a href="https://waymark-rpg.web.app/rules/">The rules</a>
+        </p>
 
         {user?.isAnonymous && (
           <div className="note">
