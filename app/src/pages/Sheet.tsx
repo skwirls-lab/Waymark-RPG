@@ -184,6 +184,9 @@ export function SheetView({
     <main className="screen sheet-screen">
       <p className="back">
         <Link to={back.to}>← {back.label}</Link>
+        <Link to="/rules" className="rules-link">
+          Rules
+        </Link>
       </p>
       <header className="sheet-header">
         <h1>{sheet.name}</h1>

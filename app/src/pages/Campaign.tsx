@@ -366,6 +366,9 @@ export function Campaign() {
     <main className={split ? 'screen wide' : 'screen'}>
       <p className="back">
         <Link to="/">← Home</Link>
+        <Link to="/rules" className="rules-link">
+          Rules
+        </Link>
       </p>
       <p className="eyebrow">{isWarden ? 'You are the Warden' : 'Campaign'}</p>
       <h1>{campaign.name}</h1>

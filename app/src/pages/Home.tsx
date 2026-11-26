@@ -26,6 +26,9 @@ export function Home() {
           Waymark
         </span>
         <span className="button-row">
+          <Link to="/rules" className="button small as-link">
+            Rules
+          </Link>
           <Link to="/account" className="button small as-link">
             Account
           </Link>

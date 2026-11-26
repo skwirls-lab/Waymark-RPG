@@ -877,3 +877,85 @@ button.link {
   padding: 0.75rem 1rem;
   background: var(--card);
 }
+
+/* ---- The app, across the site ---- */
+.nav-app {
+  padding: 0.45rem 1rem;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+.app-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin: 2.5rem 0 0;
+  padding: 1rem 1.25rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--forest);
+  border-radius: 0 12px 12px 0;
+}
+.app-note p {
+  margin: 0;
+  flex: 1 1 18rem;
+}
+.app-note.narrow {
+  margin: 2rem auto;
+}
+.ways,
+.app-band {
+  padding: 3.5rem 1.25rem;
+  max-width: 68rem;
+  margin: 0 auto;
+}
+.cards.four {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr));
+  margin-top: 1.5rem;
+}
+.cards.four h3 {
+  margin: 0 0 0.4rem;
+}
+.soon {
+  display: inline-block;
+  font: 700 0.7rem var(--body);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--blaze-text);
+  color: var(--blaze-text);
+  vertical-align: middle;
+}
+.app-band {
+  border-top: 1px solid var(--line);
+}
+.app-text {
+  max-width: 44rem;
+  margin: 0 auto;
+}
+.ticks {
+  list-style: none;
+  padding: 0;
+  margin: 1.25rem 0;
+  display: grid;
+  gap: 0.6rem;
+}
+.ticks li {
+  padding-left: 1.6rem;
+  position: relative;
+}
+.ticks li::before {
+  content: '';
+  position: absolute;
+  left: 0.15rem;
+  top: 0.45em;
+  width: 0.7rem;
+  height: 0.4rem;
+  border-left: 3px solid var(--forest);
+  border-bottom: 3px solid var(--forest);
+  transform: rotate(-45deg);
+}

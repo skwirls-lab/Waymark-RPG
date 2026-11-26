@@ -106,13 +106,15 @@ function layout({
     ['/rules/', 'Rules', 'rules'],
     ['/sheet/', 'Character sheet', 'sheet'],
     ['/about/', 'About', 'about'],
-    [APP_URL, 'App (preview)', 'app'],
+    ['/guide/', 'App guide', 'guide'],
   ]
     .map(
       ([href, label, key]) =>
         `<a href="${href}"${active === key ? ' aria-current="page"' : ''}>${label}</a>`,
     )
     .join('');
+  // The app is the one thing in the header that is a place to go and do, so it is a button.
+  const appButton = `<a class="button primary nav-app" href="${APP_URL}">Open the app</a>`;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -132,6 +134,7 @@ ${search ? '<link rel="stylesheet" href="/pagefind/pagefind-ui.css">' : ''}
 <header class="site-header">
   <a class="brand" href="/">${logo}<span>Waymark</span></a>
   <nav class="site-nav" aria-label="Main">${nav}</nav>
+  ${appButton}
   ${search ? '<div id="search" class="search"></div>' : ''}
 </header>
 <div class="shell${sidebar ? ' has-sidebar' : ''}">
@@ -184,7 +187,8 @@ pages.forEach((p, i) => {
   const prev = pages[i - 1],
     next = pages[i + 1];
   const pager = `<nav class="pager" aria-label="Chapters">${prev ? `<a class="prev" href="/rules/${prev.slug}/"><small>Previous</small>${prev.title}</a>` : '<span></span>'}${next ? `<a class="next" href="/rules/${next.slug}/"><small>Next</small>${next.title}</a>` : '<span></span>'}</nav>`;
-  const body = `<article class="prose" data-pagefind-body>${p.part ? `<p class="eyebrow">Part ${p.part}</p>` : ''}<h1>${p.title}</h1>${p.html}</article>${pager}`;
+  const appNote = `<aside class="app-note print-hide"><p><strong>Playing tonight?</strong> The free Waymark app keeps your character sheet, rolls the dice, and tracks the campaign, so nobody has to do the sums.</p><a class="button primary" href="${APP_URL}">Open the app</a></aside>`;
+  const body = `<article class="prose" data-pagefind-body>${p.part ? `<p class="eyebrow">Part ${p.part}</p>` : ''}<h1>${p.title}</h1>${p.html}</article>${appNote}${pager}`;
   write(
     `rules/${p.slug}/index.html`,
     layout({
@@ -210,7 +214,7 @@ write(
     title: 'The Rules | Waymark',
     description: 'The complete Waymark rulebook, free to read.',
     active: 'rules',
-    body: `<div class="prose narrow"><h1>The rules</h1><p>The whole game is here and free to read. If you are new, start at the Introduction and read in order. It takes about an hour, and you can start playing after Part Two.</p></div><ol class="toc">${toc}</ol><p class="narrow center"><a href="/rules/all/">Read the whole rulebook on one page</a> · <a href="/Waymark-Rulebook.md" download>Download as a text file</a></p>`,
+    body: `<div class="prose narrow"><h1>The rules</h1><p>The whole game is here and free to read. If you are new, start at the Introduction and read in order. It takes about an hour, and you can start playing after Part Two.</p></div><ol class="toc">${toc}</ol><aside class="app-note narrow"><p><strong>Rather not track it on paper?</strong> The free Waymark app builds characters step by step, keeps every sheet, and runs the numbers at the table.</p><a class="button primary" href="${APP_URL}">Open the app</a></aside><p class="narrow center"><a href="/rules/all/">Read the whole rulebook on one page</a> · <a href="/Waymark-Rulebook.md" download>Download as a text file</a></p>`,
   }),
 );
 
@@ -283,6 +287,7 @@ write(
     title: 'Using the App | Waymark',
     description: 'A short guide to the Waymark app for players and Wardens.',
     body: src('guide.html'),
+    active: 'guide',
   }),
 );
 write(

@@ -1000,3 +1000,32 @@ fieldset.plain:disabled .tab {
   background: var(--paper) !important;
   font-size: 0.95rem;
 }
+
+/* ---- Rules, a tap away during play ---- */
+.back {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+.rules-link {
+  font-weight: 700;
+}
+.rules-text {
+  overflow-x: auto;
+}
+.rules-text table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75rem 0;
+}
+.rules-text th,
+.rules-text td {
+  border: 1px solid var(--line);
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+.rules-text pre {
+  white-space: pre-wrap;
+}
