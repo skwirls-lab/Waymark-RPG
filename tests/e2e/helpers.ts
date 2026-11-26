@@ -112,6 +112,9 @@ export async function startCampaign(
   await expect(page.getByRole('heading', { name: campaignName, level: 1 })).toBeVisible();
   const code = (await page.getByTestId('join-code').textContent())!.trim();
   expect(code).toMatch(/^[A-Z2-9]{6}$/);
+  // Play happens in sessions, so the group sits down to one straight away.
+  await page.getByRole('button', { name: 'Start session 1' }).click();
+  await expect(page.getByTestId('session-status')).toContainText('Session 1 is being played.');
   return code;
 }
 

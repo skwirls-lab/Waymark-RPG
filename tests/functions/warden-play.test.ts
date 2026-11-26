@@ -90,6 +90,7 @@ beforeEach(async () => {
     updatedAt: 1,
   });
   await setAiWarden(db, 'dana', { campaignId: cid, on: true });
+  await db.doc(`campaigns/${cid}/shared/session`).set({ activeId: 's1' });
 });
 
 describe('handing a campaign to the AI Warden', () => {
@@ -107,6 +108,14 @@ describe('handing a campaign to the AI Warden', () => {
     await expect(play('sam', { text: 'Hello' }, scripted(reply('Hi')))).rejects.toThrow(
       'not run by the AI Warden',
     );
+  });
+
+  it('the story moves only during a session', async () => {
+    await db.doc(`campaigns/${cid}/shared/session`).set({ activeId: null });
+    await expect(play('sam', { text: 'Hello' }, scripted(reply('Hi')))).rejects.toThrow(
+      'No session is being played',
+    );
+    expect((await db.collection(`campaigns/${cid}/turns`).get()).size).toBe(0);
   });
 
   it('only members can play, and only while the model is connected and the plan holds', async () => {
@@ -189,12 +198,15 @@ describe('a turn, stored', () => {
     expect(ash.get('sheet').hp.current).toBe(2);
     expect(ash.get('undo').sheet.hp.current).toBe(4);
     expect((await db.doc('characters/sam_1').get()).get('updatedAt')).toBe(1);
-    const feed = (await db.collection(`campaigns/${cid}/log`).get()).docs.map((d) => d.data());
-    expect(feed).toHaveLength(1);
-    expect(feed[0]).toMatchObject({
-      byName: 'The Warden',
-      text: 'The fall: Ash took 2 damage. HP 2.',
-    });
+    const timeline = (await db.collection(`campaigns/${cid}/beats`).get()).docs
+      .map((d) => d.data())
+      .sort((a, b) => a.at.toMillis() - b.at.toMillis());
+    expect(timeline.map((b) => `${b.kind}: ${b.text}`)).toEqual([
+      'said: Ash: I cross anyway.',
+      'narration: A plank gives way.\n\nYou catch the rope.',
+      'result: The fall: Ash took 2 damage. HP 2.',
+    ]);
+    expect(timeline.every((b) => b.sessionId === 's1' && b.private === false)).toBe(true);
   });
 
   it('every change to the game appears as a result: nothing changes silently', async () => {
@@ -227,7 +239,9 @@ describe('a turn, stored', () => {
       scripted(reply('He looks up.', tools), reply('"No crossing tonight."')),
     );
     expect((await db.doc(`campaigns/${cid}/cards/c1`).get()).get('status')).toBe('met');
-    const beats = (await db.collection(`campaigns/${cid}/beats`).get()).docs.map((d) => d.data());
+    const beats = (await db.collection(`campaigns/${cid}/beats`).get()).docs
+      .map((d) => d.data())
+      .filter((b) => !b.kind);
     expect(beats[0]).toMatchObject({
       text: 'The party met Old Marrow.',
       milestone: true,

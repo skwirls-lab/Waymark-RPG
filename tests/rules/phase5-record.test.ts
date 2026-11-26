@@ -39,6 +39,7 @@ const beat = (byUid: string, over: Record<string, unknown> = {}) => ({
   private: false,
   cardId: null,
   byUid,
+  sessionId: 's1',
   ...over,
 });
 
@@ -53,6 +54,15 @@ beforeEach(async () => {
       .set({ role: 'warden', displayName: 'Dana', control: 'direct' });
     await db.doc(`${K}/members/player`).set({ role: 'player', displayName: 'Sam', control: 'ask' });
     await db.doc(`${K}/shared/brief`).set({ setting: 'A drowned valley.', sessions: [] });
+    await db.doc(`${K}/shared/session`).set({ activeId: 's1' });
+    await db.doc(`${K}/sessions/s1`).set({
+      number: 1,
+      startedAt: 1,
+      endedAt: null,
+      wardenKind: 'human',
+      players: ['Sam'],
+      summary: '',
+    });
     await db.doc(`${K}/private/notes`).set({ text: 'The ferryman is the thief.' });
     await db.doc(`${K}/private/creatures`).set({ list: [] });
     await db.doc(`${K}/private/fight`).set({ round: 1 });
@@ -270,6 +280,106 @@ describe("an AI-run campaign's story", () => {
     await assertFails(as('player').doc(`${K}/turns/t1`).delete());
     await assertFails(as('player').doc(`${K}/private/scene`).get());
     await assertFails(as('warden').doc(`${K}/private/scene`).set({ pending: null }));
+  });
+});
+
+describe('sessions', () => {
+  const session = (over: Record<string, unknown> = {}) => ({
+    number: 2,
+    startedAt: 5,
+    endedAt: null,
+    wardenKind: 'human',
+    players: ['Sam'],
+    summary: '',
+    ...over,
+  });
+
+  it('the Warden starts and ends them; every member can read them', async () => {
+    await assertSucceeds(as('warden').doc(`${K}/sessions/s2`).set(session()));
+    await assertSucceeds(as('warden').doc(`${K}/shared/session`).set({ activeId: 's2' }));
+    await assertSucceeds(
+      as('warden')
+        .doc(`${K}/sessions/s2`)
+        .set(session({ endedAt: 9, summary: 'They crossed.' })),
+    );
+    await assertSucceeds(as('player').collection(`${K}/sessions`).get());
+    await assertSucceeds(as('player').doc(`${K}/shared/session`).get());
+    await assertFails(as('stranger').collection(`${K}/sessions`).get());
+  });
+
+  it('a player cannot start, end or rewrite one, and nobody can delete one', async () => {
+    await assertFails(as('player').doc(`${K}/sessions/s2`).set(session()));
+    await assertFails(as('player').doc(`${K}/shared/session`).set({ activeId: null }));
+    await assertFails(as('player').doc(`${K}/sessions/s1`).update({ summary: 'We won.' }));
+    await assertFails(as('warden').doc(`${K}/sessions/s1`).delete());
+    await assertFails(
+      as('warden')
+        .doc(`${K}/sessions/s3`)
+        .set(session({ wardenKind: 'robot' })),
+    );
+  });
+
+  it('nothing goes on the timeline between sessions, or into a session that is not the one being played', async () => {
+    await assertFails(
+      as('warden')
+        .collection(`${K}/beats`)
+        .add(beat('warden', { sessionId: 'old' })),
+    );
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(`${K}/shared/session`).set({ activeId: null });
+    });
+    await assertFails(as('warden').collection(`${K}/beats`).add(beat('warden')));
+    await assertFails(
+      as('player')
+        .collection(`${K}/beats`)
+        .add(beat('player', { kind: 'roll' })),
+    );
+  });
+
+  it("during a session a player's own rolls and sheet changes go on the timeline, in the open", async () => {
+    await assertSucceeds(
+      as('player')
+        .collection(`${K}/beats`)
+        .add(beat('player', { kind: 'roll', text: 'Sam rolled a d6: 4' })),
+    );
+    await assertSucceeds(
+      as('player')
+        .collection(`${K}/beats`)
+        .add(beat('player', { kind: 'change', text: 'Wren took 2 damage.' })),
+    );
+    // But not a story beat, a fight line, a milestone, a private line, or one under another name.
+    await assertFails(as('player').collection(`${K}/beats`).add(beat('player')));
+    await assertFails(
+      as('player')
+        .collection(`${K}/beats`)
+        .add(beat('player', { kind: 'fight' })),
+    );
+    await assertFails(
+      as('player')
+        .collection(`${K}/beats`)
+        .add(beat('player', { kind: 'roll', milestone: true })),
+    );
+    await assertFails(
+      as('player')
+        .collection(`${K}/beats`)
+        .add(beat('player', { kind: 'roll', private: true })),
+    );
+    await assertFails(
+      as('player')
+        .collection(`${K}/beats`)
+        .add(beat('warden', { kind: 'roll' })),
+    );
+    await assertFails(
+      as('stranger')
+        .collection(`${K}/beats`)
+        .add(beat('stranger', { kind: 'roll' })),
+    );
+  });
+
+  it('a beat cannot be moved to another session afterwards', async () => {
+    const added = await as('warden').collection(`${K}/beats`).add(beat('warden'));
+    await assertFails(added.update({ sessionId: 'other' }));
+    await assertSucceeds(added.update({ milestone: true }));
   });
 });
 

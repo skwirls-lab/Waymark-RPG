@@ -313,23 +313,63 @@ export async function clearRequest(campaignId: string, id: string): Promise<void
   await fs.deleteDoc(fs.doc(db, 'campaigns', campaignId, 'requests', id));
 }
 
-/** Adds a line to the campaign's activity feed. Never throws: the feed is not worth failing an action for. */
+/** Thrown when something is to be recorded and no session is being played. */
+export class NoSession extends Error {
+  constructor() {
+    super('Start a session first. Everything on the timeline happens during one.');
+  }
+}
+
+/** What kind of line it is. A plain story beat has no kind. */
+export type BeatKind = 'fight' | 'roll' | 'change';
+
+/**
+ * Adds a line to the campaign's timeline, inside the session being played.
+ * Between sessions nothing is recorded, and this throws `NoSession`.
+ */
+export async function writeBeat(
+  campaignId: string,
+  byUid: string,
+  beat: {
+    text: string;
+    milestone?: boolean;
+    private?: boolean;
+    cardId?: string | null;
+    kind?: BeatKind;
+  },
+): Promise<void> {
+  const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
+  const session = await fs.getDoc(fs.doc(db, 'campaigns', campaignId, 'shared', 'session'));
+  const sessionId = session.get('activeId') as string | null | undefined;
+  if (!sessionId) throw new NoSession();
+  await fs.addDoc(fs.collection(db, 'campaigns', campaignId, 'beats'), {
+    text: beat.text.slice(0, 2000),
+    milestone: beat.milestone ?? false,
+    private: beat.private ?? false,
+    cardId: beat.cardId ?? null,
+    ...(beat.kind ? { kind: beat.kind } : {}),
+    byUid,
+    sessionId,
+    at: fs.serverTimestamp(),
+  });
+}
+
+/**
+ * Notes a roll or a change to a sheet on the timeline. Never throws: between
+ * sessions, or offline, the action itself still happens and simply goes
+ * unrecorded.
+ */
 export async function addLog(
   campaignId: string,
   byUid: string,
-  byName: string,
+  _byName: string,
   text: string,
+  kind: BeatKind = 'change',
 ): Promise<void> {
   try {
-    const [db, fs] = await Promise.all([getDb(), import('firebase/firestore')]);
-    await fs.addDoc(fs.collection(db, 'campaigns', campaignId, 'log'), {
-      at: Date.now(),
-      byUid,
-      byName,
-      text: text.slice(0, 500),
-    });
+    await writeBeat(campaignId, byUid, { text: text.slice(0, 500), kind });
   } catch {
-    // Offline or no longer a member.
+    // Between sessions, offline, or no longer a member.
   }
 }
 

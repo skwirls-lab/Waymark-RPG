@@ -19,7 +19,7 @@ export type RulesAnswer = AiResult<'rules'> & { sectionTitle: string | null; lin
  */
 export const askAi = <A extends AiAction>(
   action: A,
-  input: { campaignId?: string; hint?: string; question?: string },
+  input: { campaignId?: string; hint?: string; question?: string; sessionId?: string },
 ) => call<AiAnswer<A>>('aiHelp', { action, ...input });
 
 /** How many AI requests the account has used this calendar month. */

@@ -18,7 +18,6 @@ import {
   createRequest,
   type Campaign,
   type CampaignRequest,
-  type LogEntry,
   type Member,
   type Summary,
   type WardenCharacter,
@@ -765,33 +764,56 @@ const clock = (at: number) =>
   new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 /** What was rolled and what changed, for everyone at the table, with dice anyone can roll in the open. */
-export function ActivityFeed({ log, onRoll }: { log: LogEntry[]; onRoll: (text: string) => void }) {
+/** Dice rolled in the open. Each roll goes on the timeline for the whole table. */
+export function OpenDice({
+  running,
+  latest,
+  onRoll,
+}: {
+  /** Whether a session is being played. Rolls are recorded only during one. */
+  running: boolean;
+  /** The last few lines of the timeline, newest first. */
+  latest: { id: string; at: number; text: string }[];
+  onRoll: (text: string) => void;
+}) {
+  const [shown, setShown] = useState<string>();
   return (
-    <section aria-labelledby="feed">
-      <h2 id="feed">At the table</h2>
+    <section aria-labelledby="dice">
+      <h2 id="dice">Dice</h2>
       <div className="dice-buttons" role="group" aria-label="Roll in the open">
         {DICE.map((die) => (
           <button
             key={die}
             type="button"
             className="button small"
-            onClick={() => onRoll(`rolled a d${die}: ${Math.floor(Math.random() * die) + 1}`)}
+            onClick={() => {
+              const text = `rolled a d${die}: ${Math.floor(Math.random() * die) + 1}`;
+              setShown(`You ${text}.`);
+              onRoll(text);
+            }}
           >
             d{die}
           </button>
         ))}
       </div>
-      {log.length === 0 && (
-        <p className="muted">Nothing yet. Rolls and changes will appear here for everyone.</p>
+      <p className="note" role="status" hidden={!shown}>
+        {shown}
+      </p>
+      <p className="hint">
+        {running
+          ? 'Rolls go on the timeline, for everyone to see.'
+          : 'No session is being played, so rolls are not recorded.'}
+      </p>
+      {latest.length > 0 && (
+        <ol className="feed" aria-label="Latest on the timeline">
+          {latest.map((entry) => (
+            <li key={entry.id}>
+              <time dateTime={new Date(entry.at).toISOString()}>{clock(entry.at)}</time>
+              <span>{entry.text}</span>
+            </li>
+          ))}
+        </ol>
       )}
-      <ol className="feed" aria-label="Activity">
-        {log.map((entry) => (
-          <li key={entry.id}>
-            <time dateTime={new Date(entry.at).toISOString()}>{clock(entry.at)}</time>
-            <span>{entry.text}</span>
-          </li>
-        ))}
-      </ol>
     </section>
   );
 }

@@ -18,10 +18,10 @@ test('a Warden plans a session on cards, runs its fight from the card, and the t
   await openTab(page, 'Story');
 
   // A session to plan for.
-  await page.getByRole('button', { name: 'Add a session' }).click();
-  const session = page.getByRole('form', { name: 'Session brief' });
-  await session.getByLabel('Session title').fill('The Rope Bridge');
-  await session.getByRole('button', { name: 'Save session' }).click();
+  await page.getByRole('button', { name: 'Add a plan' }).click();
+  const session = page.getByRole('form', { name: 'Plan' });
+  await session.getByLabel('Plan title').fill('The Rope Bridge');
+  await session.getByRole('button', { name: 'Save plan' }).click();
 
   // A fight card: who is in it, and which session it belongs to.
   await page.getByRole('button', { name: 'New card' }).click();
@@ -53,7 +53,7 @@ test('a Warden plans a session on cards, runs its fight from the card, and the t
   await expect(page.getByTestId('card-The thing in the reeds')).toContainText('Wolf: HP 4');
 
   // The session's plan on its own.
-  await page.getByLabel('Show').selectOption({ label: 'The plan for The Rope Bridge' });
+  await page.getByLabel('Show').selectOption({ label: 'The plan: The Rope Bridge' });
   await expect(page.getByTestId('card-Ambush at the bridge')).toBeVisible();
   await expect(page.getByTestId('card-The thing in the reeds')).toHaveCount(0);
   await page.getByLabel('Show').selectOption({ label: 'Every card' });
@@ -85,7 +85,7 @@ test('a Warden plans a session on cards, runs its fight from the card, and the t
   await page.getByRole('button', { name: 'End the fight' }).click();
   await openTab(page, 'Story');
 
-  const lines = page.getByRole('list', { name: /Story beats/ }).locator('li > p');
+  const lines = page.getByRole('list', { name: /^Session 1,/ }).locator('li > p');
   await expect(lines).toHaveText([
     'The fight ended.',
     'Old Marrow shouted a warning from the ferry.',

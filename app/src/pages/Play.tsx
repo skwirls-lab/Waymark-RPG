@@ -7,10 +7,12 @@ interface Props {
   campaignId: string;
   uid: string;
   isOwner: boolean;
+  /** Whether a session is being played. The story moves only during one. */
+  running: boolean;
 }
 
 /** An AI-run campaign: the story so far, what you do next, and the Warden's voice. */
-export function Play({ campaignId, uid, isOwner }: Props) {
+export function Play({ campaignId, uid, isOwner, running }: Props) {
   const turns = useTurns(campaignId);
   const { pending, suggestions } = usePlayState(campaignId);
   const [text, setText] = useState('');
@@ -153,7 +155,14 @@ export function Play({ campaignId, uid, isOwner }: Props) {
         </p>
       )}
 
-      {pending ? (
+      {!running ? (
+        <p className="note">
+          No session is being played.{' '}
+          {isOwner
+            ? 'Start one, above, to play.'
+            : 'The campaign\u2019s owner starts one when the group sits down to play.'}
+        </p>
+      ) : pending ? (
         <div className="panel alert" role="group" aria-label="A roll is needed">
           <p>
             <strong>{pending.label}</strong>

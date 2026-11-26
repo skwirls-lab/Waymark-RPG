@@ -19,6 +19,7 @@ import {
   saveCard,
   saveFight,
   saveNotes,
+  saveSessionSummary,
   setCardStatus,
   updateBeat,
   useBeats,
@@ -29,12 +30,16 @@ import {
   useCreatures,
   useCards,
   useNotes,
+  useSessions,
+  type Beat,
   type Card,
+  type PlaySession,
   type CardDetails,
   type CardKind,
   type CardStatus,
   type SessionBrief,
 } from '../data/record';
+import { askAi } from '../data/ai';
 import { AiNote, AiSuggest } from '../ui/AiSuggest';
 
 interface Props {
@@ -97,7 +102,7 @@ function BriefSection({ campaignId, isWarden }: Omit<Props, 'uid'>) {
     const sessions = exists
       ? brief.sessions.map((s) => (s.id === session.id ? session : s))
       : [...brief.sessions, session];
-    run(() => saveBrief(campaignId, { setting: shown, sessions }), 'Session saved.');
+    run(() => saveBrief(campaignId, { setting: shown, sessions }), 'Plan saved.');
     setEditing(null);
   };
 
@@ -136,8 +141,12 @@ function BriefSection({ campaignId, isWarden }: Omit<Props, 'uid'>) {
         <p className="muted">The Warden has not written a setting yet.</p>
       )}
 
-      <h3>Sessions</h3>
-      {brief.sessions.length === 0 && <p className="muted">No session briefs yet.</p>}
+      <h3>Plans</h3>
+      <p className="hint">
+        A plan is what you have in mind for an adventure: the mission, the stakes, what to expect.
+        It may take one sitting or several. Tie cards to a plan to lay it out.
+      </p>
+      {brief.sessions.length === 0 && <p className="muted">No plans yet.</p>}
       <ul className="record">
         {brief.sessions.map((s) => (
           <li key={s.id}>
@@ -178,7 +187,7 @@ function BriefSection({ campaignId, isWarden }: Omit<Props, 'uid'>) {
                           setting: shown,
                           sessions: brief.sessions.filter((x) => x.id !== s.id),
                         }),
-                      'Session deleted.',
+                      'Plan deleted.',
                     )
                   }
                 >
@@ -206,7 +215,7 @@ function BriefSection({ campaignId, isWarden }: Omit<Props, 'uid'>) {
               })
             }
           >
-            Add a session
+            Add a plan
           </button>
         ))}
       <p className="hint" role="status">
@@ -251,13 +260,13 @@ function SessionForm({
   return (
     <form
       className="form panel"
-      aria-label="Session brief"
+      aria-label="Plan"
       onSubmit={(e) => {
         e.preventDefault();
         if (draft.title.trim()) onSave({ ...draft, title: draft.title.trim() });
       }}
     >
-      {field('title', 'Session title', 'The Rope Bridge')}
+      {field('title', 'Plan title', 'The Rope Bridge')}
       {field('mission', 'The mission', 'What are the characters trying to do?')}
       {field('stakes', 'The stakes', 'What happens if they fail, or do nothing?')}
       {field(
@@ -267,7 +276,7 @@ function SessionForm({
       )}
       <div className="button-row">
         <button type="submit" className="button small primary">
-          Save session
+          Save plan
         </button>
         <button type="button" className="button small" onClick={onCancel}>
           Cancel
@@ -277,9 +286,128 @@ function SessionForm({
   );
 }
 
+const KIND_TAG: Record<NonNullable<Beat['kind']>, string> = {
+  fight: 'Fight',
+  roll: 'Roll',
+  change: 'Sheet',
+  said: 'Player',
+  narration: 'Warden',
+  result: 'Rules',
+};
+
+/** The story itself, as opposed to the bookkeeping around it. */
+const isStory = (b: Beat) => !b.kind || b.kind === 'said' || b.kind === 'narration' || b.milestone;
+
+const length = (ms: number) => {
+  const minutes = Math.max(1, Math.round(ms / 60_000));
+  return minutes < 60
+    ? `${minutes} min`
+    : `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, '0')} min`;
+};
+
+/** A session's heading on the timeline: when it was, who ran it, who played, and its summary. */
+function SessionHeader({
+  campaignId,
+  session,
+  running,
+  isWarden,
+  hasLines,
+}: {
+  campaignId: string;
+  session: PlaySession;
+  running: boolean;
+  isWarden: boolean;
+  hasLines: boolean;
+}) {
+  const [draft, setDraft] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string>();
+  const summarise = async () => {
+    setBusy(true);
+    setProblem(undefined);
+    try {
+      const answer = await askAi('recap', { campaignId, sessionId: session.id });
+      setDraft(`${answer.proposal.title}. ${answer.proposal.summary}`);
+    } catch (error) {
+      setProblem((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <header className="session-head">
+      <h3>
+        Session {session.number}
+        {running && <span className="tag">Being played now</span>}
+      </h3>
+      <p className="muted" data-testid={`session-${session.number}`}>
+        {when(session.startedAt)}
+        {session.endedAt ? ` · ${length(session.endedAt - session.startedAt)}` : ''} ·{' '}
+        {session.wardenKind === 'ai' ? 'AI Warden' : 'Human Warden'}
+        {session.players.length > 0 ? ` · ${session.players.join(', ')}` : ''}
+      </p>
+      {session.summary && draft === undefined && <p className="note prewrap">{session.summary}</p>}
+      {isWarden && draft !== undefined && (
+        <div role="group" aria-label={`Summary of session ${session.number}`}>
+          <label className="form-row">
+            Summary
+            <textarea
+              rows={5}
+              maxLength={4000}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+            />
+          </label>
+          <div className="button-row">
+            <button
+              type="button"
+              className="button small primary"
+              onClick={() => {
+                saveSessionSummary(campaignId, session, draft.trim()).catch(() =>
+                  setProblem('That could not be saved. Check your connection and try again.'),
+                );
+                setDraft(undefined);
+              }}
+            >
+              Save summary
+            </button>
+            <button type="button" className="button small" onClick={() => setDraft(undefined)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      {isWarden && draft === undefined && !running && (
+        <div className="button-row">
+          <button type="button" className="button small" onClick={() => setDraft(session.summary)}>
+            {session.summary ? 'Edit the summary' : 'Write a summary'}
+          </button>
+          {hasLines && (
+            <button
+              type="button"
+              className="button small ai-button"
+              disabled={busy}
+              onClick={summarise}
+            >
+              {busy ? 'Thinking…' : 'Summarise with AI'}
+            </button>
+          )}
+        </div>
+      )}
+      {problem && (
+        <p className="error" role="alert">
+          {problem}
+        </p>
+      )}
+    </header>
+  );
+}
+
 function Timeline({ campaignId, uid, isWarden }: Props) {
   const beats = useBeats(campaignId, isWarden);
   const cards = useCards(campaignId, isWarden);
+  const { sessions, active } = useSessions(campaignId);
+  const [everything, setEverything] = useState(true);
   const [text, setText] = useState('');
   const [milestone, setMilestone] = useState(false);
   const [secret, setSecret] = useState(false);
@@ -313,7 +441,14 @@ function Timeline({ campaignId, uid, isWarden }: Props) {
   return (
     <section aria-labelledby="timeline">
       <h2 id="timeline">Timeline</h2>
-      {isWarden && (
+      <p className="hint">
+        The timeline is the record of the campaign: every story beat, roll, change and fight, in the
+        order it happened, session by session.
+      </p>
+      {isWarden && !active && (
+        <p className="note">Start a session, above, to record what happens.</p>
+      )}
+      {isWarden && active && (
         <form className="form" aria-label="Add a story beat" onSubmit={add}>
           <label>
             What just happened?
@@ -379,40 +514,89 @@ function Timeline({ campaignId, uid, isWarden }: Props) {
         <AiStory campaignId={campaignId} uid={uid} cards={cards} onProblem={fail} />
       )}
       {beats.length === 0 && <p className="muted">Nothing has happened yet.</p>}
-      {/* Newest first: during play, the last thing that happened matters most. */}
-      <ol className="record timeline" aria-label="Story beats, newest first">
-        {[...beats].reverse().map((b) => (
-          <li key={b.id} className={b.milestone ? 'milestone' : undefined}>
-            <span className="muted small">{when(b.at)}</span>
-            {b.milestone && <span className="tag">Milestone</span>}
-            {b.kind === 'fight' && <span className="tag">Fight</span>}
-            {b.private && <span className="tag quiet">Only you</span>}
-            {cardName(b.cardId) && <span className="tag quiet">{cardName(b.cardId)}</span>}
-            <p>{b.text}</p>
-            {isWarden && (
-              <div className="button-row">
-                <button
-                  type="button"
-                  className="link-button"
-                  onClick={() =>
-                    updateBeat(campaignId, b.id, { milestone: !b.milestone }).catch(fail)
+      {beats.length > 0 && (
+        <label className="form-row">
+          Show
+          <select
+            value={everything ? 'all' : 'story'}
+            onChange={(e) => setEverything(e.target.value === 'all')}
+          >
+            <option value="all">Everything</option>
+            <option value="story">The story only: no rolls, sheet changes or fight turns</option>
+          </select>
+        </label>
+      )}
+      {/* Newest session first, and newest first within it: the last thing that happened matters most. */}
+      {[...sessions.map((s) => s.id).reverse(), undefined].map((sessionId) => {
+        const session = sessions.find((s) => s.id === sessionId);
+        const lines = beats
+          .filter((b) =>
+            session ? b.sessionId === session.id : !sessions.some((s) => s.id === b.sessionId),
+          )
+          .filter((b) => everything || isStory(b))
+          .reverse();
+        if (!session && lines.length === 0) return null;
+        return (
+          <div key={sessionId ?? 'before'} className="session-group">
+            {session ? (
+              <SessionHeader
+                campaignId={campaignId}
+                session={session}
+                running={active?.id === session.id}
+                isWarden={isWarden}
+                hasLines={lines.length > 0}
+              />
+            ) : (
+              <h3>Before sessions were kept</h3>
+            )}
+            {lines.length === 0 && <p className="muted">Nothing recorded yet.</p>}
+            <ol
+              className="record timeline"
+              aria-label={
+                session ? `Session ${session.number}, newest first` : 'Earlier beats, newest first'
+              }
+            >
+              {lines.map((b) => (
+                <li
+                  key={b.id}
+                  className={
+                    [b.milestone ? 'milestone' : '', b.kind ? 'minor' : ''].join(' ').trim() ||
+                    undefined
                   }
                 >
-                  {b.milestone ? 'Not a milestone' : 'Mark as a milestone'}
-                </button>
-                <button
-                  type="button"
-                  className="link-button"
-                  aria-label={`Delete beat: ${b.text}`}
-                  onClick={() => deleteBeat(campaignId, b.id).catch(fail)}
-                >
-                  Delete
-                </button>
-              </div>
-            )}
-          </li>
-        ))}
-      </ol>
+                  <span className="muted small">{when(b.at)}</span>
+                  {b.milestone && <span className="tag">Milestone</span>}
+                  {b.kind && <span className="tag quiet">{KIND_TAG[b.kind]}</span>}
+                  {b.private && <span className="tag quiet">Only you</span>}
+                  {cardName(b.cardId) && <span className="tag quiet">{cardName(b.cardId)}</span>}
+                  <p>{b.text}</p>
+                  {isWarden && (
+                    <div className="button-row">
+                      <button
+                        type="button"
+                        className="link-button"
+                        onClick={() =>
+                          updateBeat(campaignId, b.id, { milestone: !b.milestone }).catch(fail)
+                        }
+                      >
+                        {b.milestone ? 'Not a milestone' : 'Mark as a milestone'}
+                      </button>
+                      <button
+                        type="button"
+                        className="link-button"
+                        aria-label={`Delete beat: ${b.text}`}
+                        onClick={() => deleteBeat(campaignId, b.id).catch(fail)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        );
+      })}
     </section>
   );
 }
@@ -552,7 +736,7 @@ function Cards({ campaignId, uid, isWarden, party, onFight, onGive }: CardsProps
             <option value="">Every card</option>
             {brief.sessions.map((s) => (
               <option key={s.id} value={s.id}>
-                The plan for {s.title}
+                The plan: {s.title}
               </option>
             ))}
           </select>
@@ -907,7 +1091,7 @@ function CardForm({
         <label>
           Part of the plan for
           <select value={sessionId} onChange={(e) => setSessionId(e.target.value)}>
-            <option value="">No session in particular</option>
+            <option value="">No plan in particular</option>
             {sessions.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.title}

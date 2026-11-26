@@ -8,7 +8,7 @@ import type {
 } from '@waymark/rules';
 import { useEffect, useState } from 'react';
 import { getDb } from '../firebase';
-import { watchCollection, watchDoc } from './campaigns';
+import { watchCollection, watchDoc, writeBeat, type BeatKind } from './campaigns';
 
 /** The mission for one session or adventure. */
 export interface SessionBrief {
@@ -35,8 +35,10 @@ export interface Beat {
   private: boolean;
   cardId: string | null;
   byUid: string;
-  /** Set on lines the fight tracker adds by itself. */
-  kind?: 'fight';
+  /** What added it: the fight tracker, a roll, a change to a sheet, or an AI-run turn. None for a story beat. */
+  kind?: BeatKind | 'said' | 'narration' | 'result';
+  /** The session it happened in. Missing on beats from before sessions were kept. */
+  sessionId?: string;
 }
 
 export const CARD_KINDS = [
@@ -136,18 +138,99 @@ export const saveCreatures = (campaignId: string, list: CustomCreature[]) =>
 export const saveFight = (campaignId: string, fight: Fight | null) =>
   put(campaignId, 'private/fight', { fight });
 
-export async function addBeat(
+/** Adds a story beat to the timeline, inside the session being played. */
+export const addBeat = (
   campaignId: string,
   byUid: string,
-  beat: Pick<Beat, 'text' | 'milestone' | 'private' | 'cardId'> & { kind?: 'fight' },
+  beat: Pick<Beat, 'text' | 'milestone' | 'private' | 'cardId'> & { kind?: BeatKind },
+): Promise<void> => writeBeat(campaignId, byUid, beat);
+
+/** One sitting of play, from "start" to "end". A campaign is made of these. */
+export interface PlaySession {
+  id: string;
+  number: number;
+  startedAt: number;
+  endedAt: number | null;
+  /** Who ran it. */
+  wardenKind: 'human' | 'ai';
+  /** The players who were in the campaign when it started. */
+  players: string[];
+  summary: string;
+}
+
+/** Starts a session and makes it the one being played. */
+export async function startSession(
+  campaignId: string,
+  session: Pick<PlaySession, 'number' | 'wardenKind' | 'players'>,
 ): Promise<void> {
   const { db, fs } = await tools();
-  await fs.addDoc(fs.collection(db, `campaigns/${campaignId}/beats`), {
-    ...beat,
-    byUid,
-    at: fs.serverTimestamp(),
+  const id = newId();
+  const batch = fs.writeBatch(db);
+  batch.set(fs.doc(db, `campaigns/${campaignId}/sessions/${id}`), {
+    ...session,
+    startedAt: Date.now(),
+    endedAt: null,
+    summary: '',
+  });
+  batch.set(fs.doc(db, `campaigns/${campaignId}/shared/session`), { activeId: id });
+  await batch.commit();
+}
+
+/** Ends the session being played. */
+export async function endSession(campaignId: string, session: PlaySession): Promise<void> {
+  const { db, fs } = await tools();
+  const batch = fs.writeBatch(db);
+  const { id, ...rest } = session;
+  batch.set(fs.doc(db, `campaigns/${campaignId}/sessions/${id}`), { ...rest, endedAt: Date.now() });
+  batch.set(fs.doc(db, `campaigns/${campaignId}/shared/session`), { activeId: null });
+  await batch.commit();
+}
+
+export async function saveSessionSummary(
+  campaignId: string,
+  session: PlaySession,
+  summary: string,
+): Promise<void> {
+  const { db, fs } = await tools();
+  const { id, ...rest } = session;
+  await fs.setDoc(fs.doc(db, `campaigns/${campaignId}/sessions/${id}`), {
+    ...rest,
+    summary: summary.slice(0, 4000),
   });
 }
+
+/** Every session of the campaign, oldest first, and which one is being played now. */
+export function useSessions(campaignId: string): {
+  sessions: PlaySession[];
+  active: PlaySession | null;
+  /** False until the first answer has arrived. */
+  loaded: boolean;
+} {
+  const [sessions, setSessions] = useState<PlaySession[]>([]);
+  const [activeId, setActiveId] = useState<string | null>();
+  useEffect(
+    () =>
+      watchCollection<PlaySession>(
+        `campaigns/${campaignId}/sessions`,
+        (id, d) => ({ ...(d as Omit<PlaySession, 'id'>), id }),
+        (items) => setSessions(items.sort((a, b) => a.number - b.number)),
+      ),
+    [campaignId],
+  );
+  useEffect(
+    () =>
+      watchDoc<{ activeId?: string | null }>(`campaigns/${campaignId}/shared/session`, (found) =>
+        setActiveId(found?.activeId ?? null),
+      ),
+    [campaignId],
+  );
+  return {
+    sessions,
+    active: sessions.find((s) => s.id === activeId) ?? null,
+    loaded: activeId !== undefined,
+  };
+}
+
 export async function updateBeat(
   campaignId: string,
   id: string,

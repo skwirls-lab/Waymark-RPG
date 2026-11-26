@@ -49,13 +49,13 @@ test.describe('phase 5: the campaign record', () => {
     await warden.getByLabel('Setting and backdrop').fill('A valley flooded a lifetime ago.');
     await warden.getByRole('button', { name: 'Save the setting' }).click();
     await expect(warden.getByText('Setting saved.')).toBeVisible();
-    await warden.getByRole('button', { name: 'Add a session' }).click();
-    const session = warden.getByRole('form', { name: 'Session brief' });
-    await session.getByLabel('Session title').fill('The Rope Bridge');
+    await warden.getByRole('button', { name: 'Add a plan' }).click();
+    const session = warden.getByRole('form', { name: 'Plan' });
+    await session.getByLabel('Plan title').fill('The Rope Bridge');
     await session.getByLabel('The mission').fill('Cross the gorge before dark.');
     await session.getByLabel('The stakes').fill('The medicine will not keep.');
     await check(warden);
-    await session.getByRole('button', { name: 'Save session' }).click();
+    await session.getByRole('button', { name: 'Save plan' }).click();
     await expect(player.getByText('A valley flooded a lifetime ago.')).toBeVisible();
     await expect(player.getByText('Cross the gorge before dark.')).toBeVisible();
 
@@ -79,10 +79,10 @@ test.describe('phase 5: the campaign record', () => {
     await beat.getByLabel('What just happened?').fill('Marrow was seen with a knife.');
     await beat.getByLabel('Only I can see this').check();
     await beat.getByRole('button', { name: 'Add to the timeline' }).click();
-    const wardenBeats = warden.getByRole('list', { name: /Story beats/ }).getByRole('listitem');
+    const wardenBeats = warden.getByRole('list', { name: /^Session 1,/ }).getByRole('listitem');
     await expect(wardenBeats).toHaveCount(2);
     await expect(wardenBeats.first()).toContainText('Marrow was seen with a knife.');
-    const playerBeats = player.getByRole('list', { name: /Story beats/ }).getByRole('listitem');
+    const playerBeats = player.getByRole('list', { name: /^Session 1,/ }).getByRole('listitem');
     await expect(playerBeats).toHaveCount(1);
     await expect(playerBeats.first()).toContainText('The bridge fell with Wren on it.');
     await expect(playerBeats.first()).toContainText('Milestone');
@@ -140,7 +140,7 @@ test.describe('phase 5: the campaign record', () => {
       await form.getByLabel('What just happened?').fill(text);
       await form.getByRole('button', { name: 'Add to the timeline' }).click();
     };
-    const beats = (page: Page) => page.getByRole('list', { name: /Story beats/ }).locator('li > p');
+    const beats = (page: Page) => page.getByRole('list', { name: /^Session 1,/ }).locator('li > p');
 
     await add(first, 'They reached the gorge.');
     await expect(beats(second)).toHaveCount(1);

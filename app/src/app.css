@@ -1029,3 +1029,38 @@ fieldset.plain:disabled .tab {
 .rules-text pre {
   white-space: pre-wrap;
 }
+
+/* ---- Sessions ---- */
+.session-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 1rem 0 0;
+  padding: 0.7rem 0.9rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.session-bar.running {
+  border: 2px solid var(--forest);
+}
+.session-bar p {
+  margin: 0;
+  flex: 1 1 16rem;
+}
+.session-group {
+  margin-top: 1.5rem;
+}
+.session-head h3 {
+  margin: 0;
+}
+.session-head p {
+  margin: 0.2rem 0 0.5rem;
+}
+.record > li.minor {
+  padding: 0.4rem 0.85rem;
+  background: var(--paper);
+  font-size: 0.95rem;
+}

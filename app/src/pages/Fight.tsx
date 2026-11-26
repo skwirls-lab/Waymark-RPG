@@ -29,6 +29,8 @@ interface Props {
   campaignId: string;
   uid: string;
   summaries: Summary[];
+  /** Whether a session is being played. A fight is part of one. */
+  running: boolean;
 }
 
 const REACTIONS = Object.fromEntries(data.reactions.map((r) => [r.id, r]));
@@ -54,7 +56,7 @@ function ReactionRoll() {
 }
 
 /** The Warden's fight tracker: sides, turn order, enemy HP, distance and morale. */
-export function Fight({ campaignId, uid, summaries }: Props) {
+export function Fight({ campaignId, uid, summaries, running }: Props) {
   const saved = useFight(campaignId, true);
   const custom = useCreatures(campaignId, true);
   const creatures: (CustomCreature | (typeof data.creatures)[number])[] = [
@@ -114,12 +116,14 @@ export function Fight({ campaignId, uid, summaries }: Props) {
           <button
             type="button"
             className="button primary"
+            disabled={!running}
             onClick={() =>
               store(startFight(party), '', { line: 'A fight began.', onlyWarden: false })
             }
           >
             Start a fight
           </button>
+          {!running && <p className="hint">Start a session first: a fight is part of one.</p>}
         </section>
       </>
     );

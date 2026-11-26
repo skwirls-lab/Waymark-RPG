@@ -151,8 +151,6 @@ interface Prepared {
   context: AiContext;
 }
 
-const oldestFirst = (docs: FirebaseFirestore.QueryDocumentSnapshot[]) => [...docs].reverse();
-
 /** Gathers what a campaign action writes from. Read on the server: the browser's word is not taken for it. */
 async function prepareCampaign(
   db: Firestore,
@@ -160,6 +158,7 @@ async function prepareCampaign(
   action: AiAction,
   campaignId: string,
   hint: string,
+  sessionId: string,
 ): Promise<Prepared> {
   const campaign = await db.doc(`campaigns/${campaignId}`).get();
   if (!campaign.exists || campaign.get('wardenUid') !== uid) {
@@ -236,14 +235,23 @@ async function prepareCampaign(
     }
     default: {
       // recap and filing: the story so far.
-      const [beats, feed, summaries] = await Promise.all([
-        campaign.ref.collection('beats').orderBy('at', 'desc').limit(40).get(),
-        campaign.ref.collection('log').orderBy('at', 'desc').limit(30).get(),
+      // One session's lines if a session was named; otherwise the latest of the whole campaign.
+      const all = campaign.ref.collection('beats');
+      const [found, summaries] = await Promise.all([
+        sessionId
+          ? all.where('sessionId', '==', sessionId).limit(400).get()
+          : all.orderBy('at', 'desc').limit(60).get(),
         campaign.ref.collection('summaries').get(),
       ]);
+      const inOrder = [...found.docs].sort(
+        (a, b) => (a.get('at')?.toMillis?.() ?? 0) - (b.get('at')?.toMillis?.() ?? 0),
+      );
+      const bookkeeping = (kind: unknown) => kind === 'roll' || kind === 'change';
+      const beats = { docs: inOrder.filter((b) => !bookkeeping(b.get('kind'))).slice(-80) };
+      const feed = { docs: inOrder.filter((b) => bookkeeping(b.get('kind'))).slice(-30) };
       // The players' own characters, so the model does not file them as people met.
       const party = summaries.docs.map((s) => clip(s.get('name'), 80));
-      const told = oldestFirst(beats.docs).map((b) => clip(b.get('text'), 500));
+      const told = beats.docs.map((b) => clip(b.get('text'), 500));
       if (told.length === 0) {
         throw new HttpsError(
           'failed-precondition',
@@ -256,7 +264,7 @@ async function prepareCampaign(
               setting,
               party,
               beats: told,
-              feed: oldestFirst(feed.docs).map((f) => clip(f.get('text'), 200)),
+              feed: feed.docs.map((f) => clip(f.get('text'), 200)),
             },
             context: {},
           }
@@ -348,7 +356,13 @@ export async function askChecked(
 export async function aiHelp(
   db: Firestore,
   uid: string,
-  input: { action?: unknown; campaignId?: unknown; hint?: unknown; question?: unknown },
+  input: {
+    action?: unknown;
+    campaignId?: unknown;
+    hint?: unknown;
+    question?: unknown;
+    sessionId?: unknown;
+  },
   model: ModelCall | null,
   now: Date = new Date(),
   limits: Limits = {},
@@ -363,7 +377,14 @@ export async function aiHelp(
     const campaignId = clip(input.campaignId, 200);
     if (!campaignId || campaignId.includes('/'))
       throw new HttpsError('invalid-argument', 'Choose a campaign first.');
-    prepared = await prepareCampaign(db, uid, action, campaignId, clip(input.hint, 300));
+    prepared = await prepareCampaign(
+      db,
+      uid,
+      action,
+      campaignId,
+      clip(input.hint, 300),
+      clip(input.sessionId, 60),
+    );
   } else {
     const question = clip(input.question, 300);
     if (question.length < 3) throw new HttpsError('invalid-argument', 'Type a question first.');

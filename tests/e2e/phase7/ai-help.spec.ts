@@ -120,7 +120,7 @@ test.describe('phase 7: AI help', () => {
     await expect(recap.getByLabel('Recap')).toHaveValue(
       /^The Fall of the Rope Bridge\. The party reached the gorge/,
     );
-    const beats = page.getByRole('list', { name: /Story beats/ }).locator('li > p');
+    const beats = page.getByRole('list', { name: /^Session 1,/ }).locator('li > p');
     await expect(beats).toHaveCount(1);
     await check(page);
     await recap.getByLabel('Recap').fill('The bridge fell. Nobody was lost.');

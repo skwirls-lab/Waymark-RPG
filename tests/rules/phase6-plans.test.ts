@@ -60,6 +60,7 @@ beforeEach(async () => {
         .doc(`campaigns/${id}/members/player`)
         .set({ role: 'player', displayName: 'Sam', control: 'direct' });
       await db.doc(`campaigns/${id}/shared/brief`).set({ setting: 'Old', sessions: [] });
+      await db.doc(`campaigns/${id}/shared/session`).set({ activeId: 's1' });
     }
     await db.doc('characters/player_1').set(character('player', 1, { campaignId: 'lapsed_2' }));
   });
@@ -166,6 +167,7 @@ describe('a campaign over the limit is read-only', () => {
     private: false,
     cardId: null,
     byUid: 'lapsed',
+    sessionId: 's1',
   };
 
   it('the Warden still runs the first campaign', async () => {

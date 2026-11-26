@@ -243,7 +243,7 @@ service cloud.firestore {
       // Abilities and gear. The Warden writes; every member reads.
       match /shared/{docId} {
         allow read: if isMember(campaignId);
-        allow write: if wardenMayWrite(campaignId) && docId in ['brief', 'content'];
+        allow write: if wardenMayWrite(campaignId) && docId in ['brief', 'content', 'session'];
       }
 
       // The Warden's own working papers: private notes, creatures, and the
@@ -256,23 +256,58 @@ service cloud.firestore {
       // The timeline: what happened, in order. The server's clock stamps
       // each beat, so two devices agree on the order. A beat marked private
       // is the Warden's alone.
+      // A session is one sitting of play: it is started and ended. Everything
+      // on the timeline happens inside one.
+      match /sessions/{sessionId} {
+        allow read: if isMember(campaignId);
+        allow create, update: if wardenMayWrite(campaignId)
+          && request.resource.data.keys().hasOnly(['number', 'startedAt', 'endedAt', 'wardenKind', 'players', 'summary'])
+          && request.resource.data.number is int
+          && request.resource.data.startedAt is number
+          && request.resource.data.wardenKind in ['human', 'ai']
+          && request.resource.data.players is list
+          && request.resource.data.get('summary', '') is string
+          && request.resource.data.get('summary', '').size() <= 4000;
+        allow delete: if false;
+      }
+
+      // The session being played now, or null between sessions.
+      function sessionNow() {
+        let path = /databases/$(database)/documents/campaigns/$(campaignId)/shared/session;
+        return exists(path) ? get(path).data.get('activeId', null) : null;
+      }
+
       match /beats/{beatId} {
         function beatOk() {
           let d = request.resource.data;
-          return d.keys().hasOnly(['at', 'text', 'milestone', 'private', 'cardId', 'byUid', 'kind'])
-            && d.get('kind', 'fight') == 'fight'
+          return d.keys().hasOnly(['at', 'text', 'milestone', 'private', 'cardId', 'byUid', 'kind', 'sessionId'])
+            && d.get('kind', 'fight') in ['fight', 'roll', 'change']
             && d.text is string && d.text.size() > 0 && d.text.size() <= 2000
             && d.milestone is bool
             && d.private is bool
             && (d.cardId == null || d.cardId is string)
             && d.byUid == request.auth.uid;
         }
+        // Nothing is added to the timeline between sessions.
+        function inSession() {
+          return sessionNow() != null && request.resource.data.sessionId == sessionNow();
+        }
         allow read: if isWarden(campaignId)
           || (isMember(campaignId) && resource.data.private == false);
-        allow create: if wardenMayWrite(campaignId) && beatOk()
+        allow create: if wardenMayWrite(campaignId) && beatOk() && inSession()
           && request.resource.data.at == request.time;
+        // A player's own rolls and sheet changes go on the timeline too: in the
+        // open, never a milestone, and under their own name.
+        allow create: if isMember(campaignId) && beatOk() && inSession()
+          && request.resource.data.at == request.time
+          && request.resource.data.kind in ['roll', 'change']
+          && request.resource.data.private == false
+          && request.resource.data.milestone == false
+          && request.resource.data.cardId == null
+          && request.resource.data.text.size() <= 500;
         allow update: if wardenMayWrite(campaignId) && beatOk()
-          && request.resource.data.at == resource.data.at;
+          && request.resource.data.at == resource.data.at
+          && request.resource.data.get('sessionId', null) == resource.data.get('sessionId', null);
         allow delete: if isWarden(campaignId);
       }
 

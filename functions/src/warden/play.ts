@@ -1,5 +1,5 @@
 import { limitsOf, randomRng, type Character, type Fight, type Rng } from '@waymark/rules';
-import { FieldValue, type Firestore } from 'firebase-admin/firestore';
+import { Timestamp, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 import { isSheet } from '../campaigns';
 import {
@@ -103,12 +103,30 @@ async function store(
   events: Event[],
   said: { who: string; uid: string; text: string } | null,
   now: number,
+  sessionId: string,
 ): Promise<void> {
   const campaign = db.doc(`campaigns/${campaignId}`);
   const batch = db.batch();
   let order = 0;
-  const turn = (data: Record<string, unknown>) =>
-    batch.set(campaign.collection('turns').doc(), { at: now, order: order++, ...data });
+  /**
+   * Each line of the turn is kept twice: in `turns`, which the play screen
+   * reads, and on the campaign's timeline, which is the record of everything.
+   * Lines of one turn are a millisecond apart, so they keep their order.
+   */
+  const turn = (data: { kind: string; who: string; text: string; uid?: string }) => {
+    const n = order++;
+    batch.set(campaign.collection('turns').doc(), { at: now, order: n, ...data });
+    batch.set(campaign.collection('beats').doc(), {
+      at: Timestamp.fromMillis(now + n),
+      text: (data.kind === 'player' ? `${data.who}: ${data.text}` : data.text).slice(0, 2000),
+      milestone: false,
+      private: false,
+      cardId: null,
+      byUid: data.uid ?? 'ai-warden',
+      kind: data.kind === 'player' ? 'said' : data.kind,
+      sessionId,
+    });
+  };
 
   for (const [id, sheet] of Object.entries(after.party)) {
     const was = before.session.party[id];
@@ -140,21 +158,16 @@ async function store(
         break;
       case 'result':
         turn({ kind: 'result', who: 'The rules', text: event.text });
-        batch.set(campaign.collection('log').doc(), {
-          at: now,
-          byUid: 'ai-warden',
-          byName: 'The Warden',
-          text: event.text.slice(0, 500),
-        });
         break;
       case 'beat':
         batch.set(campaign.collection('beats').doc(), {
-          at: FieldValue.serverTimestamp(),
+          at: Timestamp.fromMillis(now + order++),
           text: event.text,
           milestone: event.milestone,
           private: false,
           cardId: null,
           byUid: 'ai-warden',
+          sessionId,
         });
         break;
       case 'reveal-card':
@@ -247,6 +260,15 @@ export async function wardenTurn(
   if (campaign.get('aiWarden') !== true)
     throw new HttpsError('failed-precondition', 'This campaign is not run by the AI Warden.');
   if (!model) throw new HttpsError('failed-precondition', OFF);
+  // The story moves only during a session, which the campaign's owner starts.
+  const playing = await db.doc(`campaigns/${campaignId}/shared/session`).get();
+  const sessionId = playing.get('activeId') as string | null | undefined;
+  if (!sessionId) {
+    throw new HttpsError(
+      'failed-precondition',
+      "No session is being played. The campaign's owner starts one.",
+    );
+  }
 
   const loaded = await load(db, campaignId);
   const isOwner = loaded.ownerUid === uid;
@@ -274,7 +296,16 @@ export async function wardenTurn(
   await begin(db, campaignId, loaded.ownerUid, now);
   try {
     const result = await runTurn(loaded.session, turnInput, model, rng);
-    await store(db, campaignId, loaded, result.session, result.events, said, now.getTime());
+    await store(
+      db,
+      campaignId,
+      loaded,
+      result.session,
+      result.events,
+      said,
+      now.getTime(),
+      sessionId,
+    );
   } catch (problem) {
     await db.doc(`campaigns/${campaignId}/private/scene`).set({ busyUntil: 0 }, { merge: true });
     if (problem instanceof Refused) throw new HttpsError('failed-precondition', problem.message);

@@ -78,7 +78,7 @@ test.describe('phase 4: the Warden changes a sheet directly', () => {
     expect(elapsed).toBeLessThan(2000);
 
     await expect(warden.getByRole('status')).toContainText('Wren took 2 damage. HP 2.');
-    await expect(warden.getByRole('list', { name: 'Activity' })).toContainText(
+    await expect(warden.getByRole('list', { name: 'Latest on the timeline' })).toContainText(
       'Wren took 2 damage. HP 2.',
     );
     await expect(warden.getByTestId('summary-Wren')).toContainText('HP 2 of 4');
@@ -238,7 +238,7 @@ test.describe('phase 4: saves, blasts, the feed and presence', () => {
     await expect(
       warden.getByText('Wren rolled 9 against Dexterity 13: success.').first(),
     ).toBeVisible();
-    await expect(warden.getByRole('list', { name: 'Activity' })).toContainText(
+    await expect(warden.getByRole('list', { name: 'Latest on the timeline' })).toContainText(
       'Wren rolled 9 against Dexterity 13: success.',
     );
   });
@@ -288,7 +288,7 @@ test.describe('phase 4: saves, blasts, the feed and presence', () => {
 
     // The player's own change is told to the table.
     await player.getByRole('button', { name: 'Add 1 Fatigue' }).click();
-    await expect(warden.getByRole('list', { name: 'Activity' })).toContainText(
+    await expect(warden.getByRole('list', { name: 'Latest on the timeline' })).toContainText(
       'Wren: Gained 1 Fatigue.',
     );
 
@@ -302,10 +302,10 @@ test.describe('phase 4: saves, blasts, the feed and presence', () => {
       .getByRole('group', { name: 'Roll in the open' })
       .getByRole('button', { name: 'd20' })
       .click();
-    await expect(warden.getByRole('list', { name: 'Activity' })).toContainText(
+    await expect(warden.getByRole('list', { name: 'Latest on the timeline' })).toContainText(
       /Sam rolled a d20: \d+/,
     );
-    await expect(player.getByRole('list', { name: 'Activity' })).toContainText(
+    await expect(player.getByRole('list', { name: 'Latest on the timeline' })).toContainText(
       /Sam rolled a d20: \d+/,
     );
     await expectNoSeriousAccessibilityIssues(player);

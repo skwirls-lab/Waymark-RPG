@@ -12,17 +12,12 @@ import {
   type Member,
   type Summary,
 } from '../data/campaigns';
-import {
-  useCampaign,
-  useCampaignCharacters,
-  useLog,
-  usePresence,
-  useRequests,
-} from '../data/useCampaign';
+import { useCampaign, useCampaignCharacters, usePresence, useRequests } from '../data/useCampaign';
 import { setAiWarden } from '../data/play';
-import { useContent } from '../data/record';
+import { useBeats, useContent, useSessions } from '../data/record';
 import { useCharacterStore } from '../data/useCharacters';
-import { ActivityFeed, WardenParty } from './Party';
+import { OpenDice, WardenParty } from './Party';
+import { SessionBar } from './SessionBar';
 import { Play } from './Play';
 import { Story, type Loot } from './Story';
 
@@ -81,7 +76,8 @@ export function Campaign() {
   const members = memberList ?? [];
   const playerCharacters = useCampaignCharacters(cid!, isWarden);
   const requests = useRequests(isWarden ? cid! : null, null);
-  const log = useLog(cid!);
+  const { sessions, active, loaded } = useSessions(cid!);
+  const beats = useBeats(cid!, isWarden);
   const content = useContent(isWarden ? cid! : null);
   const [params, setParams] = useSearchParams();
   const wide = useWide();
@@ -355,9 +351,13 @@ export function Campaign() {
         </ul>
       </section>
 
-      <ActivityFeed
-        log={log}
-        onRoll={(text) => void addLog(campaign.id, uid, myName, `${myName} ${text}`)}
+      <OpenDice
+        running={active !== null}
+        latest={[...beats]
+          .reverse()
+          .slice(0, 6)
+          .map((b) => ({ id: b.id, at: b.at, text: b.text }))}
+        onRoll={(text) => void addLog(campaign.id, uid, myName, `${myName} ${text}`, 'roll')}
       />
     </>
   );
@@ -378,6 +378,15 @@ export function Campaign() {
         </p>
       )}
 
+      <SessionBar
+        campaignId={campaign.id}
+        isWarden={isWarden && !readOnly}
+        aiWarden={campaign.aiWarden === true}
+        sessions={sessions}
+        active={active}
+        loaded={loaded}
+        players={members.filter((m) => m.role !== 'warden').map((m) => m.displayName)}
+      />
       {readOnly && (
         <p className="note warn" role="status">
           <strong>This campaign is read-only.</strong> Your plan keeps one campaign running. Nothing
@@ -413,7 +422,14 @@ export function Campaign() {
           <div id="tab-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
             <fieldset className="plain" disabled={readOnly}>
               {tab === 'party' && partyPanel}
-              {tab === 'play' && <Play campaignId={campaign.id} uid={uid} isOwner={isWarden} />}
+              {tab === 'play' && (
+                <Play
+                  campaignId={campaign.id}
+                  uid={uid}
+                  isOwner={isWarden}
+                  running={active !== null}
+                />
+              )}
               {tab === 'story' && (
                 <Story
                   campaignId={campaign.id}
@@ -430,7 +446,12 @@ export function Campaign() {
               )}
               <Suspense fallback={<p className="lede">Loading…</p>}>
                 {tab === 'fight' && (
-                  <Fight campaignId={campaign.id} uid={uid} summaries={summaries} />
+                  <Fight
+                    campaignId={campaign.id}
+                    uid={uid}
+                    summaries={summaries}
+                    running={active !== null}
+                  />
                 )}
                 {tab === 'workshop' && <Workshop campaignId={campaign.id} uid={uid} />}
               </Suspense>
