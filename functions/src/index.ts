@@ -21,12 +21,13 @@ function uidOf(request: CallableRequest): string {
 
 const background = { region: 'us-central1', maxInstances: 5 } as const;
 /**
- * For functions a browser calls. "public" lets the request reach the
- * function at all; each function then checks who is signed in. It is stated
- * outright so that every deploy applies it: left to the default, the first
- * functions were deployed without it and could not be called.
+ * For functions a browser calls. This Google organization does not allow
+ * "anyone" to be granted access to a service, so asking the deploy tool for
+ * a public function makes the deploy fail. The function is deployed private
+ * here, and a step in the deploy (see ci.yml) then switches off Cloud Run's
+ * own caller check for it. Each function checks for itself who is signed in.
  */
-const options = { ...background, invoker: 'public' } as const;
+const options = { ...background, invoker: 'private' } as const;
 
 export const createCampaign = onCall(options, (request) =>
   campaigns.createCampaign(db, uidOf(request), request.data ?? {}),
