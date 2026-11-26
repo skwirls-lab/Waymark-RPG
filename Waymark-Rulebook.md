@@ -2,7 +2,7 @@
 
 ### A roleplaying game for any world
 
-*Draft 0.4*
+*Draft 0.5*
 
 ---
 
@@ -33,8 +33,20 @@ Waymark works for any kind of world. Your game might be about forest creatures d
 ## What you need
 
 - **Two or more people.** One Warden, and at least one player. Three to five people is ideal.
-- **Paper and pencils**, to keep track of each character.
-- **A set of gaming dice.** These are sold as a set of six or seven, in game shops and online, and free dice-rolling apps work just as well.
+- **Something to keep track of each character.** Paper and pencils do the job. So does the free Waymark app, described below.
+- **A set of gaming dice.** These are sold as a set of six or seven, in game shops and online. The Waymark app can roll for you, and free dice-rolling apps work just as well.
+
+### Paper, table, or screen
+
+Waymark can be played in whichever way suits your group, and you can mix them freely.
+
+- **In conversation.** Paper, pencils and dice, and nothing else. This is all the game has ever needed.
+- **On a tabletop.** Add miniature figures and a ruler. The section "Playing on a tabletop" turns the game's distances into inches.
+- **With the Waymark app.** The app is free, and was made for these rules. It walks you through making a character, keeps every character sheet, and works out damage, Armor, Fatigue and rests for you. It can roll the dice, or you can roll real ones and type in what they showed. For the Warden it keeps the campaign: the story so far, the people and places in it, fights, and anything you invent for your world. You will find it at **waymark-rpg-app.web.app**.
+
+The rules are the same whichever you choose. Where this book says "write it on your character sheet", the app does the writing. Some players at a table can use the app while others use paper.
+
+The app can also take the Warden's chair. An **AI Warden** describes the world and plays everyone in it, for a group with nobody free to run the game, or for one person playing alone. It tells the story; the rules in this book, as the app applies them, still decide every roll. This part of the app is new and is still being tried out.
 
 ### Reading the dice
 
@@ -172,7 +184,7 @@ These ideas shape every rule in the book.
 
 # PART TWO: MAKING A CHARACTER
 
-Making a character takes about ten minutes. Write everything down on a sheet of paper as you go. There is a layout you can copy at the end of the book.
+Making a character takes about ten minutes. Write everything down on a sheet of paper as you go. There is a layout you can copy at the end of the book. If you are using the Waymark app, it takes you through the same six steps and keeps the sheet for you.
 
 **The steps**
 
@@ -1174,6 +1186,8 @@ If you know other roleplaying games, you can bring their monsters into Waymark.
 ## Building your world
 
 Waymark does not come with a world. It is made to be used with yours. You do not need to write much before you start. A page of notes is enough, and you can add to it as you play.
+
+Keep those notes wherever you like: a notebook, a folder of index cards, or the Waymark app, which has a place for the setting, a timeline of what has happened, and a card for each person, place, creature and loose end. Whatever you use, write down what happened at the end of each session. Next week you will be glad you did.
 
 **A world needs:**
 
