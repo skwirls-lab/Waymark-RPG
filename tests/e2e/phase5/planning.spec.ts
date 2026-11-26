@@ -212,5 +212,6 @@ test("loot on a card is a piece of the world's gear, and is handed to a characte
   await giving.getByRole('button', { name: 'Give to Pip' }).click();
   await expect(giving).toHaveCount(0);
   await page.getByTestId('summary-Pip').getByRole('link', { name: 'Open' }).click();
-  await expect(page.getByText('Tide hook')).toBeVisible();
+  // The item is on the sheet. (Its name can also appear in the line saying it was given.)
+  await expect(page.getByText('Tide hook').first()).toBeVisible();
 });
